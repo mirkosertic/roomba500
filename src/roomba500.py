@@ -69,6 +69,15 @@ class Roomba500:
         self.ser.write(chr(128))
         self.ser.write(chr(131))
 
+    def playNote(self, note, duration):
+        self.ser.write(chr(140))
+        self.ser.write(chr(0))
+        self.ser.write(chr(1))
+        self.ser.write(chr(note))
+        self.ser.write(chr(duration))
+        self.ser.write(chr(141))
+        self.ser.write(chr(0))
+
     def drive(self, speedLeft, speedRight):
         leftSpeedHigh, leftSpeedLow = twoComplementOf(speedLeft)
         rightSpeedHigh, rightSpeedLow = twoComplementOf(speedRight)

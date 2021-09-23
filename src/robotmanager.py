@@ -26,16 +26,19 @@ def publishOdometry(pose):
     """
         Publish odometry for a given pose
     """
-    global odomTopic, transformBroadcaster
+    global odomTopic, transformBroadcaster, robot
 
-    vx = .0
-    vy = .0
-    vth = .0
-    currentTime = rospy.Time.now()
+    deltaTimeInSeconds = (pose.time - robot.lastKnownReferencePose.time).to_sec()
+    if (deltaTimeInSeconds == 0):
+        return
+
+    vxInMetersPerSecond = (pose.x - robot.lastKnownReferencePose.x) / deltaTimeInSeconds
+    vyInMetersPerSecond = (pose.y - robot.lastKnownReferencePose.y) / deltaTimeInSeconds
+    vthInRadiansPerSecond = ((pose.theta - robot.lastKnownReferencePose.theta) * math.pi / 180) / deltaTimeInSeconds
 
     # Publish odometry
     odom = Odometry()
-    odom.header.stamp = currentTime
+    odom.header.stamp = pose.time
     odom.header.frame_id = "odom"
 
     odom_quat = tf.transformations.quaternion_from_euler(0, 0, math.radians(pose.theta))
@@ -43,22 +46,22 @@ def publishOdometry(pose):
     odom.pose.pose = Pose(Point(pose.x, pose.y, 0.), Quaternion(*odom_quat))
 
     odom.child_frame_id = "base_link"
-    odom.twist.twist = Twist(Vector3(vx, vy, 0), Vector3(0, 0, vth))
+    odom.twist.twist = Twist(Vector3(vxInMetersPerSecond, vyInMetersPerSecond, 0), Vector3(0, 0, vthInRadiansPerSecond))
 
     odomTopic.publish(odom)
 
     transformBroadcaster.sendTransform(
         (pose.x, pose.y, 0.),
         odom_quat,
-        currentTime,
+        pose.time,
         "base_link",
         "odom"
     )
 
     transformBroadcaster.sendTransform(
         (0., 0., 0.),
-         tf.transformations.quaternion_from_euler(0, 0, 0),
-        currentTime,
+        tf.transformations.quaternion_from_euler(0, 0, 0),
+        pose.time,
         "odom",
         "map"
     )
@@ -301,7 +304,7 @@ def robotmanager():
     fullRotationInSensorTicks = float(rospy.get_param('~fullRotationInSensorTicks', '1608.0'))
     ticksPerCm = float(rospy.get_param('~ticksPerCm', '22.5798'))
     robotWheelDistanceInCm = float(rospy.get_param('~robotWheelDistanceInCm', '25.0'))
-    pollingRateInHertz = int(rospy.get_param('~pollingintervalionhertz', '20'))
+    pollingRateInHertz = int(rospy.get_param('~pollingintervalionhertz', '60'))
 
     # And connect to the roomba
     rospy.loginfo("Connecting to Roomba 5xx on port %s with %s baud", port, baudrate)
@@ -312,6 +315,9 @@ def robotmanager():
     rospy.loginfo("Entering passive mode")
     robot.passiveMode()
     time.sleep(.1)
+
+    # Signal welcome by playing a simple note
+    robot.playNote(69, 16)
 
     # Reset all movement to zero, e.g. stop motors
     rospy.loginfo("Stopping motors")
@@ -344,7 +350,7 @@ def robotmanager():
     # We start at the last known reference pose
     publishOdometry(robot.lastKnownReferencePose)
 
-    # Processing the sensor polling in an endless loop until this rosnode goes to die
+    # Processing the sensor polling in an endless loop until this node goes to die
     while not rospy.is_shutdown():
 
         syncLock.acquire()
@@ -353,22 +359,14 @@ def robotmanager():
         rospy.loginfo("Getting new sensorframe")
         newSensorFrame = robot.readSensorFrame()
 
-        rospy.loginfo("Last wheel left = %s, last wheel right = %s, current wheel left = %s, current wheel right = %s",
-                      lastSensorFrame.leftWheel, lastSensorFrame.rightWheel, newSensorFrame.leftWheel, newSensorFrame.rightWheel)
-
-        rospy.loginfo("Delta rotation left is %s, right is %s",
-                      overflowSafeWheelRotation(newSensorFrame.leftWheel - lastSensorFrame.leftWheel),
-                      overflowSafeWheelRotation(newSensorFrame.rightWheel - lastSensorFrame.rightWheel))
-
-        # Calculate the relative movement to last sensor data
-        robot.leftWheelDistance += overflowSafeWheelRotation(newSensorFrame.leftWheel - lastSensorFrame.leftWheel)
-        robot.rightWheelDistance += overflowSafeWheelRotation(newSensorFrame.rightWheel - lastSensorFrame.rightWheel)
-
         # Bumper right with debounce
         if newSensorFrame.bumperState & 1 > 0:
             if not robot.lastBumperRight:
                 rospy.loginfo("Right bumper triggered")
                 stopRobot()
+
+                # Note C
+                robot.playNote(72, 16)
 
                 robot.lastBumperRight = True
                 bumperRightTopic.publish(1)
@@ -383,6 +381,9 @@ def robotmanager():
                 rospy.loginfo("Left bumper triggered")
                 stopRobot()
 
+                # Note D
+                robot.playNote(74, 16)
+
                 robot.lastBumperLeft = True
                 bumperLeftTopic.publish(1)
         else:
@@ -395,6 +396,9 @@ def robotmanager():
             if not robot.lastRightWheelDropped:
                 rospy.loginfo("Right wheel dropped")
                 stopRobot()
+
+                # Note E
+                robot.playNote(76, 16)
 
                 robot.lastRightWheelDropped = True
                 wheeldropRightTopic.publish(1)
@@ -409,6 +413,9 @@ def robotmanager():
                 rospy.loginfo("Left wheel dropped")
                 stopRobot()
 
+                # Note F
+                robot.playNote(77, 16)
+
                 robot.lastLeftWheelDropped = True
                 wheeldropLeftTopic.puslish(1)
         else:
@@ -416,9 +423,23 @@ def robotmanager():
                 robot.lastLeftWheelDropped = False
                 wheeldropLeftTopic.puslish(0)
 
-        # Estimate a pose and publish information
-        rospy.loginfo("Estimating new position")
-        estimateAndPublishPose()
+        # Calculate the relative movement to last sensor data
+        deltaLeft = overflowSafeWheelRotation(newSensorFrame.leftWheel - lastSensorFrame.leftWheel)
+        deltaRight = overflowSafeWheelRotation(newSensorFrame.rightWheel - lastSensorFrame.rightWheel)
+        if deltaLeft != 0 or deltaRight != 0:
+            rospy.loginfo("Last wheel left = %s, last wheel right = %s, current wheel left = %s, current wheel right = %s",
+                          lastSensorFrame.leftWheel, lastSensorFrame.rightWheel, newSensorFrame.leftWheel, newSensorFrame.rightWheel)
+
+            rospy.loginfo("Delta rotation left is %s, right is %s",
+                          deltaLeft,
+                          deltaRight)
+
+            # Estimate a pose and publish information
+            robot.leftWheelDistance += deltaLeft
+            robot.rightWheelDistance += deltaRight
+
+            rospy.loginfo("Estimating new position")
+            estimateAndPublishPose()
 
         # Remember last sensor data for the next iteration
         lastSensorFrame = newSensorFrame

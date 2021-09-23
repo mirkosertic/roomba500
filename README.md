@@ -1,12 +1,56 @@
-# Roomba 500 support for ROS(Robot Operating System)
+# Roomba 5xx support for ROS(Robot Operating System)
 
-## Why and what
+An implementation of a ROS base controller and other utilities for the Roomba 5xx platform based on the Roomba Open Interface
+Specification.
 
-TODO
+This implementation has been developed and tested on ROS Melodic.
 
 ## Provided Nodes
 
-TODO
+### robotmanager.py
+
+`robotmanager.py` is a base controller (robot driver) for the Roomba. It takes ros commands and sends them to a connected
+Roomba. Connection to the Roomba is established over a serial interface.
+
+This base controller uses the Roomba wheel encoder counts to get a better estimate of the robot odometry position and velocity. The internal Roomba sensors lack precision, depending on the model and firmware version. Using the wheel encoder values gives the best results. Please note that there is no sensor fusion involved, so odometry tends to drift over time. Please combine this node with a laser scanner to get better results of even make if workable with the ROS navigation stack.
+
+However, this base controler works perfectly with [teleop_twist_keyboard](http://wiki.ros.org/teleop_twist_keyboard).
+
+#### Subscribed Topics
+
+* `cmd_vel` ([geometry_msgs/Twist](http://docs.ros.org/en/api/geometry_msgs/html/msg/Twist.html))
+    Velocity commands to the robot.
+
+#### Published Topics
+
+* `odom` ([nav_msgs/Odometry](http://docs.ros.org/en/api/nav_msgs/html/msg/Odometry.html))
+    Odometry readings from the robot.
+* `batteryCharge` (int16)
+    Charge of the battery in mAh.
+* `batteryCapacity` (int16)
+    Capacity of the battery in mAh.
+* `bumperLeft` (int16)
+    Status of the bumper. 1 = triggered, 0 = not triggered. Only state change are published
+* `bumperRight` (int16)
+    Status of the bumper. 1 = triggered, 0 = not triggered. Only state change are published
+* `wheeldropLeft` (int16)
+    Status of wheel. 1 = dropped, 0 = not dropped. Only state change are published
+* `wheeldropRight` (int16)
+    Status of wheel. 1 = dropped, 0 = not dropped. Only state change are published
+
+#### Parameters
+
+* `serialport` (string, default: /dev/serial0)
+  The serial port where the Roomba can be found.
+* `baudrate` (int, default: 115200)
+  The baud rate for serial communication.
+* `fullRotationInSensorTicks` (int, default: 1608)
+  Wheel encoder counts for a full 360 degree rotation. Is individual for each Roomba depending on tyre usage etc. 
+* `ticksPerCm` (float, default: 22.5798)
+  Wheel encoder counts for a movement of 1 cm. Is individual for each Roomba depending on tyre usage etc.
+* `robotWheelDistanceInCm` (float, default: 25.0)
+  The difference between the two robot wheels. Depends on the Roomba model.
+* `pollingintervalionhertz` (int, default: 60)
 
 ## Installation
 
