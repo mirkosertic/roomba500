@@ -417,11 +417,11 @@ def robotmanager():
                 robot.playNote(77, 16)
 
                 robot.lastLeftWheelDropped = True
-                wheeldropLeftTopic.puslish(1)
+                wheeldropLeftTopic.publish(1)
         else:
             if robot.lastLeftWheelDropped:
                 robot.lastLeftWheelDropped = False
-                wheeldropLeftTopic.puslish(0)
+                wheeldropLeftTopic.publish(0)
 
         # Calculate the relative movement to last sensor data
         deltaLeft = overflowSafeWheelRotation(newSensorFrame.leftWheel - lastSensorFrame.leftWheel)
