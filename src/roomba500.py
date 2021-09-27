@@ -25,10 +25,6 @@ def _bitOfByte( bit, byte ):
         return 0
     return ((byte >> bit) & 0x01)
 
-def getLower5Bits(r):
-    """ r is one byte as an integer """
-    return [ _bitOfByte(4,r), _bitOfByte(3,r), _bitOfByte(2,r), _bitOfByte(1,r), _bitOfByte(0,r) ]
-
 def twosComplementInt2bytes( highByte, lowByte ):
     """ returns an int which has the same value
     as the twosComplement value stored in
@@ -64,10 +60,22 @@ class Roomba500:
         self.lastKnownReferencePose = None
         self.leftWheelDistance = 0
         self.rightWheelDistance = 0
+        self.mainbrushPWM = 0
+        self.sidebrushPWM = 0
+        self.vacuumPWM = 0
+
+    def safeMode(self):
+        self.ser.write(chr(128))
+        self.ser.write(chr(131))
 
     def passiveMode(self):
         self.ser.write(chr(128))
-        self.ser.write(chr(131))
+
+    def updateMotorControl(self):
+        self.ser.write(chr(144))
+        self.ser.write(chr(self.mainbrushPWM))
+        self.ser.write(chr(self.sidebrushPWM))
+        self.ser.write(chr(self.vacuumPWM))
 
     def playNote(self, note, duration):
         self.ser.write(chr(140))
@@ -89,29 +97,44 @@ class Roomba500:
 
     def readSensorFrame(self):
         self.ser.write(chr(149))
-        self.ser.write(chr(5))
+        self.ser.write(chr(11))
         self.ser.write(chr(43))
         self.ser.write(chr(44))
         self.ser.write(chr(25))
         self.ser.write(chr(26))
         self.ser.write(chr(7))
-        leftWheelHigh = ord(self.ser.read())
-        leftWheelLow = ord(self.ser.read())
-        leftWheel = leftWheelHigh << 8 | leftWheelLow
-        rightWheelHigh = ord(self.ser.read())
-        rightWheelLow = ord(self.ser.read())
-        rightWheel = rightWheelHigh << 8 | rightWheelLow
-        batteryChargeHigh = ord(self.ser.read())
-        batteryChargeLow = ord(self.ser.read())
-        batteryCharge = batteryChargeHigh  << 8 | batteryChargeLow
-        batteryCapacityHigh = ord(self.ser.read())
-        batteryCapacityLow = ord(self.ser.read())
-        batteryCapacity = batteryCapacityHigh << 8 | batteryCapacityLow
+
+        self.ser.write(chr(46))
+        self.ser.write(chr(47))
+        self.ser.write(chr(48))
+        self.ser.write(chr(49))
+        self.ser.write(chr(50))
+        self.ser.write(chr(51))
+
+        leftWheel = ord(self.ser.read()) << 8 | ord(self.ser.read())
+        rightWheel = ord(self.ser.read()) << 8 | ord(self.ser.read())
+        batteryCharge = ord(self.ser.read())  << 8 | ord(self.ser.read())
+        batteryCapacity = ord(self.ser.read()) << 8 | ord(self.ser.read())
         bumperState = ord(self.ser.read())
+
+        lightBumpLeft = ord(self.ser.read()) << 8 | ord(self.ser.read())
+        lightBumpFrontLeft = ord(self.ser.read()) << 8 | ord(self.ser.read())
+        lightBumpCenterLeft = ord(self.ser.read()) << 8 | ord(self.ser.read())
+        lightBumpCenterRight = ord(self.ser.read()) << 8 | ord(self.ser.read())
+        lightBumpFrontRight = ord(self.ser.read()) << 8 | ord(self.ser.read())
+        lightBumpRight = ord(self.ser.read()) << 8 | ord(self.ser.read())
+
         result = SensorFrame()
         result.leftWheel = leftWheel
         result.rightWheel = rightWheel
         result.batteryCharge = batteryCharge
         result.batteryCapacity = batteryCapacity
         result.bumperState = bumperState
+        result.lightBumperLeft = lightBumpLeft
+        result.lightBumperFrontLeft = lightBumpFrontLeft
+        result.lightBumperCenterLeft = lightBumpCenterLeft
+        result.lightBumperCenterRight = lightBumpCenterRight
+        result.lightBumperFrontRight = lightBumpFrontRight
+        result.lightBumperRight = lightBumpRight
+
         return result

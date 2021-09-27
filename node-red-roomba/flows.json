@@ -7,24 +7,13 @@
         "info": ""
     },
     {
-        "id": "9e84d8819fb7d001",
-        "type": "ui_spacer",
-        "z": "79e0000ef76bb4d1",
-        "name": "spacer",
-        "group": "f2cabae8eb792e65",
-        "order": 2,
-        "width": "3",
-        "height": 1,
-        "className": ""
-    },
-    {
         "id": "f2cabae8eb792e65",
         "type": "ui_group",
         "name": "Remote control",
         "tab": "fe3ba83191bb4378",
         "order": 2,
         "disp": true,
-        "width": "12",
+        "width": "6",
         "collapse": false,
         "className": ""
     },
@@ -136,6 +125,57 @@
         }
     },
     {
+        "id": "8ef9680d6653a048",
+        "type": "ui_group",
+        "name": "Sensors",
+        "tab": "fe3ba83191bb4378",
+        "order": 2,
+        "disp": true,
+        "width": "6",
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "a82a9d760537016a",
+        "type": "ui_spacer",
+        "z": "79e0000ef76bb4d1",
+        "name": "spacer",
+        "group": "f2cabae8eb792e65",
+        "order": 3,
+        "width": 2,
+        "height": 1
+    },
+    {
+        "id": "eaa01d8f9fa4e14b",
+        "type": "ui_spacer",
+        "z": "79e0000ef76bb4d1",
+        "name": "spacer",
+        "group": "f2cabae8eb792e65",
+        "order": 5,
+        "width": 2,
+        "height": 1
+    },
+    {
+        "id": "1409cf0f91bc2b63",
+        "type": "ui_spacer",
+        "z": "79e0000ef76bb4d1",
+        "name": "spacer",
+        "group": "f2cabae8eb792e65",
+        "order": 9,
+        "width": 6,
+        "height": 1
+    },
+    {
+        "id": "02a0706841c02930",
+        "type": "ui_spacer",
+        "z": "79e0000ef76bb4d1",
+        "name": "spacer",
+        "group": "8ef9680d6653a048",
+        "order": 2,
+        "width": 2,
+        "height": 1
+    },
+    {
         "id": "67fecf3d19de7dd6",
         "type": "ros-subscriber",
         "z": "79e0000ef76bb4d1",
@@ -159,8 +199,8 @@
         "z": "79e0000ef76bb4d1",
         "group": "f2cabae8eb792e65",
         "order": 1,
-        "width": "0",
-        "height": "0",
+        "width": 6,
+        "height": 1,
         "name": "",
         "label": "Current Capacity",
         "format": "{{msg.payload.data}} mAh",
@@ -194,8 +234,8 @@
         "z": "79e0000ef76bb4d1",
         "group": "f2cabae8eb792e65",
         "order": 2,
-        "width": "0",
-        "height": "0",
+        "width": 6,
+        "height": 1,
         "name": "",
         "label": "Maximum Capacity",
         "format": "{{msg.payload.data}} mAh",
@@ -211,9 +251,9 @@
         "z": "79e0000ef76bb4d1",
         "name": "",
         "group": "f2cabae8eb792e65",
-        "order": 4,
-        "width": "4",
-        "height": "1",
+        "order": 6,
+        "width": 2,
+        "height": 1,
         "passthru": false,
         "label": "Left",
         "tooltip": "",
@@ -221,7 +261,7 @@
         "bgcolor": "",
         "className": "",
         "icon": "keyboard_arrow_left",
-        "payload": "{\"linear\":{\"x\":0,\"y\":0,\"z\":0},\"angular\":{\"x\":0,\"y\":0,\"z\":0.35}}",
+        "payload": "{\"amount\":1}",
         "payloadType": "json",
         "topic": "topic",
         "topicType": "msg",
@@ -229,7 +269,7 @@
         "y": 400,
         "wires": [
             [
-                "cea9191fb0af67af"
+                "73884110c7794b9c"
             ]
         ]
     },
@@ -239,9 +279,9 @@
         "z": "79e0000ef76bb4d1",
         "name": "",
         "group": "f2cabae8eb792e65",
-        "order": 6,
-        "width": "4",
-        "height": "1",
+        "order": 8,
+        "width": 2,
+        "height": 1,
         "passthru": false,
         "label": "Right",
         "tooltip": "",
@@ -249,7 +289,7 @@
         "bgcolor": "",
         "className": "",
         "icon": "keyboard_arrow_right",
-        "payload": "{\"linear\":{\"x\":0,\"y\":0,\"z\":0},\"angular\":{\"x\":0,\"y\":0,\"z\":-0.35}}",
+        "payload": "{\"amount\":-1}",
         "payloadType": "json",
         "topic": "topic",
         "topicType": "msg",
@@ -257,7 +297,7 @@
         "y": 440,
         "wires": [
             [
-                "cea9191fb0af67af"
+                "73884110c7794b9c"
             ]
         ]
     },
@@ -267,9 +307,9 @@
         "z": "79e0000ef76bb4d1",
         "name": "",
         "group": "f2cabae8eb792e65",
-        "order": 5,
-        "width": "4",
-        "height": "1",
+        "order": 7,
+        "width": 2,
+        "height": 1,
         "passthru": false,
         "label": "Stop",
         "tooltip": "",
@@ -277,15 +317,15 @@
         "bgcolor": "",
         "className": "",
         "icon": "stop",
-        "payload": "{\"linear\":{\"x\":0,\"y\":0,\"z\":0},\"angular\":{\"x\":0,\"y\":0,\"z\":0}}",
+        "payload": "{\"amount\":0}",
         "payloadType": "json",
         "topic": "topic",
         "topicType": "msg",
         "x": 210,
-        "y": 480,
+        "y": 320,
         "wires": [
             [
-                "cea9191fb0af67af"
+                "5b26fbd6d9f1503c"
             ]
         ]
     },
@@ -295,9 +335,9 @@
         "z": "79e0000ef76bb4d1",
         "name": "",
         "group": "f2cabae8eb792e65",
-        "order": 3,
-        "width": "6",
-        "height": "1",
+        "order": 4,
+        "width": 2,
+        "height": 1,
         "passthru": false,
         "label": "Forward",
         "tooltip": "",
@@ -305,15 +345,15 @@
         "bgcolor": "",
         "className": "",
         "icon": "keyboard_arrow_up",
-        "payload": "{\"linear\":{\"x\":0.125,\"y\":0,\"z\":0},\"angular\":{\"x\":0,\"y\":0,\"z\":0}}",
+        "payload": "{\"amount\":1}",
         "payloadType": "json",
         "topic": "topic",
         "topicType": "msg",
-        "x": 200,
+        "x": 220,
         "y": 360,
         "wires": [
             [
-                "cea9191fb0af67af"
+                "5b26fbd6d9f1503c"
             ]
         ]
     },
@@ -324,8 +364,378 @@
         "topicname": "cmd_vel",
         "typepackage": "geometry_msgs",
         "typename": "Twist",
-        "x": 520,
-        "y": 440,
+        "x": 840,
+        "y": 420,
         "wires": []
+    },
+    {
+        "id": "5fbfb36b49121379",
+        "type": "ui_slider",
+        "z": "79e0000ef76bb4d1",
+        "name": "",
+        "label": "Drive Speed",
+        "tooltip": "",
+        "group": "f2cabae8eb792e65",
+        "order": 10,
+        "width": 0,
+        "height": 0,
+        "passthru": true,
+        "outs": "all",
+        "topic": "drivespeed",
+        "topicType": "flow",
+        "min": "-0.8",
+        "max": "0.8",
+        "step": "0.05",
+        "className": "",
+        "x": 710,
+        "y": 600,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "422163e2c3e6f641",
+        "type": "ui_slider",
+        "z": "79e0000ef76bb4d1",
+        "name": "",
+        "label": "Rotation Speed",
+        "tooltip": "",
+        "group": "f2cabae8eb792e65",
+        "order": 11,
+        "width": 0,
+        "height": 0,
+        "passthru": true,
+        "outs": "all",
+        "topic": "rotationspeed",
+        "topicType": "flow",
+        "min": "-1",
+        "max": "1",
+        "step": "0.1",
+        "className": "",
+        "x": 720,
+        "y": 520,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "5b26fbd6d9f1503c",
+        "type": "function",
+        "z": "79e0000ef76bb4d1",
+        "name": "Create Drive Message",
+        "func": "msg.payload = {\n    \"linear\": {\n        \"x\": flow.get(\"drivespeed\") * msg.payload.amount,\n        \"y\": 0,\n        \"z\": 0\n    },\n    \"angular\": {\n        \"x\": 0,\n        \"y\": 0,\n        \"z\": 0\n    }\n}\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "// Der Code hier wird ausgeführt,\n// wenn der Node gestartet wird\nif (flow.get(\"drivespeed\") === undefined) {\n    flow.set(\"drivespeed\", 0.20)\n}",
+        "finalize": "",
+        "libs": [],
+        "x": 540,
+        "y": 340,
+        "wires": [
+            [
+                "d5bfcdd6d51617b8",
+                "cea9191fb0af67af"
+            ]
+        ]
+    },
+    {
+        "id": "73884110c7794b9c",
+        "type": "function",
+        "z": "79e0000ef76bb4d1",
+        "name": "Create Turn Message",
+        "func": "msg.payload = {\n    \"linear\": {\n        \"x\": 0,\n        \"y\": 0,\n        \"z\": 0\n    },\n    \"angular\": {\n        \"x\": 0,\n        \"y\": 0,\n        \"z\": flow.get(\"rotationspeed\") * msg.payload.amount\n    }\n}\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "// Der Code hier wird ausgeführt,\n// wenn der Node gestartet wird\nif (flow.get(\"rotationspeed\") === undefined) {\n    flow.set(\"rotationspeed\", 0.35)\n}",
+        "finalize": "",
+        "libs": [],
+        "x": 540,
+        "y": 420,
+        "wires": [
+            [
+                "d5bfcdd6d51617b8",
+                "cea9191fb0af67af"
+            ]
+        ]
+    },
+    {
+        "id": "5a4dd8914d4aad65",
+        "type": "ui_template",
+        "z": "79e0000ef76bb4d1",
+        "group": "8ef9680d6653a048",
+        "name": "Bumper left",
+        "order": 1,
+        "width": 2,
+        "height": 1,
+        "format": "<div ng-bind-html=\"msg.payload.value\"></div>",
+        "storeOutMessages": true,
+        "fwdInMessages": true,
+        "resendOnRefresh": true,
+        "templateScope": "local",
+        "className": "",
+        "x": 410,
+        "y": 520,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "dce9f7aef808323d",
+        "type": "ui_template",
+        "z": "79e0000ef76bb4d1",
+        "group": "8ef9680d6653a048",
+        "name": "Number right",
+        "order": 3,
+        "width": 2,
+        "height": 1,
+        "format": "<div ng-bind-html=\"msg.payload.value\"></div>",
+        "storeOutMessages": true,
+        "fwdInMessages": true,
+        "resendOnRefresh": true,
+        "templateScope": "local",
+        "className": "",
+        "x": 410,
+        "y": 620,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "f7496856c7a8e21c",
+        "type": "ui_text",
+        "z": "79e0000ef76bb4d1",
+        "group": "8ef9680d6653a048",
+        "order": 4,
+        "width": 6,
+        "height": 1,
+        "name": "",
+        "label": "Light Sensor Left",
+        "format": "{{msg.payload.data}}",
+        "layout": "row-spread",
+        "className": "",
+        "x": 410,
+        "y": 720,
+        "wires": []
+    },
+    {
+        "id": "ea57022ba7ad74b6",
+        "type": "ui_text",
+        "z": "79e0000ef76bb4d1",
+        "group": "8ef9680d6653a048",
+        "order": 5,
+        "width": 6,
+        "height": 1,
+        "name": "",
+        "label": "Light Sensor Front Left",
+        "format": "{{msg.payload.data}}",
+        "layout": "row-spread",
+        "className": "",
+        "x": 420,
+        "y": 780,
+        "wires": []
+    },
+    {
+        "id": "160ba99e6c04895c",
+        "type": "ui_text",
+        "z": "79e0000ef76bb4d1",
+        "group": "8ef9680d6653a048",
+        "order": 6,
+        "width": 6,
+        "height": 1,
+        "name": "",
+        "label": "Light Sensor Center Left",
+        "format": "{{msg.payload.data}}",
+        "layout": "row-spread",
+        "className": "",
+        "x": 430,
+        "y": 840,
+        "wires": []
+    },
+    {
+        "id": "734946f11c40bb2f",
+        "type": "ui_text",
+        "z": "79e0000ef76bb4d1",
+        "group": "8ef9680d6653a048",
+        "order": 7,
+        "width": 6,
+        "height": 1,
+        "name": "",
+        "label": "Light Sensor Center Right",
+        "format": "{{msg.payload.data}}",
+        "layout": "row-spread",
+        "className": "",
+        "x": 430,
+        "y": 900,
+        "wires": []
+    },
+    {
+        "id": "7fc5831e9ea786c1",
+        "type": "ui_text",
+        "z": "79e0000ef76bb4d1",
+        "group": "8ef9680d6653a048",
+        "order": 8,
+        "width": 6,
+        "height": 1,
+        "name": "",
+        "label": "Light Sensor Front Right",
+        "format": "{{msg.payload.data}}",
+        "layout": "row-spread",
+        "className": "",
+        "x": 430,
+        "y": 960,
+        "wires": []
+    },
+    {
+        "id": "0246d7414b336d3a",
+        "type": "ui_text",
+        "z": "79e0000ef76bb4d1",
+        "group": "8ef9680d6653a048",
+        "order": 9,
+        "width": 6,
+        "height": 1,
+        "name": "",
+        "label": "Light Sensor Right",
+        "format": "{{msg.payload.data}}",
+        "layout": "row-spread",
+        "className": "",
+        "x": 410,
+        "y": 1020,
+        "wires": []
+    },
+    {
+        "id": "3015ddafa4361ecf",
+        "type": "ros-subscriber",
+        "z": "79e0000ef76bb4d1",
+        "topicname": "lightBumperLeft",
+        "typepackage": "std_msgs",
+        "typename": "Int16",
+        "x": 80,
+        "y": 720,
+        "wires": [
+            [
+                "f7496856c7a8e21c"
+            ]
+        ]
+    },
+    {
+        "id": "600d7a951dbfe85f",
+        "type": "ros-subscriber",
+        "z": "79e0000ef76bb4d1",
+        "topicname": "lightBumperFrontLeft",
+        "typepackage": "std_msgs",
+        "typename": "Int16",
+        "x": 100,
+        "y": 780,
+        "wires": [
+            [
+                "ea57022ba7ad74b6"
+            ]
+        ]
+    },
+    {
+        "id": "f19bcf05f34e16aa",
+        "type": "ros-subscriber",
+        "z": "79e0000ef76bb4d1",
+        "topicname": "lightBumperCenterLeft",
+        "typepackage": "std_msgs",
+        "typename": "Int16",
+        "x": 100,
+        "y": 840,
+        "wires": [
+            [
+                "160ba99e6c04895c"
+            ]
+        ]
+    },
+    {
+        "id": "03d9ab329227f8a5",
+        "type": "ros-subscriber",
+        "z": "79e0000ef76bb4d1",
+        "topicname": "lightBumperCenterRight",
+        "typepackage": "std_msgs",
+        "typename": "Int16",
+        "x": 110,
+        "y": 900,
+        "wires": [
+            [
+                "734946f11c40bb2f"
+            ]
+        ]
+    },
+    {
+        "id": "bd7b22b7180c6f98",
+        "type": "ros-subscriber",
+        "z": "79e0000ef76bb4d1",
+        "topicname": "lightBumperFrontRight",
+        "typepackage": "std_msgs",
+        "typename": "Int16",
+        "x": 110,
+        "y": 960,
+        "wires": [
+            [
+                "7fc5831e9ea786c1"
+            ]
+        ]
+    },
+    {
+        "id": "68d2e7a2e1f2e14e",
+        "type": "ros-subscriber",
+        "z": "79e0000ef76bb4d1",
+        "topicname": "lightBumperRight",
+        "typepackage": "std_msgs",
+        "typename": "Int16",
+        "x": 120,
+        "y": 1020,
+        "wires": [
+            [
+                "0246d7414b336d3a"
+            ]
+        ]
+    },
+    {
+        "id": "d5bfcdd6d51617b8",
+        "type": "debug",
+        "z": "79e0000ef76bb4d1",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 850,
+        "y": 300,
+        "wires": []
+    },
+    {
+        "id": "067eb919ec7a6859",
+        "type": "ros-subscriber",
+        "z": "79e0000ef76bb4d1",
+        "topicname": "bumperLeft",
+        "typepackage": "std_msgs",
+        "typename": "Int16",
+        "x": 90,
+        "y": 520,
+        "wires": [
+            [
+                "5a4dd8914d4aad65"
+            ]
+        ]
+    },
+    {
+        "id": "8f861f42d1215782",
+        "type": "ros-subscriber",
+        "z": "79e0000ef76bb4d1",
+        "topicname": "bumperRight",
+        "typepackage": "std_msgs",
+        "typename": "Int16",
+        "x": 90,
+        "y": 620,
+        "wires": [
+            [
+                "dce9f7aef808323d"
+            ]
+        ]
     }
 ]

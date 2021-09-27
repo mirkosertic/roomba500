@@ -291,12 +291,42 @@ def newCmdVelMessage(data):
 
     syncLock.release()
 
+def newCmdPWMMainBrush(data):
+    global robot, syncLock
+
+    syncLock.acquire()
+
+    robot.mainbrushPWM = data.value
+    robot.updateMotorControl()
+
+    syncLock.release()
+
+def newCmdPWMSideBrush(data):
+    global robot, syncLock
+
+    syncLock.acquire()
+
+    robot.sidebrushPWM = data.value
+    robot.updateMotorControl()
+
+    syncLock.release()
+
+def newCmdPWMVacuum(data):
+    global robot, syncLock
+
+    syncLock.acquire()
+
+    robot.vacuumPWM = data.value
+    robot.updateMotorControl()
+
+    syncLock.release()
+
 def robotmanager():
     """
         All heavy lifting of the ros node goes to here
     """
     global robot, odomTopic
-    rospy.init_node('roomba500manager', anonymous=True)
+    rospy.init_node('roomba500basecontroller', anonymous=True)
 
     # Get some configuration data
     port = rospy.get_param('~serialport', '/dev/serial0')
@@ -311,9 +341,9 @@ def robotmanager():
     ser = serial.Serial(port=port, baudrate=baudrate)
     robot = Roomba500(ser, fullRotationInSensorTicks, ticksPerCm, robotWheelDistanceInCm)
 
-    # Enter passive mode
-    rospy.loginfo("Entering passive mode")
-    robot.passiveMode()
+    # Enter safe mode
+    rospy.loginfo("Entering safe mode")
+    robot.safeMode()
     time.sleep(.1)
 
     # Signal welcome by playing a simple note
@@ -329,7 +359,7 @@ def robotmanager():
     lastSensorFrame = robot.readSensorFrame()
     robot.lastKnownReferencePose = RobotPose(0, 0, 0, robot.leftWheelDistance, robot.rightWheelDistance, rospy.Time.now())
 
-    # Topics for battery charge and capacity
+    # Topics for battery charge, capacity and light bumpers
     batteryChargeTopic = rospy.Publisher('batteryCharge', Int16, queue_size = 10)
     batteryCapacityTopic = rospy.Publisher('batteryCapacity', Int16, queue_size = 10)
     bumperLeftTopic = rospy.Publisher('bumperLeft', Int16, queue_size = 10)
@@ -337,11 +367,23 @@ def robotmanager():
     wheeldropLeftTopic = rospy.Publisher('wheeldropLeft', Int16, queue_size = 10)
     wheeldropRightTopic = rospy.Publisher('wheeldropRight', Int16, queue_size = 10)
 
+    lightBumperLeftTopic = rospy.Publisher('lightBumperLeft', Int16, queue_size = 10)
+    lightBumperFrontLeftTopic = rospy.Publisher('lightBumperFrontLeft', Int16, queue_size = 10)
+    lightBumperCenterLeftTopic = rospy.Publisher('lightBumperCenterLeft', Int16, queue_size = 10)
+    lightBumperCenterRightTopic = rospy.Publisher('lightBumperCenterRight', Int16, queue_size = 10)
+    lightBumperFrontRightTopic = rospy.Publisher('lightBumperFrontRight', Int16, queue_size = 10)
+    lightBumperRightTopic = rospy.Publisher('lightBumperRight', Int16, queue_size = 10)
+
     # Here goes the odometry data
     odomTopic = rospy.Publisher('odom', Odometry, queue_size = 10)
 
     # We consume steering commands from here
     rospy.Subscriber("cmd_vel", Twist, newCmdVelMessage)
+
+    # We also consume motor control commands
+    rospy.Subscriber("cmd_mainbrush", Int16, newCmdPWMMainBrush)
+    rospy.Subscriber("cmd_sidebrush", Int16, newCmdPWMSideBrush)
+    rospy.Subscriber("cmd_vacuum", Int16, newCmdPWMVacuum)
 
     # Initialize sensor polling
     rospy.loginfo("Polling Roomba sensors with %s hertz", pollingRateInHertz)
@@ -360,7 +402,7 @@ def robotmanager():
         newSensorFrame = robot.readSensorFrame()
 
         # Bumper right with debounce
-        if newSensorFrame.bumperState & 1 > 0:
+        if newSensorFrame.isBumperRight():
             if not robot.lastBumperRight:
                 rospy.loginfo("Right bumper triggered")
                 stopRobot()
@@ -376,7 +418,7 @@ def robotmanager():
                 bumperRightTopic.publish(0)
 
         # Bumper left with debounce
-        if newSensorFrame.bumperState & 2 > 0:
+        if newSensorFrame.isBumperLeft():
             if not robot.lastBumperLeft:
                 rospy.loginfo("Left bumper triggered")
                 stopRobot()
@@ -392,7 +434,7 @@ def robotmanager():
                 bumperLeftTopic.publish(0)
 
         # Right wheel drop with debounce
-        if newSensorFrame.bumperState & 4 > 0:
+        if newSensorFrame.isWheeldropRight():
             if not robot.lastRightWheelDropped:
                 rospy.loginfo("Right wheel dropped")
                 stopRobot()
@@ -408,7 +450,7 @@ def robotmanager():
                 wheeldropRightTopic.publish(0)
 
         # Left wheel drop with debounce
-        if newSensorFrame.bumperState & 8 > 0:
+        if newSensorFrame.isWheeldropLeft():
             if not robot.lastLeftWheelDropped:
                 rospy.loginfo("Left wheel dropped")
                 stopRobot()
@@ -447,6 +489,13 @@ def robotmanager():
         # Publish telemetry data such as battery charge etc.
         batteryChargeTopic.publish(lastSensorFrame.batteryCharge)
         batteryCapacityTopic.publish(lastSensorFrame.batteryCapacity)
+
+        lightBumperLeftTopic.publish(lastSensorFrame.lightBumperLeft)
+        lightBumperFrontLeftTopic.publish(lastSensorFrame.lightBumperFrontLeft)
+        lightBumperCenterLeftTopic.publish(lastSensorFrame.lightBumperCenterLeft)
+        lightBumperCenterRightTopic.publish(lastSensorFrame.lightBumperCenterRight)
+        lightBumperFrontRightTopic.publish(lastSensorFrame.lightBumperFrontRight)
+        lightBumperRightTopic.publish(lastSensorFrame.lightBumperRight)
 
         syncLock.release()
 

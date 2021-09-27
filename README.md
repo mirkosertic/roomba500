@@ -7,14 +7,15 @@ This implementation has been developed and tested on ROS Melodic.
 
 ## Provided Nodes
 
-### robotmanager.py
+### basecontroller.py
 
-`robotmanager.py` is a base controller (robot driver) for the Roomba. It takes ros commands and sends them to a connected
+`basecontroller.py` is a base controller (robot driver) for the Roomba. It takes ros commands and sends them to a connected
 Roomba. Connection to the Roomba is established over a serial interface.
 
 This base controller uses the Roomba wheel encoder counts to get a better estimate of the robot odometry position and velocity. The internal Roomba sensors lack precision, depending on the model and firmware version. Using the wheel encoder values gives the best results. Please note that there is no sensor fusion involved, so odometry tends to drift over time. Please combine this node with a laser scanner to get better results of even make if workable with the ROS navigation stack.
 
-However, this base controler works perfectly with [teleop_twist_keyboard](http://wiki.ros.org/teleop_twist_keyboard).
+However, this base controler works perfectly with [teleop_twist_keyboard](http://wiki.ros.org/teleop_twist_keyboard). There is
+also a [Node-RED Dashboard](https://nodered.org/) available in the node-red-roomba directory.
 
 #### Subscribed Topics
 
@@ -24,19 +25,31 @@ However, this base controler works perfectly with [teleop_twist_keyboard](http:/
 #### Published Topics
 
 * `odom` ([nav_msgs/Odometry](http://docs.ros.org/en/api/nav_msgs/html/msg/Odometry.html))
-    Odometry readings from the robot.
+  Odometry readings from the robot.
 * `batteryCharge` (int16)
-    Charge of the battery in mAh.
+  Charge of the battery in mAh.
 * `batteryCapacity` (int16)
-    Capacity of the battery in mAh.
+  Capacity of the battery in mAh.
 * `bumperLeft` (int16)
-    Status of the bumper. 1 = triggered, 0 = not triggered. Only state change are published
+  Status of the bumper. 1 = triggered, 0 = not triggered. Only state change are published
 * `bumperRight` (int16)
-    Status of the bumper. 1 = triggered, 0 = not triggered. Only state change are published
+  Status of the bumper. 1 = triggered, 0 = not triggered. Only state change are published
 * `wheeldropLeft` (int16)
-    Status of wheel. 1 = dropped, 0 = not dropped. Only state change are published
+  Status of wheel. 1 = dropped, 0 = not dropped. Only state change are published
 * `wheeldropRight` (int16)
-    Status of wheel. 1 = dropped, 0 = not dropped. Only state change are published
+  Status of wheel. 1 = dropped, 0 = not dropped. Only state change are published
+* `lightBumperLeft` (int16)
+  Value for the left Light-Bumper (0..4095)
+* `lightBumperFrontLeft` (int16)
+  Value for the front-left Light-Bumper (0..4095)  
+* `lightBumperCenterLeft` (int16)
+  Value for the center-left Light-Bumper (0..4095)  
+* `lightBumperCenterRight` (int16)
+  Value for the center-right Light-Bumper (0..4095)  
+* `lightBumperFrontRight` (int16)
+  Value for the front-right Light-Bumper (0..4095)  
+* `lightBumperRight` (int16)
+  Value for the right Light-Bumper (0..4095)
 
 #### Parameters
 
@@ -53,5 +66,9 @@ However, this base controler works perfectly with [teleop_twist_keyboard](http:/
 * `pollingintervalionhertz` (int, default: 60)
 
 ## Installation
+
+TODO
+
+## Node-RED Dashboard
 
 TODO

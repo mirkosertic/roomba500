@@ -1,0 +1,15 @@
+{
+    "name": "node-red-roomba",
+    "description": "A simple node-red flow and dashboard to control the Roomba5xx",
+    "version": "0.0.1",
+    "dependencies": {
+        "node-red-dashboard": "3.0.4",
+        "snappy-ros": "0.3.4"
+    },
+    "node-red": {
+        "settings": {
+            "flowFile": "flows.json",
+            "credentialsFile": "flow_cred.json"
+        }
+    }
+}
