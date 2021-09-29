@@ -73,9 +73,9 @@ class Roomba500:
 
     def updateMotorControl(self):
         self.ser.write(chr(144))
-        self.ser.write(chr(self.mainbrushPWM))
-        self.ser.write(chr(self.sidebrushPWM))
-        self.ser.write(chr(self.vacuumPWM))
+        self.ser.write(chr(self.mainbrushPWM & 0xff))
+        self.ser.write(chr(self.sidebrushPWM & 0xff))
+        self.ser.write(chr(self.vacuumPWM & 0xff))
 
     def playNote(self, note, duration):
         self.ser.write(chr(140))
@@ -97,7 +97,7 @@ class Roomba500:
 
     def readSensorFrame(self):
         self.ser.write(chr(149))
-        self.ser.write(chr(11))
+        self.ser.write(chr(12))
         self.ser.write(chr(43))
         self.ser.write(chr(44))
         self.ser.write(chr(25))
@@ -110,6 +110,8 @@ class Roomba500:
         self.ser.write(chr(49))
         self.ser.write(chr(50))
         self.ser.write(chr(51))
+
+        self.ser.write(chr(35))
 
         leftWheel = ord(self.ser.read()) << 8 | ord(self.ser.read())
         rightWheel = ord(self.ser.read()) << 8 | ord(self.ser.read())
@@ -124,6 +126,8 @@ class Roomba500:
         lightBumpFrontRight = ord(self.ser.read()) << 8 | ord(self.ser.read())
         lightBumpRight = ord(self.ser.read()) << 8 | ord(self.ser.read())
 
+        oimode = ord(self.ser.read())
+
         result = SensorFrame()
         result.leftWheel = leftWheel
         result.rightWheel = rightWheel
@@ -136,5 +140,6 @@ class Roomba500:
         result.lightBumperCenterRight = lightBumpCenterRight
         result.lightBumperFrontRight = lightBumpFrontRight
         result.lightBumperRight = lightBumpRight
+        result.oimode = oimode
 
         return result

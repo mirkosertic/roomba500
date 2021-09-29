@@ -296,7 +296,7 @@ def newCmdPWMMainBrush(data):
 
     syncLock.acquire()
 
-    robot.mainbrushPWM = data.value
+    robot.mainbrushPWM = data.data
     robot.updateMotorControl()
 
     syncLock.release()
@@ -306,7 +306,7 @@ def newCmdPWMSideBrush(data):
 
     syncLock.acquire()
 
-    robot.sidebrushPWM = data.value
+    robot.sidebrushPWM = data.data
     robot.updateMotorControl()
 
     syncLock.release()
@@ -316,7 +316,9 @@ def newCmdPWMVacuum(data):
 
     syncLock.acquire()
 
-    robot.vacuumPWM = data.value
+    rospy.loginfo("Received vacuum pwm command %s", data)
+
+    robot.vacuumPWM = data.data
     robot.updateMotorControl()
 
     syncLock.release()
@@ -373,6 +375,8 @@ def robotmanager():
     lightBumperCenterRightTopic = rospy.Publisher('lightBumperCenterRight', Int16, queue_size = 10)
     lightBumperFrontRightTopic = rospy.Publisher('lightBumperFrontRight', Int16, queue_size = 10)
     lightBumperRightTopic = rospy.Publisher('lightBumperRight', Int16, queue_size = 10)
+
+    oimodeTopic = rospy.Publisher('oimode', Int16, queue_size = 10)
 
     # Here goes the odometry data
     odomTopic = rospy.Publisher('odom', Odometry, queue_size = 10)
@@ -496,6 +500,8 @@ def robotmanager():
         lightBumperCenterRightTopic.publish(lastSensorFrame.lightBumperCenterRight)
         lightBumperFrontRightTopic.publish(lastSensorFrame.lightBumperFrontRight)
         lightBumperRightTopic.publish(lastSensorFrame.lightBumperRight)
+
+        oimodeTopic.publish(lastSensorFrame.oimode)
 
         syncLock.release()
 

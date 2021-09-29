@@ -136,7 +136,18 @@
         "className": ""
     },
     {
-        "id": "a82a9d760537016a",
+        "id": "ca461530954d3a0b",
+        "type": "ui_group",
+        "name": "Motors",
+        "tab": "fe3ba83191bb4378",
+        "order": 3,
+        "disp": true,
+        "width": "6",
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "3d7f94da5205444a",
         "type": "ui_spacer",
         "z": "79e0000ef76bb4d1",
         "name": "spacer",
@@ -146,7 +157,7 @@
         "height": 1
     },
     {
-        "id": "eaa01d8f9fa4e14b",
+        "id": "6143c4e3398f0a67",
         "type": "ui_spacer",
         "z": "79e0000ef76bb4d1",
         "name": "spacer",
@@ -156,7 +167,7 @@
         "height": 1
     },
     {
-        "id": "1409cf0f91bc2b63",
+        "id": "6168714002554a87",
         "type": "ui_spacer",
         "z": "79e0000ef76bb4d1",
         "name": "spacer",
@@ -166,24 +177,14 @@
         "height": 1
     },
     {
-        "id": "02a0706841c02930",
-        "type": "ui_spacer",
-        "z": "79e0000ef76bb4d1",
-        "name": "spacer",
-        "group": "8ef9680d6653a048",
-        "order": 2,
-        "width": 2,
-        "height": 1
-    },
-    {
         "id": "67fecf3d19de7dd6",
         "type": "ros-subscriber",
         "z": "79e0000ef76bb4d1",
         "topicname": "batteryCharge",
         "typepackage": "std_msgs",
         "typename": "Int16",
-        "x": 180,
-        "y": 120,
+        "x": 170,
+        "y": 80,
         "wires": [
             [
                 "2c395ee175a98ccb"
@@ -206,8 +207,8 @@
         "format": "{{msg.payload.data}} mAh",
         "layout": "row-spread",
         "className": "",
-        "x": 490,
-        "y": 120,
+        "x": 480,
+        "y": 80,
         "wires": []
     },
     {
@@ -217,8 +218,8 @@
         "topicname": "batteryCapacity",
         "typepackage": "std_msgs",
         "typename": "Int16",
-        "x": 180,
-        "y": 240,
+        "x": 170,
+        "y": 140,
         "wires": [
             [
                 "c0e1794708f2edf8"
@@ -241,8 +242,8 @@
         "format": "{{msg.payload.data}} mAh",
         "layout": "row-spread",
         "className": "",
-        "x": 490,
-        "y": 240,
+        "x": 480,
+        "y": 140,
         "wires": []
     },
     {
@@ -263,13 +264,13 @@
         "icon": "keyboard_arrow_left",
         "payload": "{\"amount\":1}",
         "payloadType": "json",
-        "topic": "topic",
-        "topicType": "msg",
-        "x": 210,
-        "y": 400,
+        "topic": "direction",
+        "topicType": "str",
+        "x": 550,
+        "y": 320,
         "wires": [
             [
-                "73884110c7794b9c"
+                "f64711538ce0a388"
             ]
         ]
     },
@@ -291,13 +292,13 @@
         "icon": "keyboard_arrow_right",
         "payload": "{\"amount\":-1}",
         "payloadType": "json",
-        "topic": "topic",
-        "topicType": "msg",
-        "x": 210,
-        "y": 440,
+        "topic": "direction",
+        "topicType": "str",
+        "x": 550,
+        "y": 360,
         "wires": [
             [
-                "73884110c7794b9c"
+                "803001a20e67358b"
             ]
         ]
     },
@@ -319,13 +320,13 @@
         "icon": "stop",
         "payload": "{\"amount\":0}",
         "payloadType": "json",
-        "topic": "topic",
-        "topicType": "msg",
-        "x": 210,
-        "y": 320,
+        "topic": "direction",
+        "topicType": "str",
+        "x": 550,
+        "y": 540,
         "wires": [
             [
-                "5b26fbd6d9f1503c"
+                "b18ec18ea65b8882"
             ]
         ]
     },
@@ -347,13 +348,13 @@
         "icon": "keyboard_arrow_up",
         "payload": "{\"amount\":1}",
         "payloadType": "json",
-        "topic": "topic",
-        "topicType": "msg",
-        "x": 220,
-        "y": 360,
+        "topic": "direction",
+        "topicType": "str",
+        "x": 540,
+        "y": 500,
         "wires": [
             [
-                "5b26fbd6d9f1503c"
+                "db8909fb0f796672"
             ]
         ]
     },
@@ -364,7 +365,7 @@
         "topicname": "cmd_vel",
         "typepackage": "geometry_msgs",
         "typename": "Twist",
-        "x": 840,
+        "x": 1380,
         "y": 420,
         "wires": []
     },
@@ -381,16 +382,19 @@
         "height": 0,
         "passthru": true,
         "outs": "all",
-        "topic": "drivespeed",
-        "topicType": "flow",
+        "topic": "speed",
+        "topicType": "str",
         "min": "-0.8",
         "max": "0.8",
         "step": "0.05",
         "className": "",
-        "x": 710,
-        "y": 600,
+        "x": 530,
+        "y": 440,
         "wires": [
-            []
+            [
+                "db8909fb0f796672",
+                "b18ec18ea65b8882"
+            ]
         ]
     },
     {
@@ -406,16 +410,19 @@
         "height": 0,
         "passthru": true,
         "outs": "all",
-        "topic": "rotationspeed",
-        "topicType": "flow",
+        "topic": "speed",
+        "topicType": "str",
         "min": "-1",
         "max": "1",
         "step": "0.1",
         "className": "",
-        "x": 720,
-        "y": 520,
+        "x": 520,
+        "y": 260,
         "wires": [
-            []
+            [
+                "f64711538ce0a388",
+                "803001a20e67358b"
+            ]
         ]
     },
     {
@@ -423,14 +430,14 @@
         "type": "function",
         "z": "79e0000ef76bb4d1",
         "name": "Create Drive Message",
-        "func": "msg.payload = {\n    \"linear\": {\n        \"x\": flow.get(\"drivespeed\") * msg.payload.amount,\n        \"y\": 0,\n        \"z\": 0\n    },\n    \"angular\": {\n        \"x\": 0,\n        \"y\": 0,\n        \"z\": 0\n    }\n}\nreturn msg;",
+        "func": "if (msg.payload.speed && msg.payload.direction) {\n    msg.payload = {\n        \"linear\": {\n            \"x\": msg.payload.speed.payload * msg.payload.direction.payload.amount,\n            \"y\": 0,\n            \"z\": 0\n        },\n        \"angular\": {\n            \"x\": 0,\n            \"y\": 0,\n            \"z\": 0\n        }\n    }\n} else {\n    msg.payload = {\n        \"linear\": {\n            \"x\": 0,\n            \"y\": 0,\n            \"z\": 0\n        },\n        \"angular\": {\n            \"x\": 0,\n            \"y\": 0,\n            \"z\": 0\n        }\n    }    \n}\nreturn msg;",
         "outputs": 1,
         "noerr": 0,
         "initialize": "// Der Code hier wird ausgeführt,\n// wenn der Node gestartet wird\nif (flow.get(\"drivespeed\") === undefined) {\n    flow.set(\"drivespeed\", 0.20)\n}",
         "finalize": "",
         "libs": [],
-        "x": 540,
-        "y": 340,
+        "x": 960,
+        "y": 500,
         "wires": [
             [
                 "d5bfcdd6d51617b8",
@@ -443,14 +450,14 @@
         "type": "function",
         "z": "79e0000ef76bb4d1",
         "name": "Create Turn Message",
-        "func": "msg.payload = {\n    \"linear\": {\n        \"x\": 0,\n        \"y\": 0,\n        \"z\": 0\n    },\n    \"angular\": {\n        \"x\": 0,\n        \"y\": 0,\n        \"z\": flow.get(\"rotationspeed\") * msg.payload.amount\n    }\n}\nreturn msg;",
+        "func": "if (msg.payload.speed && msg.payload.direction) {\n    msg.payload = {\n        \"linear\": {\n            \"x\": 0,\n            \"y\": 0,\n            \"z\": 0\n        },\n        \"angular\": {\n            \"x\": 0,\n            \"y\": 0,\n            \"z\": msg.payload.speed.payload * msg.payload.direction.payload.amount\n        }\n    }\n} else {\n    msg.payload = {\n        \"linear\": {\n            \"x\": 0,\n            \"y\": 0,\n            \"z\": 0\n        },\n        \"angular\": {\n            \"x\": 0,\n            \"y\": 0,\n            \"z\": 0\n        }\n    }\n}\nreturn msg;",
         "outputs": 1,
         "noerr": 0,
         "initialize": "// Der Code hier wird ausgeführt,\n// wenn der Node gestartet wird\nif (flow.get(\"rotationspeed\") === undefined) {\n    flow.set(\"rotationspeed\", 0.35)\n}",
         "finalize": "",
         "libs": [],
-        "x": 540,
-        "y": 420,
+        "x": 960,
+        "y": 320,
         "wires": [
             [
                 "d5bfcdd6d51617b8",
@@ -467,14 +474,14 @@
         "order": 1,
         "width": 2,
         "height": 1,
-        "format": "<div ng-bind-html=\"msg.payload.value\"></div>",
+        "format": "L Bumper : <span ng-bind-html=\"msg.payload.data\"></span>",
         "storeOutMessages": true,
         "fwdInMessages": true,
         "resendOnRefresh": true,
         "templateScope": "local",
         "className": "",
-        "x": 410,
-        "y": 520,
+        "x": 470,
+        "y": 820,
         "wires": [
             []
         ]
@@ -488,14 +495,14 @@
         "order": 3,
         "width": 2,
         "height": 1,
-        "format": "<div ng-bind-html=\"msg.payload.value\"></div>",
+        "format": "R Bumper: <span ng-bind-html=\"msg.payload.data\"></span>",
         "storeOutMessages": true,
         "fwdInMessages": true,
         "resendOnRefresh": true,
         "templateScope": "local",
         "className": "",
-        "x": 410,
-        "y": 620,
+        "x": 460,
+        "y": 880,
         "wires": [
             []
         ]
@@ -513,8 +520,8 @@
         "format": "{{msg.payload.data}}",
         "layout": "row-spread",
         "className": "",
-        "x": 410,
-        "y": 720,
+        "x": 460,
+        "y": 960,
         "wires": []
     },
     {
@@ -530,8 +537,8 @@
         "format": "{{msg.payload.data}}",
         "layout": "row-spread",
         "className": "",
-        "x": 420,
-        "y": 780,
+        "x": 470,
+        "y": 1020,
         "wires": []
     },
     {
@@ -547,8 +554,8 @@
         "format": "{{msg.payload.data}}",
         "layout": "row-spread",
         "className": "",
-        "x": 430,
-        "y": 840,
+        "x": 480,
+        "y": 1080,
         "wires": []
     },
     {
@@ -564,8 +571,8 @@
         "format": "{{msg.payload.data}}",
         "layout": "row-spread",
         "className": "",
-        "x": 430,
-        "y": 900,
+        "x": 480,
+        "y": 1140,
         "wires": []
     },
     {
@@ -581,8 +588,8 @@
         "format": "{{msg.payload.data}}",
         "layout": "row-spread",
         "className": "",
-        "x": 430,
-        "y": 960,
+        "x": 480,
+        "y": 1200,
         "wires": []
     },
     {
@@ -598,8 +605,8 @@
         "format": "{{msg.payload.data}}",
         "layout": "row-spread",
         "className": "",
-        "x": 410,
-        "y": 1020,
+        "x": 460,
+        "y": 1260,
         "wires": []
     },
     {
@@ -609,8 +616,8 @@
         "topicname": "lightBumperLeft",
         "typepackage": "std_msgs",
         "typename": "Int16",
-        "x": 80,
-        "y": 720,
+        "x": 130,
+        "y": 960,
         "wires": [
             [
                 "f7496856c7a8e21c"
@@ -624,8 +631,8 @@
         "topicname": "lightBumperFrontLeft",
         "typepackage": "std_msgs",
         "typename": "Int16",
-        "x": 100,
-        "y": 780,
+        "x": 150,
+        "y": 1020,
         "wires": [
             [
                 "ea57022ba7ad74b6"
@@ -639,8 +646,8 @@
         "topicname": "lightBumperCenterLeft",
         "typepackage": "std_msgs",
         "typename": "Int16",
-        "x": 100,
-        "y": 840,
+        "x": 150,
+        "y": 1080,
         "wires": [
             [
                 "160ba99e6c04895c"
@@ -654,8 +661,8 @@
         "topicname": "lightBumperCenterRight",
         "typepackage": "std_msgs",
         "typename": "Int16",
-        "x": 110,
-        "y": 900,
+        "x": 160,
+        "y": 1140,
         "wires": [
             [
                 "734946f11c40bb2f"
@@ -669,8 +676,8 @@
         "topicname": "lightBumperFrontRight",
         "typepackage": "std_msgs",
         "typename": "Int16",
-        "x": 110,
-        "y": 960,
+        "x": 160,
+        "y": 1200,
         "wires": [
             [
                 "7fc5831e9ea786c1"
@@ -684,8 +691,8 @@
         "topicname": "lightBumperRight",
         "typepackage": "std_msgs",
         "typename": "Int16",
-        "x": 120,
-        "y": 1020,
+        "x": 170,
+        "y": 1260,
         "wires": [
             [
                 "0246d7414b336d3a"
@@ -697,15 +704,15 @@
         "type": "debug",
         "z": "79e0000ef76bb4d1",
         "name": "",
-        "active": true,
+        "active": false,
         "tosidebar": true,
         "console": false,
         "tostatus": false,
         "complete": "false",
         "statusVal": "",
         "statusType": "auto",
-        "x": 850,
-        "y": 300,
+        "x": 1270,
+        "y": 220,
         "wires": []
     },
     {
@@ -715,8 +722,8 @@
         "topicname": "bumperLeft",
         "typepackage": "std_msgs",
         "typename": "Int16",
-        "x": 90,
-        "y": 520,
+        "x": 150,
+        "y": 820,
         "wires": [
             [
                 "5a4dd8914d4aad65"
@@ -730,12 +737,421 @@
         "topicname": "bumperRight",
         "typepackage": "std_msgs",
         "typename": "Int16",
-        "x": 90,
-        "y": 620,
+        "x": 140,
+        "y": 880,
         "wires": [
             [
                 "dce9f7aef808323d"
             ]
         ]
+    },
+    {
+        "id": "f64711538ce0a388",
+        "type": "join",
+        "z": "79e0000ef76bb4d1",
+        "name": "",
+        "mode": "custom",
+        "build": "object",
+        "property": "",
+        "propertyType": "full",
+        "key": "topic",
+        "joiner": "\\n",
+        "joinerType": "str",
+        "accumulate": true,
+        "timeout": "",
+        "count": "1",
+        "reduceRight": false,
+        "reduceExp": "",
+        "reduceInit": "",
+        "reduceInitType": "",
+        "reduceFixup": "",
+        "x": 730,
+        "y": 300,
+        "wires": [
+            [
+                "73884110c7794b9c"
+            ]
+        ]
+    },
+    {
+        "id": "803001a20e67358b",
+        "type": "join",
+        "z": "79e0000ef76bb4d1",
+        "name": "",
+        "mode": "custom",
+        "build": "object",
+        "property": "",
+        "propertyType": "full",
+        "key": "topic",
+        "joiner": "\\n",
+        "joinerType": "str",
+        "accumulate": true,
+        "timeout": "",
+        "count": "1",
+        "reduceRight": false,
+        "reduceExp": "",
+        "reduceInit": "",
+        "reduceInitType": "",
+        "reduceFixup": "",
+        "x": 730,
+        "y": 360,
+        "wires": [
+            [
+                "73884110c7794b9c"
+            ]
+        ]
+    },
+    {
+        "id": "db8909fb0f796672",
+        "type": "join",
+        "z": "79e0000ef76bb4d1",
+        "name": "",
+        "mode": "custom",
+        "build": "object",
+        "property": "",
+        "propertyType": "full",
+        "key": "topic",
+        "joiner": "\\n",
+        "joinerType": "str",
+        "accumulate": true,
+        "timeout": "",
+        "count": "1",
+        "reduceRight": false,
+        "reduceExp": "",
+        "reduceInit": "",
+        "reduceInitType": "",
+        "reduceFixup": "",
+        "x": 730,
+        "y": 480,
+        "wires": [
+            [
+                "5b26fbd6d9f1503c"
+            ]
+        ]
+    },
+    {
+        "id": "b18ec18ea65b8882",
+        "type": "join",
+        "z": "79e0000ef76bb4d1",
+        "name": "",
+        "mode": "custom",
+        "build": "object",
+        "property": "",
+        "propertyType": "full",
+        "key": "topic",
+        "joiner": "\\n",
+        "joinerType": "str",
+        "accumulate": true,
+        "timeout": "",
+        "count": "1",
+        "reduceRight": false,
+        "reduceExp": "",
+        "reduceInit": "",
+        "reduceInitType": "",
+        "reduceFixup": "",
+        "x": 730,
+        "y": 540,
+        "wires": [
+            [
+                "5b26fbd6d9f1503c"
+            ]
+        ]
+    },
+    {
+        "id": "d638bad66f0d9918",
+        "type": "ui_ui_control",
+        "z": "79e0000ef76bb4d1",
+        "name": "On connect",
+        "events": "all",
+        "x": 90,
+        "y": 360,
+        "wires": [
+            [
+                "f1fd0bee98cd41b9",
+                "7cc402fcbb58a04f",
+                "476015931fb46cd4"
+            ]
+        ]
+    },
+    {
+        "id": "f1fd0bee98cd41b9",
+        "type": "function",
+        "z": "79e0000ef76bb4d1",
+        "name": "Initial value",
+        "func": "msg.payload=0.35\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 330,
+        "y": 260,
+        "wires": [
+            [
+                "422163e2c3e6f641"
+            ]
+        ]
+    },
+    {
+        "id": "7cc402fcbb58a04f",
+        "type": "function",
+        "z": "79e0000ef76bb4d1",
+        "name": "Initial value",
+        "func": "msg.payload = 0.25\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 330,
+        "y": 440,
+        "wires": [
+            [
+                "5fbfb36b49121379"
+            ]
+        ]
+    },
+    {
+        "id": "d2d87a36fe873e76",
+        "type": "ros-subscriber",
+        "z": "79e0000ef76bb4d1",
+        "topicname": "oimode",
+        "typepackage": "std_msgs",
+        "typename": "Int16",
+        "x": 160,
+        "y": 1320,
+        "wires": [
+            [
+                "adfb5a5a0ca826e5"
+            ]
+        ]
+    },
+    {
+        "id": "adfb5a5a0ca826e5",
+        "type": "ui_text",
+        "z": "79e0000ef76bb4d1",
+        "group": "8ef9680d6653a048",
+        "order": 2,
+        "width": 2,
+        "height": 1,
+        "name": "",
+        "label": "OI Mode",
+        "format": "{{msg.payload.data}}",
+        "layout": "row-spread",
+        "className": "",
+        "x": 470,
+        "y": 1320,
+        "wires": []
+    },
+    {
+        "id": "1fd15b807ad8877f",
+        "type": "ui_slider",
+        "z": "79e0000ef76bb4d1",
+        "name": "",
+        "label": "Vacuum speed",
+        "tooltip": "",
+        "group": "ca461530954d3a0b",
+        "order": 1,
+        "width": 0,
+        "height": 0,
+        "passthru": true,
+        "outs": "all",
+        "topic": "topic",
+        "topicType": "msg",
+        "min": "-128",
+        "max": "127",
+        "step": 1,
+        "className": "",
+        "x": 540,
+        "y": 620,
+        "wires": [
+            [
+                "ed0325582d40f8b6"
+            ]
+        ]
+    },
+    {
+        "id": "c5aa442799636307",
+        "type": "ros-publisher",
+        "z": "79e0000ef76bb4d1",
+        "topicname": "cmd_vacuum",
+        "typepackage": "std_msgs",
+        "typename": "Int16",
+        "x": 1070,
+        "y": 620,
+        "wires": []
+    },
+    {
+        "id": "476015931fb46cd4",
+        "type": "function",
+        "z": "79e0000ef76bb4d1",
+        "name": "Initial value",
+        "func": "msg.payload = 0\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 330,
+        "y": 620,
+        "wires": [
+            [
+                "1fd15b807ad8877f",
+                "2b7af452ea53a127",
+                "0cad31f4fb3d4e67"
+            ]
+        ]
+    },
+    {
+        "id": "ed0325582d40f8b6",
+        "type": "function",
+        "z": "79e0000ef76bb4d1",
+        "name": "Create message",
+        "func": "msg.payload = {\n    \"data\": msg.payload\n}\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 770,
+        "y": 620,
+        "wires": [
+            [
+                "8ce70808c403c812",
+                "c5aa442799636307"
+            ]
+        ]
+    },
+    {
+        "id": "8ce70808c403c812",
+        "type": "debug",
+        "z": "79e0000ef76bb4d1",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1220,
+        "y": 560,
+        "wires": []
+    },
+    {
+        "id": "2b7af452ea53a127",
+        "type": "ui_slider",
+        "z": "79e0000ef76bb4d1",
+        "name": "",
+        "label": "Main brush speed",
+        "tooltip": "",
+        "group": "ca461530954d3a0b",
+        "order": 2,
+        "width": 0,
+        "height": 0,
+        "passthru": true,
+        "outs": "all",
+        "topic": "topic",
+        "topicType": "msg",
+        "min": "-128",
+        "max": "128",
+        "step": 1,
+        "className": "",
+        "x": 550,
+        "y": 680,
+        "wires": [
+            [
+                "4ad2ca379b1cd1c8"
+            ]
+        ]
+    },
+    {
+        "id": "0cad31f4fb3d4e67",
+        "type": "ui_slider",
+        "z": "79e0000ef76bb4d1",
+        "name": "",
+        "label": "Side brush speed",
+        "tooltip": "",
+        "group": "ca461530954d3a0b",
+        "order": 3,
+        "width": 0,
+        "height": 0,
+        "passthru": true,
+        "outs": "all",
+        "topic": "topic",
+        "topicType": "msg",
+        "min": "-128",
+        "max": "127",
+        "step": 1,
+        "className": "",
+        "x": 550,
+        "y": 740,
+        "wires": [
+            [
+                "8de667f5df80dc01"
+            ]
+        ]
+    },
+    {
+        "id": "4ad2ca379b1cd1c8",
+        "type": "function",
+        "z": "79e0000ef76bb4d1",
+        "name": "Create message",
+        "func": "msg.payload = {\n    \"data\": msg.payload\n}\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 770,
+        "y": 680,
+        "wires": [
+            [
+                "de20c690785a4a5f",
+                "8ce70808c403c812"
+            ]
+        ]
+    },
+    {
+        "id": "8de667f5df80dc01",
+        "type": "function",
+        "z": "79e0000ef76bb4d1",
+        "name": "Create message",
+        "func": "msg.payload = {\n    \"data\": msg.payload\n}\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 770,
+        "y": 740,
+        "wires": [
+            [
+                "2b6fe3d3fdeefc67",
+                "8ce70808c403c812"
+            ]
+        ]
+    },
+    {
+        "id": "de20c690785a4a5f",
+        "type": "ros-publisher",
+        "z": "79e0000ef76bb4d1",
+        "topicname": "cmd_mainbrush",
+        "typepackage": "std_msgs",
+        "typename": "Int16",
+        "x": 1080,
+        "y": 680,
+        "wires": []
+    },
+    {
+        "id": "2b6fe3d3fdeefc67",
+        "type": "ros-publisher",
+        "z": "79e0000ef76bb4d1",
+        "topicname": "cmd_sidebrush",
+        "typepackage": "std_msgs",
+        "typename": "Int16",
+        "x": 1080,
+        "y": 740,
+        "wires": []
     }
 ]

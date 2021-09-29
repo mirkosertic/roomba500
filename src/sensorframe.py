@@ -14,6 +14,7 @@ class SensorFrame:
         self.lightBumperCenterRight = 0
         self.lightBumperFrontRight = 0
         self.lightBumperRight = 0
+        self.oimode = 0
 
     def isBumperLeft(self):
         return self.bumperState & 2 > 0

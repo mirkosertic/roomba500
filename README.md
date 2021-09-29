@@ -1,4 +1,4 @@
-# Roomba 5xx support for ROS(Robot Operating System)
+# Roomba 5xx support for ROS (Robot Operating System)
 
 An implementation of a ROS base controller and other utilities for the Roomba 5xx platform based on the Roomba Open Interface
 Specification.
@@ -14,13 +14,19 @@ Roomba. Connection to the Roomba is established over a serial interface.
 
 This base controller uses the Roomba wheel encoder counts to get a better estimate of the robot odometry position and velocity. The internal Roomba sensors lack precision, depending on the model and firmware version. Using the wheel encoder values gives the best results. Please note that there is no sensor fusion involved, so odometry tends to drift over time. Please combine this node with a laser scanner to get better results of even make if workable with the ROS navigation stack.
 
-However, this base controler works perfectly with [teleop_twist_keyboard](http://wiki.ros.org/teleop_twist_keyboard). There is
+However, this base controller works perfectly with [teleop_twist_keyboard](http://wiki.ros.org/teleop_twist_keyboard). There is
 also a [Node-RED Dashboard](https://nodered.org/) available in the node-red-roomba directory.
 
 #### Subscribed Topics
 
 * `cmd_vel` ([geometry_msgs/Twist](http://docs.ros.org/en/api/geometry_msgs/html/msg/Twist.html))
-    Velocity commands to the robot.
+  Velocity commands to the robot.
+* `cmd_mainbrush` (int16)
+  Motorspeed of the main brush. -127 to +127. 0 = Off
+* `cmd_sidebrush` (int16)
+  Motorspeed of the side brush. -127 to +127. 0 = Off
+* `cmd_vacuum` (int16)
+  Motorspeed of the vacuum. 0 to +127. 0 = Off
 
 #### Published Topics
 
@@ -50,6 +56,8 @@ also a [Node-RED Dashboard](https://nodered.org/) available in the node-red-room
   Value for the front-right Light-Bumper (0..4095)  
 * `lightBumperRight` (int16)
   Value for the right Light-Bumper (0..4095)
+* `oimode` (int16)
+  The current mode of the open interface (0 = Off, 1 = Passive, 2 = Save, 3 = Full)
 
 #### Parameters
 
