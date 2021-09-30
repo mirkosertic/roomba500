@@ -131,7 +131,7 @@
         "tab": "fe3ba83191bb4378",
         "order": 2,
         "disp": true,
-        "width": "6",
+        "width": 6,
         "collapse": false,
         "className": ""
     },
@@ -142,12 +142,12 @@
         "tab": "fe3ba83191bb4378",
         "order": 3,
         "disp": true,
-        "width": "6",
+        "width": 6,
         "collapse": false,
         "className": ""
     },
     {
-        "id": "3d7f94da5205444a",
+        "id": "9077937c483ac061",
         "type": "ui_spacer",
         "z": "79e0000ef76bb4d1",
         "name": "spacer",
@@ -157,7 +157,7 @@
         "height": 1
     },
     {
-        "id": "6143c4e3398f0a67",
+        "id": "5d7a4af9cb05e171",
         "type": "ui_spacer",
         "z": "79e0000ef76bb4d1",
         "name": "spacer",
@@ -167,7 +167,7 @@
         "height": 1
     },
     {
-        "id": "6168714002554a87",
+        "id": "cb68bfafd429936f",
         "type": "ui_spacer",
         "z": "79e0000ef76bb4d1",
         "name": "spacer",
@@ -456,7 +456,7 @@
         "initialize": "// Der Code hier wird ausgeführt,\n// wenn der Node gestartet wird\nif (flow.get(\"rotationspeed\") === undefined) {\n    flow.set(\"rotationspeed\", 0.35)\n}",
         "finalize": "",
         "libs": [],
-        "x": 960,
+        "x": 980,
         "y": 320,
         "wires": [
             [
@@ -480,8 +480,8 @@
         "resendOnRefresh": true,
         "templateScope": "local",
         "className": "",
-        "x": 470,
-        "y": 820,
+        "x": 490,
+        "y": 960,
         "wires": [
             []
         ]
@@ -501,8 +501,8 @@
         "resendOnRefresh": true,
         "templateScope": "local",
         "className": "",
-        "x": 460,
-        "y": 880,
+        "x": 480,
+        "y": 1020,
         "wires": [
             []
         ]
@@ -520,8 +520,8 @@
         "format": "{{msg.payload.data}}",
         "layout": "row-spread",
         "className": "",
-        "x": 460,
-        "y": 960,
+        "x": 480,
+        "y": 1100,
         "wires": []
     },
     {
@@ -537,8 +537,8 @@
         "format": "{{msg.payload.data}}",
         "layout": "row-spread",
         "className": "",
-        "x": 470,
-        "y": 1020,
+        "x": 490,
+        "y": 1160,
         "wires": []
     },
     {
@@ -554,8 +554,8 @@
         "format": "{{msg.payload.data}}",
         "layout": "row-spread",
         "className": "",
-        "x": 480,
-        "y": 1080,
+        "x": 500,
+        "y": 1220,
         "wires": []
     },
     {
@@ -571,8 +571,8 @@
         "format": "{{msg.payload.data}}",
         "layout": "row-spread",
         "className": "",
-        "x": 480,
-        "y": 1140,
+        "x": 500,
+        "y": 1280,
         "wires": []
     },
     {
@@ -588,8 +588,8 @@
         "format": "{{msg.payload.data}}",
         "layout": "row-spread",
         "className": "",
-        "x": 480,
-        "y": 1200,
+        "x": 500,
+        "y": 1340,
         "wires": []
     },
     {
@@ -605,8 +605,8 @@
         "format": "{{msg.payload.data}}",
         "layout": "row-spread",
         "className": "",
-        "x": 460,
-        "y": 1260,
+        "x": 480,
+        "y": 1400,
         "wires": []
     },
     {
@@ -616,8 +616,8 @@
         "topicname": "lightBumperLeft",
         "typepackage": "std_msgs",
         "typename": "Int16",
-        "x": 130,
-        "y": 960,
+        "x": 150,
+        "y": 1100,
         "wires": [
             [
                 "f7496856c7a8e21c"
@@ -631,8 +631,8 @@
         "topicname": "lightBumperFrontLeft",
         "typepackage": "std_msgs",
         "typename": "Int16",
-        "x": 150,
-        "y": 1020,
+        "x": 170,
+        "y": 1160,
         "wires": [
             [
                 "ea57022ba7ad74b6"
@@ -646,8 +646,8 @@
         "topicname": "lightBumperCenterLeft",
         "typepackage": "std_msgs",
         "typename": "Int16",
-        "x": 150,
-        "y": 1080,
+        "x": 170,
+        "y": 1220,
         "wires": [
             [
                 "160ba99e6c04895c"
@@ -661,8 +661,8 @@
         "topicname": "lightBumperCenterRight",
         "typepackage": "std_msgs",
         "typename": "Int16",
-        "x": 160,
-        "y": 1140,
+        "x": 180,
+        "y": 1280,
         "wires": [
             [
                 "734946f11c40bb2f"
@@ -676,8 +676,8 @@
         "topicname": "lightBumperFrontRight",
         "typepackage": "std_msgs",
         "typename": "Int16",
-        "x": 160,
-        "y": 1200,
+        "x": 180,
+        "y": 1340,
         "wires": [
             [
                 "7fc5831e9ea786c1"
@@ -691,8 +691,8 @@
         "topicname": "lightBumperRight",
         "typepackage": "std_msgs",
         "typename": "Int16",
-        "x": 170,
-        "y": 1260,
+        "x": 190,
+        "y": 1400,
         "wires": [
             [
                 "0246d7414b336d3a"
@@ -722,8 +722,8 @@
         "topicname": "bumperLeft",
         "typepackage": "std_msgs",
         "typename": "Int16",
-        "x": 150,
-        "y": 820,
+        "x": 170,
+        "y": 960,
         "wires": [
             [
                 "5a4dd8914d4aad65"
@@ -737,8 +737,8 @@
         "topicname": "bumperRight",
         "typepackage": "std_msgs",
         "typename": "Int16",
-        "x": 140,
-        "y": 880,
+        "x": 160,
+        "y": 1020,
         "wires": [
             [
                 "dce9f7aef808323d"
@@ -918,8 +918,8 @@
         "topicname": "oimode",
         "typepackage": "std_msgs",
         "typename": "Int16",
-        "x": 160,
-        "y": 1320,
+        "x": 180,
+        "y": 1460,
         "wires": [
             [
                 "adfb5a5a0ca826e5"
@@ -939,8 +939,8 @@
         "format": "{{msg.payload.data}}",
         "layout": "row-spread",
         "className": "",
-        "x": 470,
-        "y": 1320,
+        "x": 490,
+        "y": 1460,
         "wires": []
     },
     {
@@ -952,8 +952,8 @@
         "tooltip": "",
         "group": "ca461530954d3a0b",
         "order": 1,
-        "width": 0,
-        "height": 0,
+        "width": 5,
+        "height": 1,
         "passthru": true,
         "outs": "all",
         "topic": "topic",
@@ -1027,7 +1027,7 @@
         "type": "debug",
         "z": "79e0000ef76bb4d1",
         "name": "",
-        "active": true,
+        "active": false,
         "tosidebar": true,
         "console": false,
         "tostatus": false,
@@ -1046,9 +1046,9 @@
         "label": "Main brush speed",
         "tooltip": "",
         "group": "ca461530954d3a0b",
-        "order": 2,
-        "width": 0,
-        "height": 0,
+        "order": 3,
+        "width": 5,
+        "height": 1,
         "passthru": true,
         "outs": "all",
         "topic": "topic",
@@ -1073,9 +1073,9 @@
         "label": "Side brush speed",
         "tooltip": "",
         "group": "ca461530954d3a0b",
-        "order": 3,
-        "width": 0,
-        "height": 0,
+        "order": 5,
+        "width": 5,
+        "height": 1,
         "passthru": true,
         "outs": "all",
         "topic": "topic",
@@ -1153,5 +1153,89 @@
         "x": 1080,
         "y": 740,
         "wires": []
+    },
+    {
+        "id": "d6811efc61eddee9",
+        "type": "ui_button",
+        "z": "79e0000ef76bb4d1",
+        "name": "Reset V",
+        "group": "ca461530954d3a0b",
+        "order": 2,
+        "width": 1,
+        "height": 1,
+        "passthru": false,
+        "label": "",
+        "tooltip": "",
+        "color": "",
+        "bgcolor": "",
+        "className": "",
+        "icon": "stop",
+        "payload": "0",
+        "payloadType": "num",
+        "topic": "topic",
+        "topicType": "msg",
+        "x": 250,
+        "y": 700,
+        "wires": [
+            [
+                "1fd15b807ad8877f"
+            ]
+        ]
+    },
+    {
+        "id": "9b35786bb978e9f8",
+        "type": "ui_button",
+        "z": "79e0000ef76bb4d1",
+        "name": "Reset MB",
+        "group": "ca461530954d3a0b",
+        "order": 4,
+        "width": 1,
+        "height": 1,
+        "passthru": false,
+        "label": "",
+        "tooltip": "",
+        "color": "",
+        "bgcolor": "",
+        "className": "",
+        "icon": "stop",
+        "payload": "0",
+        "payloadType": "num",
+        "topic": "topic",
+        "topicType": "msg",
+        "x": 250,
+        "y": 760,
+        "wires": [
+            [
+                "2b7af452ea53a127"
+            ]
+        ]
+    },
+    {
+        "id": "78db9901760bbcc1",
+        "type": "ui_button",
+        "z": "79e0000ef76bb4d1",
+        "name": "Reset SB",
+        "group": "ca461530954d3a0b",
+        "order": 6,
+        "width": 1,
+        "height": 1,
+        "passthru": false,
+        "label": "",
+        "tooltip": "",
+        "color": "",
+        "bgcolor": "",
+        "className": "",
+        "icon": "stop",
+        "payload": "0",
+        "payloadType": "num",
+        "topic": "topic",
+        "topicType": "msg",
+        "x": 240,
+        "y": 820,
+        "wires": [
+            [
+                "0cad31f4fb3d4e67"
+            ]
+        ]
     }
 ]

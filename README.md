@@ -80,3 +80,11 @@ TODO
 ## Node-RED Dashboard
 
 TODO
+
+Example Node-RED flow to control the Roomba:
+
+![Example Node-RED flow](doc/noderedflow.png)
+
+Example Node-RED dashboard for the Roomba:
+
+![Example Node-RED dashboard](doc/nodereddashboard.png)
