@@ -336,7 +336,7 @@ def robotmanager():
     fullRotationInSensorTicks = float(rospy.get_param('~fullRotationInSensorTicks', '1608.0'))
     ticksPerCm = float(rospy.get_param('~ticksPerCm', '22.5798'))
     robotWheelDistanceInCm = float(rospy.get_param('~robotWheelDistanceInCm', '25.0'))
-    pollingRateInHertz = int(rospy.get_param('~pollingintervalionhertz', '60'))
+    pollingRateInHertz = int(rospy.get_param('~pollingRateinHertz', '60'))
 
     # And connect to the roomba
     rospy.loginfo("Connecting to Roomba 5xx on port %s with %s baud", port, baudrate)

@@ -71,7 +71,7 @@ also a [Node-RED Dashboard](https://nodered.org/) available in the node-red-room
   Wheel encoder counts for a movement of 1 cm. Is individual for each Roomba depending on tyre usage etc.
 * `robotWheelDistanceInCm` (float, default: 25.0)
   The difference between the two robot wheels. Depends on the Roomba model.
-* `pollingintervalionhertz` (int, default: 60)
+* `pollingRateinHertz` (int, default: 60)
 
 ## Installation
 
