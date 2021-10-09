@@ -32,9 +32,14 @@ def publishOdometry(pose):
     if (deltaTimeInSeconds == 0):
         return
 
-    vxInMetersPerSecond = (pose.x - robot.lastKnownReferencePose.x) / deltaTimeInSeconds
-    vyInMetersPerSecond = (pose.y - robot.lastKnownReferencePose.y) / deltaTimeInSeconds
-    vthInRadiansPerSecond = ((pose.theta - robot.lastKnownReferencePose.theta) * math.pi / 180) / deltaTimeInSeconds
+    # The robot can only move forward ( x - direction in base_link coordinate frame
+    distanceX = pose.x - robot.lastKnownReferencePose.x
+    distanceY = pose.y - robot.lastKnownReferencePose.y
+    linearDistanceInMeters = math.sqrt(distanceX * distanceX + distanceY * distanceY)
+
+    vxInMetersPerSecond = linearDistanceInMeters / deltaTimeInSeconds
+    vyInMetersPerSecond = .0
+    vthInRadiansPerSecond = -((pose.theta - robot.lastKnownReferencePose.theta) * math.pi / 180) / deltaTimeInSeconds
 
     # Publish odometry
     odom = Odometry()
@@ -48,8 +53,6 @@ def publishOdometry(pose):
     odom.child_frame_id = "base_link"
     odom.twist.twist = Twist(Vector3(vxInMetersPerSecond, vyInMetersPerSecond, 0), Vector3(0, 0, vthInRadiansPerSecond))
 
-    odomTopic.publish(odom)
-
     transformBroadcaster.sendTransform(
         (pose.x, pose.y, 0.),
         odom_quat,
@@ -58,13 +61,7 @@ def publishOdometry(pose):
         "odom"
     )
 
-    transformBroadcaster.sendTransform(
-        (0., 0., 0.),
-        tf.transformations.quaternion_from_euler(0, 0, 0),
-        pose.time,
-        "odom",
-        "map"
-    )
+    odomTopic.publish(odom)
 
     return
 
@@ -121,14 +118,14 @@ def estimateAndPublishPose():
         diffOfWheelEncoders = robot.leftWheelDistance - robot.rightWheelDistance
         if abs(diffOfWheelEncoders) < 20:
             # Robot moved in a straight line
-            averageMovementInTicks = (robot.leftWheelDistance + robot.rightWheelDistance) / 2
+            averageMovementInTicks = (robot.leftWheelDistance + robot.rightWheelDistance) / 2.0
             averageMovementInCm = averageMovementInTicks / robot.ticksPerCm
 
             deltaXInMeters = math.cos(math.radians(robot.lastKnownReferencePose.theta - 90)) * averageMovementInCm / 100
             deltaYInMeters = math.sin(math.radians(robot.lastKnownReferencePose.theta - 90)) * averageMovementInCm / 100
 
-            rospy.loginfo("Assuming movement in straight line, as difference of wheel encoders is %s. distance is %s cm"
-                          , diffOfWheelEncoders, averageMovementInCm)
+            rospy.loginfo("Assuming movement in straight line, as difference of wheel encoders is %s. distance is %s cm, dx = %s meters, dy = %s meters"
+                          , diffOfWheelEncoders, averageMovementInCm, deltaXInMeters, deltaYInMeters)
 
             poseestimation = RobotPose(robot.lastKnownReferencePose.theta,
                                        robot.lastKnownReferencePose.x - deltaXInMeters,
@@ -336,7 +333,7 @@ def robotmanager():
     fullRotationInSensorTicks = float(rospy.get_param('~fullRotationInSensorTicks', '1608.0'))
     ticksPerCm = float(rospy.get_param('~ticksPerCm', '22.5798'))
     robotWheelDistanceInCm = float(rospy.get_param('~robotWheelDistanceInCm', '25.0'))
-    pollingRateInHertz = int(rospy.get_param('~pollingRateinHertz', '60'))
+    pollingRateInHertz = int(rospy.get_param('~pollingRateInHertz', '30'))
 
     # And connect to the roomba
     rospy.loginfo("Connecting to Roomba 5xx on port %s with %s baud", port, baudrate)
