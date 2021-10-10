@@ -88,3 +88,12 @@ Example Node-RED flow to control the Roomba:
 Example Node-RED dashboard for the Roomba:
 
 ![Example Node-RED dashboard](doc/nodereddashboard.png)
+
+## Usage with ROS slam-toolbox
+
+TODO
+
+Example map generated with a YDLIDAR X4:
+
+![Example map](doc/examplemap.png)
+

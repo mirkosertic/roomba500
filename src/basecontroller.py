@@ -121,14 +121,14 @@ def estimateAndPublishPose():
             averageMovementInTicks = (robot.leftWheelDistance + robot.rightWheelDistance) / 2.0
             averageMovementInCm = averageMovementInTicks / robot.ticksPerCm
 
-            deltaXInMeters = math.cos(math.radians(robot.lastKnownReferencePose.theta - 90)) * averageMovementInCm / 100
-            deltaYInMeters = math.sin(math.radians(robot.lastKnownReferencePose.theta - 90)) * averageMovementInCm / 100
+            deltaXInMeters = math.cos(math.radians(robot.lastKnownReferencePose.theta)) * averageMovementInCm / 100
+            deltaYInMeters = math.sin(math.radians(robot.lastKnownReferencePose.theta)) * averageMovementInCm / 100
 
             rospy.loginfo("Assuming movement in straight line, as difference of wheel encoders is %s. distance is %s cm, dx = %s meters, dy = %s meters"
                           , diffOfWheelEncoders, averageMovementInCm, deltaXInMeters, deltaYInMeters)
 
             poseestimation = RobotPose(robot.lastKnownReferencePose.theta,
-                                       robot.lastKnownReferencePose.x - deltaXInMeters,
+                                       robot.lastKnownReferencePose.x + deltaXInMeters,
                                        robot.lastKnownReferencePose.y + deltaYInMeters,
                                        robot.leftWheelDistance, robot.rightWheelDistance, rospy.Time.now())
             publishOdometry(poseestimation)
@@ -469,20 +469,20 @@ def robotmanager():
         # Calculate the relative movement to last sensor data
         deltaLeft = overflowSafeWheelRotation(newSensorFrame.leftWheel - lastSensorFrame.leftWheel)
         deltaRight = overflowSafeWheelRotation(newSensorFrame.rightWheel - lastSensorFrame.rightWheel)
-        if deltaLeft != 0 or deltaRight != 0:
-            rospy.loginfo("Last wheel left = %s, last wheel right = %s, current wheel left = %s, current wheel right = %s",
-                          lastSensorFrame.leftWheel, lastSensorFrame.rightWheel, newSensorFrame.leftWheel, newSensorFrame.rightWheel)
 
-            rospy.loginfo("Delta rotation left is %s, right is %s",
-                          deltaLeft,
-                          deltaRight)
+        rospy.loginfo("Last wheel left = %s, last wheel right = %s, current wheel left = %s, current wheel right = %s",
+                      lastSensorFrame.leftWheel, lastSensorFrame.rightWheel, newSensorFrame.leftWheel, newSensorFrame.rightWheel)
 
-            # Estimate a pose and publish information
-            robot.leftWheelDistance += deltaLeft
-            robot.rightWheelDistance += deltaRight
+        rospy.loginfo("Delta rotation left is %s, right is %s",
+                      deltaLeft,
+                      deltaRight)
 
-            rospy.loginfo("Estimating new position")
-            estimateAndPublishPose()
+        # Estimate a pose and publish information
+        robot.leftWheelDistance += deltaLeft
+        robot.rightWheelDistance += deltaRight
+
+        rospy.loginfo("Estimating new position")
+        estimateAndPublishPose()
 
         # Remember last sensor data for the next iteration
         lastSensorFrame = newSensorFrame
