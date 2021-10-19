@@ -1,0 +1,5 @@
+<?xml version="1.0"?>
+<launch>
+  <node name="basecontroller" pkg="roomba500" type="basecontroller.py" output="screen" respawn="false">
+  </node>
+</launch>

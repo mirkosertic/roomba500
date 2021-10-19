@@ -11,502 +11,487 @@ from std_msgs.msg import String, Int16
 from nav_msgs.msg import Odometry, OccupancyGrid
 from geometry_msgs.msg import Twist, Point, Pose, Quaternion, Twist, Vector3
 
-
 from roomba500 import Roomba500
 from robotpose import RobotPose
 
-syncLock = threading.Lock()
+class BaseController:
 
-robot = None
-odomTopic = None
+    def __init__(self):
+        self.syncLock = threading.Lock()
+        self.robot = None
+        self.odomTopic = None
+        self.transformBroadcaster = tf.TransformBroadcaster()
 
-transformBroadcaster = tf.TransformBroadcaster()
+    def publishOdometry(self, pose):
+        """
+            Publish odometry for a given pose
+        """
+        deltaTimeInSeconds = (pose.time - self.robot.lastKnownReferencePose.time).to_sec()
+        if (deltaTimeInSeconds == 0):
+            return
 
-def publishOdometry(pose):
-    """
-        Publish odometry for a given pose
-    """
-    global odomTopic, transformBroadcaster, robot
+        # The robot can only move forward ( x - direction in base_link coordinate frame
+        distanceX = pose.x - self.robot.lastKnownReferencePose.x
+        distanceY = pose.y - self.robot.lastKnownReferencePose.y
+        linearDistanceInMeters = math.sqrt(distanceX * distanceX + distanceY * distanceY)
 
-    deltaTimeInSeconds = (pose.time - robot.lastKnownReferencePose.time).to_sec()
-    if (deltaTimeInSeconds == 0):
+        vxInMetersPerSecond = linearDistanceInMeters / deltaTimeInSeconds
+        vyInMetersPerSecond = .0
+        vthInRadiansPerSecond = -((pose.theta - self.robot.lastKnownReferencePose.theta) * math.pi / 180) / deltaTimeInSeconds
+
+        # Publish odometry
+        odom = Odometry()
+        odom.header.stamp = pose.time
+        odom.header.frame_id = "odom"
+
+        odom_quat = tf.transformations.quaternion_from_euler(0, 0, math.radians(pose.theta))
+
+        odom.pose.pose = Pose(Point(pose.x, pose.y, 0.), Quaternion(*odom_quat))
+
+        odom.child_frame_id = "base_link"
+        odom.twist.twist = Twist(Vector3(vxInMetersPerSecond, vyInMetersPerSecond, 0), Vector3(0, 0, vthInRadiansPerSecond))
+
+        self.transformBroadcaster.sendTransform(
+            (pose.x, pose.y, 0.),
+            odom_quat,
+            pose.time,
+            "base_link",
+            "odom"
+        )
+
+        self.odomTopic.publish(odom)
+
         return
 
-    # The robot can only move forward ( x - direction in base_link coordinate frame
-    distanceX = pose.x - robot.lastKnownReferencePose.x
-    distanceY = pose.y - robot.lastKnownReferencePose.y
-    linearDistanceInMeters = math.sqrt(distanceX * distanceX + distanceY * distanceY)
 
-    vxInMetersPerSecond = linearDistanceInMeters / deltaTimeInSeconds
-    vyInMetersPerSecond = .0
-    vthInRadiansPerSecond = -((pose.theta - robot.lastKnownReferencePose.theta) * math.pi / 180) / deltaTimeInSeconds
+    def overflowSafeWheelRotation(self, rotationDelta):
+        """
+            Check if the delta wheel rotation was caused by some overflow
+        """
+        if rotationDelta < -16384:
+            # Rotation forward with overflow
+            return rotationDelta + 65536
+        if rotationDelta > 16384:
+            # Rotation backward with overflow
+            return rotationDelta - 65536
 
-    # Publish odometry
-    odom = Odometry()
-    odom.header.stamp = pose.time
-    odom.header.frame_id = "odom"
-
-    odom_quat = tf.transformations.quaternion_from_euler(0, 0, math.radians(pose.theta))
-
-    odom.pose.pose = Pose(Point(pose.x, pose.y, 0.), Quaternion(*odom_quat))
-
-    odom.child_frame_id = "base_link"
-    odom.twist.twist = Twist(Vector3(vxInMetersPerSecond, vyInMetersPerSecond, 0), Vector3(0, 0, vthInRadiansPerSecond))
-
-    transformBroadcaster.sendTransform(
-        (pose.x, pose.y, 0.),
-        odom_quat,
-        pose.time,
-        "base_link",
-        "odom"
-    )
-
-    odomTopic.publish(odom)
-
-    return
+        return rotationDelta
 
 
-def overflowSafeWheelRotation(rotationDelta):
-    """
-        Check if the delta wheel rotation was caused by some overflow
-    """
-    if rotationDelta < -16384:
-        # Rotation forward with overflow
-        return rotationDelta + 65536
-    if rotationDelta > 16384:
-        # Rotation backward with overflow
-        return rotationDelta - 65536
+    def estimateAndPublishPose(self):
+        """
+            Estimates the current pose based on the last known reference pose
+            and wheel encoder values from a sensor frame
+        """
+        rospy.loginfo("Estimating new pose with leftWheelDistance = %s and rightWheelDistance = %s",
+                      self.robot.leftWheelDistance, self.robot.rightWheelDistance)
+        rospy.loginfo("Last known reference pose is at x = %s m and y = %s m, theta = %s degrees",
+                      self.robot.lastKnownReferencePose.x, self.robot.lastKnownReferencePose.y, self.robot.lastKnownReferencePose.theta)
 
-    return rotationDelta
+        # First case
+        # Rotation on the spot
+        # one wheel rotation is positive, the other is negative
+        # If they sum up roughly to zero, the robot rotated on the spot
+        sumOfWheelEncoders = self.robot.leftWheelDistance + self.robot.rightWheelDistance
+        if sumOfWheelEncoders < 20:
+            # Roomba rotated on the spot
+            rotationInDegrees = self.robot.leftWheelDistance / (self.robot.fullRotationInSensorTicks / 360)
 
+            rospy.loginfo("Assuming rotation on the spot, as sum of wheel encoders is %s. Rotation is %s degrees",
+                          sumOfWheelEncoders, rotationInDegrees)
 
-def estimateAndPublishPose():
-    """
-        Estimates the current pose based on the last known reference pose
-        and wheel encoder values from a sensor frame
-    """
-    global robot, odomTopic, robot
-
-    rospy.loginfo("Estimating new pose with leftWheelDistance = %s and rightWheelDistance = %s",
-                  robot.leftWheelDistance, robot.rightWheelDistance)
-    rospy.loginfo("Last known reference pose is at x = %s m and y = %s m, theta = %s degrees",
-                  robot.lastKnownReferencePose.x, robot.lastKnownReferencePose.y, robot.lastKnownReferencePose.theta)
-
-    # First case
-    # Rotation on the spot
-    # one wheel rotation is positive, the other is negative
-    # If they sum up roughly to zero, the robot rotated on the spot
-    sumOfWheelEncoders = robot.leftWheelDistance + robot.rightWheelDistance
-    if sumOfWheelEncoders < 20:
-        # Roomba rotated on the spot
-        rotationInDegrees = robot.leftWheelDistance / (robot.fullRotationInSensorTicks / 360)
-
-        rospy.loginfo("Assuming rotation on the spot, as sum of wheel encoders is %s. Rotation is %s degrees",
-                      sumOfWheelEncoders, rotationInDegrees)
-
-        poseestimation = RobotPose(robot.lastKnownReferencePose.theta - rotationInDegrees,
-                                   robot.lastKnownReferencePose.x,
-                                   robot.lastKnownReferencePose.y,
-                                   robot.leftWheelDistance, robot.rightWheelDistance, rospy.Time.now())
-        publishOdometry(poseestimation)
-        return poseestimation
-
-    else:
-        # Second case
-        # Robot moved in a straight line
-        # Both wheels rotate in the same direction with roughly the same distance
-        diffOfWheelEncoders = robot.leftWheelDistance - robot.rightWheelDistance
-        if abs(diffOfWheelEncoders) < 20:
-            # Robot moved in a straight line
-            averageMovementInTicks = (robot.leftWheelDistance + robot.rightWheelDistance) / 2.0
-            averageMovementInCm = averageMovementInTicks / robot.ticksPerCm
-
-            deltaXInMeters = math.cos(math.radians(robot.lastKnownReferencePose.theta)) * averageMovementInCm / 100
-            deltaYInMeters = math.sin(math.radians(robot.lastKnownReferencePose.theta)) * averageMovementInCm / 100
-
-            rospy.loginfo("Assuming movement in straight line, as difference of wheel encoders is %s. distance is %s cm, dx = %s meters, dy = %s meters"
-                          , diffOfWheelEncoders, averageMovementInCm, deltaXInMeters, deltaYInMeters)
-
-            poseestimation = RobotPose(robot.lastKnownReferencePose.theta,
-                                       robot.lastKnownReferencePose.x + deltaXInMeters,
-                                       robot.lastKnownReferencePose.y + deltaYInMeters,
-                                       robot.leftWheelDistance, robot.rightWheelDistance, rospy.Time.now())
-            publishOdometry(poseestimation)
+            poseestimation = RobotPose(self.robot.lastKnownReferencePose.theta - rotationInDegrees,
+                                       self.robot.lastKnownReferencePose.x,
+                                       self.robot.lastKnownReferencePose.y,
+                                       self.robot.leftWheelDistance, self.robot.rightWheelDistance, rospy.Time.now())
+            self.publishOdometry(poseestimation)
             return poseestimation
 
         else:
-            # Third case
-            # Rotation to the right. The left wheel moves further than the right wheel
-            if (robot.leftWheelDistance > robot.rightWheelDistance):
-                # Robot rotated to the right
-                L = robot.robotWheelDistanceInCm / 100
+            # Second case
+            # Robot moved in a straight line
+            # Both wheels rotate in the same direction with roughly the same distance
+            diffOfWheelEncoders = self.robot.leftWheelDistance - self.robot.rightWheelDistance
+            if abs(diffOfWheelEncoders) < 20:
+                # Robot moved in a straight line
+                averageMovementInTicks = (self.robot.leftWheelDistance + self.robot.rightWheelDistance) / 2.0
+                averageMovementInCm = averageMovementInTicks / self.robot.ticksPerCm
 
-                leftWheelDistanceInM = float(robot.leftWheelDistance) / robot.ticksPerCm / 100
-                rightWheelDistanceInM = float(robot.rightWheelDistance) / robot.ticksPerCm / 100
+                deltaXInMeters = math.cos(math.radians(self.robot.lastKnownReferencePose.theta)) * averageMovementInCm / 100
+                deltaYInMeters = math.sin(math.radians(self.robot.lastKnownReferencePose.theta)) * averageMovementInCm / 100
 
-                radiusInMeter = L / ((leftWheelDistanceInM / rightWheelDistanceInM) - 1.0)
-                deltaTheta = rightWheelDistanceInM * 360 / (2.0 + math.pi * radiusInMeter)
+                rospy.loginfo("Assuming movement in straight line, as difference of wheel encoders is %s. distance is %s cm, dx = %s meters, dy = %s meters"
+                              , diffOfWheelEncoders, averageMovementInCm, deltaXInMeters, deltaYInMeters)
 
-                rospy.loginfo("Assuming rotation to the right with radius of %s m and angle of %s degrees",
-                              radiusInMeter, deltaTheta)
-
-                rotationRadiusToCenterInMeter = radiusInMeter + L / 2
-
-                rotationPointX = robot.lastKnownReferencePose.x + math.sin(math.radians(robot.lastKnownReferencePose.theta)) * rotationRadiusToCenterInMeter
-                rotationPointY = robot.lastKnownReferencePose.y - math.cos(math.radians(robot.lastKnownReferencePose.theta)) * rotationRadiusToCenterInMeter
-
-                rospy.loginfo("Assuming rotation point is at x = %s, y = %s", rotationPointX, rotationPointY)
-
-                newPositionX = rotationPointX + math.sin(math.radians(deltaTheta)) * rotationRadiusToCenterInMeter
-                newPositionY = rotationPointY + math.cos(math.radians(deltaTheta)) * rotationRadiusToCenterInMeter
-
-                newTheta = robot.lastKnownReferencePose.theta - deltaTheta
-
-                rospy.loginfo("Estimated position is x = %s, y = %s, theta = %s", newPositionX, newPositionY, newTheta)
-
-                poseestimation = RobotPose(newTheta,
-                                           newPositionX,
-                                           newPositionY,
-                                           robot.leftWheelDistance, robot.rightWheelDistance, rospy.Time.now())
-                publishOdometry(poseestimation)
+                poseestimation = RobotPose(self.robot.lastKnownReferencePose.theta,
+                                           self.robot.lastKnownReferencePose.x + deltaXInMeters,
+                                           self.robot.lastKnownReferencePose.y + deltaYInMeters,
+                                           self.robot.leftWheelDistance, self.robot.rightWheelDistance, rospy.Time.now())
+                self.publishOdometry(poseestimation)
                 return poseestimation
 
-            # Fourth case
-            # Rotation to the left. The right wheel moves further than the left wheel
-            if (robot.rightWheelDistance > robot.leftWheelDistance):
-                # Robot rotated to the left
-                L = robot.robotWheelDistanceInCm / 100
+            else:
+                # Third case
+                # Rotation to the right. The left wheel moves further than the right wheel
+                if (self.robot.leftWheelDistance > self.robot.rightWheelDistance):
+                    # Robot rotated to the right
+                    L = self.robot.robotWheelDistanceInCm / 100
 
-                leftWheelDistanceInM = float(robot.leftWheelDistance) / robot.ticksPerCm / 100
-                rightWheelDistanceInM = float(robot.rightWheelDistance) / robot.ticksPerCm / 100
+                    leftWheelDistanceInM = float(self.robot.leftWheelDistance) / self.robot.ticksPerCm / 100
+                    rightWheelDistanceInM = float(self.robot.rightWheelDistance) / self.robot.ticksPerCm / 100
 
-                radiusInMeter = L / ((rightWheelDistanceInM / leftWheelDistanceInM) - 1.0)
-                deltaTheta = leftWheelDistanceInM * 360 / (2.0 + math.pi * radiusInMeter)
+                    radiusInMeter = L / ((leftWheelDistanceInM / rightWheelDistanceInM) - 1.0)
+                    deltaTheta = rightWheelDistanceInM * 360 / (2.0 + math.pi * radiusInMeter)
 
-                rospy.loginfo("Assuming rotation to the left with radius of %s m and angle of %s degrees",
-                              radiusInMeter, deltaTheta)
+                    rospy.loginfo("Assuming rotation to the right with radius of %s m and angle of %s degrees",
+                                  radiusInMeter, deltaTheta)
 
-                rotationRadiusToCenterInMeter = radiusInMeter + L / 2
+                    rotationRadiusToCenterInMeter = radiusInMeter + L / 2
 
-                rotationPointX = robot.lastKnownReferencePose.x + math.sin(math.radians(robot.lastKnownReferencePose.theta)) * rotationRadiusToCenterInMeter
-                rotationPointY = robot.lastKnownReferencePose.y + math.cos(math.radians(robot.lastKnownReferencePose.theta)) * rotationRadiusToCenterInMeter
+                    rotationPointX = self.robot.lastKnownReferencePose.x + math.sin(math.radians(self.robot.lastKnownReferencePose.theta)) * rotationRadiusToCenterInMeter
+                    rotationPointY = self.robot.lastKnownReferencePose.y - math.cos(math.radians(self.robot.lastKnownReferencePose.theta)) * rotationRadiusToCenterInMeter
 
-                rospy.loginfo("Assuming rotation point is at x = %s, y = %s", rotationPointX, rotationPointY)
+                    rospy.loginfo("Assuming rotation point is at x = %s, y = %s", rotationPointX, rotationPointY)
 
-                newPositionX = rotationPointX + math.sin(math.radians(deltaTheta)) * rotationRadiusToCenterInMeter
-                newPositionY = rotationPointY - math.cos(math.radians(deltaTheta)) * rotationRadiusToCenterInMeter
+                    newPositionX = rotationPointX + math.sin(math.radians(deltaTheta)) * rotationRadiusToCenterInMeter
+                    newPositionY = rotationPointY + math.cos(math.radians(deltaTheta)) * rotationRadiusToCenterInMeter
 
-                newTheta = robot.lastKnownReferencePose.theta + deltaTheta
+                    newTheta = self.robot.lastKnownReferencePose.theta - deltaTheta
 
-                rospy.loginfo("Estimated position is x = %s, y = %s, theta = %s", newPositionX, newPositionY, newTheta)
+                    rospy.loginfo("Estimated position is x = %s, y = %s, theta = %s", newPositionX, newPositionY, newTheta)
 
-                poseestimation = RobotPose(newTheta,
-                                           newPositionX,
-                                           newPositionY,
-                                           robot.leftWheelDistance, robot.rightWheelDistance, rospy.Time.now())
-                publishOdometry(poseestimation)
-                return poseestimation
+                    poseestimation = RobotPose(newTheta,
+                                               newPositionX,
+                                               newPositionY,
+                                               self.robot.leftWheelDistance, self.robot.rightWheelDistance, rospy.Time.now())
+                    self.publishOdometry(poseestimation)
+                    return poseestimation
 
-    # Don't know how to handle
-    raise AssertionError
+                # Fourth case
+                # Rotation to the left. The right wheel moves further than the left wheel
+                if (self.robot.rightWheelDistance > self.robot.leftWheelDistance):
+                    # Robot rotated to the left
+                    L = self.robot.robotWheelDistanceInCm / 100
+
+                    leftWheelDistanceInM = float(self.robot.leftWheelDistance) / self.robot.ticksPerCm / 100
+                    rightWheelDistanceInM = float(self.robot.rightWheelDistance) / self.robot.ticksPerCm / 100
+
+                    radiusInMeter = L / ((rightWheelDistanceInM / leftWheelDistanceInM) - 1.0)
+                    deltaTheta = leftWheelDistanceInM * 360 / (2.0 + math.pi * radiusInMeter)
+
+                    rospy.loginfo("Assuming rotation to the left with radius of %s m and angle of %s degrees",
+                                  radiusInMeter, deltaTheta)
+
+                    rotationRadiusToCenterInMeter = radiusInMeter + L / 2
+
+                    rotationPointX = self.robot.lastKnownReferencePose.x + math.sin(math.radians(self.robot.lastKnownReferencePose.theta)) * rotationRadiusToCenterInMeter
+                    rotationPointY = self.robot.lastKnownReferencePose.y + math.cos(math.radians(self.robot.lastKnownReferencePose.theta)) * rotationRadiusToCenterInMeter
+
+                    rospy.loginfo("Assuming rotation point is at x = %s, y = %s", rotationPointX, rotationPointY)
+
+                    newPositionX = rotationPointX + math.sin(math.radians(deltaTheta)) * rotationRadiusToCenterInMeter
+                    newPositionY = rotationPointY - math.cos(math.radians(deltaTheta)) * rotationRadiusToCenterInMeter
+
+                    newTheta = self.robot.lastKnownReferencePose.theta + deltaTheta
+
+                    rospy.loginfo("Estimated position is x = %s, y = %s, theta = %s", newPositionX, newPositionY, newTheta)
+
+                    poseestimation = RobotPose(newTheta,
+                                               newPositionX,
+                                               newPositionY,
+                                               self.robot.leftWheelDistance, self.robot.rightWheelDistance, rospy.Time.now())
+                    self.publishOdometry(poseestimation)
+                    return poseestimation
+
+        # Don't know how to handle
+        raise AssertionError
 
 
-def publishFinalPose():
-    """
-        Estimates the final pose estimation based on the last known
-        pose and wheel encoder values from a sensor frame. The estimated
-        pose will become the new reference pose
-    """
-    global robot, odomTopic
+    def publishFinalPose(self):
+        """
+            Estimates the final pose estimation based on the last known
+            pose and wheel encoder values from a sensor frame. The estimated
+            pose will become the new reference pose
+        """
+        temp  = self.estimateAndPublishPose()
 
-    temp  = estimateAndPublishPose()
+        rospy.loginfo("Final Delta rotation left is %s, right is %s",
+                      self.overflowSafeWheelRotation(temp.leftWheel - self.robot.lastKnownReferencePose.leftWheel),
+                      self.overflowSafeWheelRotation(temp.rightWheel - self.robot.lastKnownReferencePose.rightWheel))
 
-    rospy.loginfo("Final Delta rotation left is %s, right is %s",
-                  overflowSafeWheelRotation(temp.leftWheel - robot.lastKnownReferencePose.leftWheel),
-                  overflowSafeWheelRotation(temp.rightWheel - robot.lastKnownReferencePose.rightWheel))
+        self.robot.lastKnownReferencePose = temp
 
-    robot.lastKnownReferencePose = temp
-
-    robot.leftWheelDistance = 0
-    robot.rightWheelDistance = 0
+        self.robot.leftWheelDistance = 0
+        self.robot.rightWheelDistance = 0
 
 
-def stopRobot():
-    """
-        Stops all robot motion
-    """
-    publishFinalPose()
+    def stopRobot(self):
+        """
+            Stops all robot motion
+        """
+        self.publishFinalPose()
 
-    robot.drive(0, 0)
+        self.robot.drive(0, 0)
 
 
-def newCmdVelMessage(data):
-    """
-        Consume a steering command.
-        Every new steering leads to a final position estimation and
-        an update to the reference pose
-    """
-    global odomTopic, robot, syncLock
+    def newCmdVelMessage(self, data):
+        """
+            Consume a steering command.
+            Every new steering leads to a final position estimation and
+            an update to the reference pose
+        """
+        self.syncLock.acquire()
 
-    syncLock.acquire()
+        self.publishFinalPose()
 
-    publishFinalPose()
+        rospy.loginfo("Received cmd_vel message : %s", data)
 
-    rospy.loginfo("Received cmd_vel message : %s", data)
+        linear = data.linear
+        angular = data.angular
 
-    linear = data.linear
-    angular = data.angular
+        speedInMeterPerSecond = linear.x # Meter per second
+        rotationInRadiansPerSecond = angular.z # Radians per second
 
-    speedInMeterPerSecond = linear.x # Meter per second
-    rotationInRadiansPerSecond = angular.z # Radians per second
+        if speedInMeterPerSecond == 0.0 and rotationInRadiansPerSecond == 0.0:
 
-    if speedInMeterPerSecond == 0 and rotationInRadiansPerSecond == 0:
+            self.robot.drive(0, 0)
 
-        robot.drive(0, 0)
-
-    else:
-
-        if rotationInRadiansPerSecond == 0:
-            mmPerSecond = speedInMeterPerSecond * 100 * 10
-
-            if mmPerSecond > 500:
-                mmPerSecond = 500
-            if mmPerSecond < - 500:
-                mmPerSecond = -500
-
-            robot.drive(int(mmPerSecond), int(mmPerSecond))
         else:
-            degreePerSecond = rotationInRadiansPerSecond * 180.0 / math.pi
 
-            mmPerSecond = int(robot.fullRotationInSensorTicks / 360 * degreePerSecond)
-            if mmPerSecond > 500:
-                mmPerSecond = 500
-            if mmPerSecond < - 500:
-                mmPerSecond = -500
+            if rotationInRadiansPerSecond == 0.0:
+                mmPerSecond = speedInMeterPerSecond * 100 * 10
 
-            robot.drive(-mmPerSecond, mmPerSecond)
+                if mmPerSecond > 500:
+                    mmPerSecond = 500
+                if mmPerSecond < - 500:
+                    mmPerSecond = -500
 
-    syncLock.release()
+                self.robot.drive(int(mmPerSecond), int(mmPerSecond))
+            else:
+                degreePerSecond = rotationInRadiansPerSecond * 180.0 / math.pi
 
-def newCmdPWMMainBrush(data):
-    global robot, syncLock
+                mmPerSecond = int(self.robot.fullRotationInSensorTicks / 360 * degreePerSecond)
+                if mmPerSecond > 500:
+                    mmPerSecond = 500
+                if mmPerSecond < - 500:
+                    mmPerSecond = -500
 
-    syncLock.acquire()
+                self.robot.drive(-mmPerSecond, mmPerSecond)
 
-    robot.mainbrushPWM = data.data
-    robot.updateMotorControl()
+        self.syncLock.release()
 
-    syncLock.release()
+    def newCmdPWMMainBrush(self, data):
+        self.syncLock.acquire()
 
-def newCmdPWMSideBrush(data):
-    global robot, syncLock
+        self.robot.mainbrushPWM = data.data
+        self.robot.updateMotorControl()
 
-    syncLock.acquire()
+        self.syncLock.release()
 
-    robot.sidebrushPWM = data.data
-    robot.updateMotorControl()
+    def newCmdPWMSideBrush(self, data):
+        self.syncLock.acquire()
 
-    syncLock.release()
+        self.robot.sidebrushPWM = data.data
+        self.robot.updateMotorControl()
 
-def newCmdPWMVacuum(data):
-    global robot, syncLock
+        self.syncLock.release()
 
-    syncLock.acquire()
+    def newCmdPWMVacuum(self, data):
+        self.syncLock.acquire()
 
-    rospy.loginfo("Received vacuum pwm command %s", data)
+        rospy.loginfo("Received vacuum pwm command %s", data)
 
-    robot.vacuumPWM = data.data
-    robot.updateMotorControl()
+        self.robot.vacuumPWM = data.data
+        self.robot.updateMotorControl()
 
-    syncLock.release()
+        self.syncLock.release()
 
-def robotmanager():
-    """
-        All heavy lifting of the ros node goes to here
-    """
-    global robot, odomTopic
-    rospy.init_node('roomba500basecontroller', anonymous=True)
+    def start(self):
+        """
+            All heavy lifting of the ros node goes to here
+        """
+        rospy.init_node('roomba500basecontroller', anonymous=True)
 
-    # Get some configuration data
-    port = rospy.get_param('~serialport', '/dev/serial0')
-    baudrate = int(rospy.get_param('~baudrate', '115200'))
-    fullRotationInSensorTicks = float(rospy.get_param('~fullRotationInSensorTicks', '1608.0'))
-    ticksPerCm = float(rospy.get_param('~ticksPerCm', '22.5798'))
-    robotWheelDistanceInCm = float(rospy.get_param('~robotWheelDistanceInCm', '25.0'))
-    pollingRateInHertz = int(rospy.get_param('~pollingRateInHertz', '30'))
+        # Get some configuration data
+        port = rospy.get_param('~serialport', '/dev/serial0')
+        baudrate = int(rospy.get_param('~baudrate', '115200'))
+        fullRotationInSensorTicks = float(rospy.get_param('~fullRotationInSensorTicks', '1608.0'))
+        ticksPerCm = float(rospy.get_param('~ticksPerCm', '22.5798'))
+        robotWheelDistanceInCm = float(rospy.get_param('~robotWheelDistanceInCm', '25.0'))
+        pollingRateInHertz = int(rospy.get_param('~pollingRateInHertz', '30'))
 
-    # And connect to the roomba
-    rospy.loginfo("Connecting to Roomba 5xx on port %s with %s baud", port, baudrate)
-    ser = serial.Serial(port=port, baudrate=baudrate)
-    robot = Roomba500(ser, fullRotationInSensorTicks, ticksPerCm, robotWheelDistanceInCm)
+        # And connect to the roomba
+        rospy.loginfo("Connecting to Roomba 5xx on port %s with %s baud", port, baudrate)
+        ser = serial.Serial(port=port, baudrate=baudrate)
+        self.robot = Roomba500(ser, fullRotationInSensorTicks, ticksPerCm, robotWheelDistanceInCm)
 
-    # Enter safe mode
-    rospy.loginfo("Entering safe mode")
-    robot.safeMode()
-    time.sleep(.1)
+        # Enter safe mode
+        rospy.loginfo("Entering safe mode")
+        self.robot.safeMode()
+        time.sleep(.1)
 
-    # Signal welcome by playing a simple note
-    robot.playNote(69, 16)
+        # Signal welcome by playing a simple note
+        self.robot.playNote(69, 16)
 
-    # Reset all movement to zero, e.g. stop motors
-    rospy.loginfo("Stopping motors")
-    robot.drive(0, 0)
+        # Reset all movement to zero, e.g. stop motors
+        rospy.loginfo("Stopping motors")
+        self.robot.drive(0, 0)
 
-    # Initialize the last known reference pose with a position
-    # and the current values of the wheel encoders
-    rospy.loginfo("Computing initial reference pose")
-    lastSensorFrame = robot.readSensorFrame()
-    robot.lastKnownReferencePose = RobotPose(0, 0, 0, robot.leftWheelDistance, robot.rightWheelDistance, rospy.Time.now())
+        # Initialize the last known reference pose with a position
+        # and the current values of the wheel encoders
+        rospy.loginfo("Computing initial reference pose")
+        lastSensorFrame = self.robot.readSensorFrame()
+        self.robot.lastKnownReferencePose = RobotPose(0, 0, 0, self.robot.leftWheelDistance, self.robot.rightWheelDistance, rospy.Time.now())
 
-    # Topics for battery charge, capacity and light bumpers
-    batteryChargeTopic = rospy.Publisher('batteryCharge', Int16, queue_size = 10)
-    batteryCapacityTopic = rospy.Publisher('batteryCapacity', Int16, queue_size = 10)
-    bumperLeftTopic = rospy.Publisher('bumperLeft', Int16, queue_size = 10)
-    bumperRightTopic = rospy.Publisher('bumperRight', Int16, queue_size = 10)
-    wheeldropLeftTopic = rospy.Publisher('wheeldropLeft', Int16, queue_size = 10)
-    wheeldropRightTopic = rospy.Publisher('wheeldropRight', Int16, queue_size = 10)
+        # Topics for battery charge, capacity and light bumpers
+        batteryChargeTopic = rospy.Publisher('batteryCharge', Int16, queue_size = 10)
+        batteryCapacityTopic = rospy.Publisher('batteryCapacity', Int16, queue_size = 10)
+        bumperLeftTopic = rospy.Publisher('bumperLeft', Int16, queue_size = 10)
+        bumperRightTopic = rospy.Publisher('bumperRight', Int16, queue_size = 10)
+        wheeldropLeftTopic = rospy.Publisher('wheeldropLeft', Int16, queue_size = 10)
+        wheeldropRightTopic = rospy.Publisher('wheeldropRight', Int16, queue_size = 10)
 
-    lightBumperLeftTopic = rospy.Publisher('lightBumperLeft', Int16, queue_size = 10)
-    lightBumperFrontLeftTopic = rospy.Publisher('lightBumperFrontLeft', Int16, queue_size = 10)
-    lightBumperCenterLeftTopic = rospy.Publisher('lightBumperCenterLeft', Int16, queue_size = 10)
-    lightBumperCenterRightTopic = rospy.Publisher('lightBumperCenterRight', Int16, queue_size = 10)
-    lightBumperFrontRightTopic = rospy.Publisher('lightBumperFrontRight', Int16, queue_size = 10)
-    lightBumperRightTopic = rospy.Publisher('lightBumperRight', Int16, queue_size = 10)
+        lightBumperLeftTopic = rospy.Publisher('lightBumperLeft', Int16, queue_size = 10)
+        lightBumperFrontLeftTopic = rospy.Publisher('lightBumperFrontLeft', Int16, queue_size = 10)
+        lightBumperCenterLeftTopic = rospy.Publisher('lightBumperCenterLeft', Int16, queue_size = 10)
+        lightBumperCenterRightTopic = rospy.Publisher('lightBumperCenterRight', Int16, queue_size = 10)
+        lightBumperFrontRightTopic = rospy.Publisher('lightBumperFrontRight', Int16, queue_size = 10)
+        lightBumperRightTopic = rospy.Publisher('lightBumperRight', Int16, queue_size = 10)
 
-    oimodeTopic = rospy.Publisher('oimode', Int16, queue_size = 10)
+        oimodeTopic = rospy.Publisher('oimode', Int16, queue_size = 10)
 
-    # Here goes the odometry data
-    odomTopic = rospy.Publisher('odom', Odometry, queue_size = 10)
+        # Here goes the odometry data
+        self.odomTopic = rospy.Publisher('odom', Odometry, queue_size = 10)
 
-    # We consume steering commands from here
-    rospy.Subscriber("cmd_vel", Twist, newCmdVelMessage)
+        # We consume steering commands from here
+        rospy.Subscriber("cmd_vel", Twist, self.newCmdVelMessage)
 
-    # We also consume motor control commands
-    rospy.Subscriber("cmd_mainbrush", Int16, newCmdPWMMainBrush)
-    rospy.Subscriber("cmd_sidebrush", Int16, newCmdPWMSideBrush)
-    rospy.Subscriber("cmd_vacuum", Int16, newCmdPWMVacuum)
+        # We also consume motor control commands
+        rospy.Subscriber("cmd_mainbrush", Int16, self.newCmdPWMMainBrush)
+        rospy.Subscriber("cmd_sidebrush", Int16, self.newCmdPWMSideBrush)
+        rospy.Subscriber("cmd_vacuum", Int16, self.newCmdPWMVacuum)
 
-    # Initialize sensor polling
-    rospy.loginfo("Polling Roomba sensors with %s hertz", pollingRateInHertz)
-    rate = rospy.Rate(pollingRateInHertz)
+        # Initialize sensor polling
+        rospy.loginfo("Polling Roomba sensors with %s hertz", pollingRateInHertz)
+        rate = rospy.Rate(pollingRateInHertz)
 
-    # We start at the last known reference pose
-    publishOdometry(robot.lastKnownReferencePose)
+        # We start at the last known reference pose
+        self.publishOdometry(self.robot.lastKnownReferencePose)
 
-    # Processing the sensor polling in an endless loop until this node goes to die
-    while not rospy.is_shutdown():
+        # Processing the sensor polling in an endless loop until this node goes to die
+        while not rospy.is_shutdown():
 
-        syncLock.acquire()
+            self.syncLock.acquire()
 
-        # Read some sensor data
-        rospy.loginfo("Getting new sensorframe")
-        newSensorFrame = robot.readSensorFrame()
+            # Read some sensor data
+            rospy.loginfo("Getting new sensorframe")
+            newSensorFrame = self.robot.readSensorFrame()
 
-        # Bumper right with debounce
-        if newSensorFrame.isBumperRight():
-            if not robot.lastBumperRight:
-                rospy.loginfo("Right bumper triggered")
-                stopRobot()
+            # Bumper right with debounce
+            if newSensorFrame.isBumperRight():
+                if not self.robot.lastBumperRight:
+                    rospy.loginfo("Right bumper triggered")
+                    self.stopRobot()
 
-                # Note C
-                robot.playNote(72, 16)
+                    # Note C
+                    self.robot.playNote(72, 16)
 
-                robot.lastBumperRight = True
-                bumperRightTopic.publish(1)
-        else:
-            if robot.lastBumperRight:
-                robot.lastBumperRight = False
-                bumperRightTopic.publish(0)
+                    self.robot.lastBumperRight = True
+                    bumperRightTopic.publish(1)
+            else:
+                if self.robot.lastBumperRight:
+                    self.robot.lastBumperRight = False
+                    bumperRightTopic.publish(0)
 
-        # Bumper left with debounce
-        if newSensorFrame.isBumperLeft():
-            if not robot.lastBumperLeft:
-                rospy.loginfo("Left bumper triggered")
-                stopRobot()
+            # Bumper left with debounce
+            if newSensorFrame.isBumperLeft():
+                if not self.robot.lastBumperLeft:
+                    rospy.loginfo("Left bumper triggered")
+                    self.stopRobot()
 
-                # Note D
-                robot.playNote(74, 16)
+                    # Note D
+                    self.robot.playNote(74, 16)
 
-                robot.lastBumperLeft = True
-                bumperLeftTopic.publish(1)
-        else:
-            if robot.lastBumperLeft:
-                robot.lastBumperLeft = False
-                bumperLeftTopic.publish(0)
+                    self.robot.lastBumperLeft = True
+                    bumperLeftTopic.publish(1)
+            else:
+                if self.robot.lastBumperLeft:
+                    self.robot.lastBumperLeft = False
+                    bumperLeftTopic.publish(0)
 
-        # Right wheel drop with debounce
-        if newSensorFrame.isWheeldropRight():
-            if not robot.lastRightWheelDropped:
-                rospy.loginfo("Right wheel dropped")
-                stopRobot()
+            # Right wheel drop with debounce
+            if newSensorFrame.isWheeldropRight():
+                if not self.robot.lastRightWheelDropped:
+                    rospy.loginfo("Right wheel dropped")
+                    self.stopRobot()
 
-                # Note E
-                robot.playNote(76, 16)
+                    # Note E
+                    self.robot.playNote(76, 16)
 
-                robot.lastRightWheelDropped = True
-                wheeldropRightTopic.publish(1)
-        else:
-            if robot.lastRightWheelDropped:
-                robot.lastRightWheelDropped = False
-                wheeldropRightTopic.publish(0)
+                    self.robot.lastRightWheelDropped = True
+                    wheeldropRightTopic.publish(1)
+            else:
+                if self.robot.lastRightWheelDropped:
+                    self.robot.lastRightWheelDropped = False
+                    wheeldropRightTopic.publish(0)
 
-        # Left wheel drop with debounce
-        if newSensorFrame.isWheeldropLeft():
-            if not robot.lastLeftWheelDropped:
-                rospy.loginfo("Left wheel dropped")
-                stopRobot()
+            # Left wheel drop with debounce
+            if newSensorFrame.isWheeldropLeft():
+                if not self.robot.lastLeftWheelDropped:
+                    rospy.loginfo("Left wheel dropped")
+                    self.stopRobot()
 
-                # Note F
-                robot.playNote(77, 16)
+                    # Note F
+                    self.robot.playNote(77, 16)
 
-                robot.lastLeftWheelDropped = True
-                wheeldropLeftTopic.publish(1)
-        else:
-            if robot.lastLeftWheelDropped:
-                robot.lastLeftWheelDropped = False
-                wheeldropLeftTopic.publish(0)
+                    self.robot.lastLeftWheelDropped = True
+                    wheeldropLeftTopic.publish(1)
+            else:
+                if self.robot.lastLeftWheelDropped:
+                    self.robot.lastLeftWheelDropped = False
+                    wheeldropLeftTopic.publish(0)
 
-        # Calculate the relative movement to last sensor data
-        deltaLeft = overflowSafeWheelRotation(newSensorFrame.leftWheel - lastSensorFrame.leftWheel)
-        deltaRight = overflowSafeWheelRotation(newSensorFrame.rightWheel - lastSensorFrame.rightWheel)
+            # Calculate the relative movement to last sensor data
+            deltaLeft = self.overflowSafeWheelRotation(newSensorFrame.leftWheel - lastSensorFrame.leftWheel)
+            deltaRight = self.overflowSafeWheelRotation(newSensorFrame.rightWheel - lastSensorFrame.rightWheel)
 
-        rospy.loginfo("Last wheel left = %s, last wheel right = %s, current wheel left = %s, current wheel right = %s",
-                      lastSensorFrame.leftWheel, lastSensorFrame.rightWheel, newSensorFrame.leftWheel, newSensorFrame.rightWheel)
+            rospy.loginfo("Last wheel left = %s, last wheel right = %s, current wheel left = %s, current wheel right = %s",
+                          lastSensorFrame.leftWheel, lastSensorFrame.rightWheel, newSensorFrame.leftWheel, newSensorFrame.rightWheel)
 
-        rospy.loginfo("Delta rotation left is %s, right is %s",
-                      deltaLeft,
-                      deltaRight)
+            rospy.loginfo("Delta rotation left is %s, right is %s",
+                          deltaLeft,
+                          deltaRight)
 
-        # Estimate a pose and publish information
-        robot.leftWheelDistance += deltaLeft
-        robot.rightWheelDistance += deltaRight
+            # Estimate a pose and publish information
+            self.robot.leftWheelDistance += deltaLeft
+            self.robot.rightWheelDistance += deltaRight
 
-        rospy.loginfo("Estimating new position")
-        estimateAndPublishPose()
+            rospy.loginfo("Estimating new position")
+            self.estimateAndPublishPose()
 
-        # Remember last sensor data for the next iteration
-        lastSensorFrame = newSensorFrame
+            # Remember last sensor data for the next iteration
+            lastSensorFrame = newSensorFrame
 
-        # Publish telemetry data such as battery charge etc.
-        batteryChargeTopic.publish(lastSensorFrame.batteryCharge)
-        batteryCapacityTopic.publish(lastSensorFrame.batteryCapacity)
+            # Publish telemetry data such as battery charge etc.
+            batteryChargeTopic.publish(lastSensorFrame.batteryCharge)
+            batteryCapacityTopic.publish(lastSensorFrame.batteryCapacity)
 
-        lightBumperLeftTopic.publish(lastSensorFrame.lightBumperLeft)
-        lightBumperFrontLeftTopic.publish(lastSensorFrame.lightBumperFrontLeft)
-        lightBumperCenterLeftTopic.publish(lastSensorFrame.lightBumperCenterLeft)
-        lightBumperCenterRightTopic.publish(lastSensorFrame.lightBumperCenterRight)
-        lightBumperFrontRightTopic.publish(lastSensorFrame.lightBumperFrontRight)
-        lightBumperRightTopic.publish(lastSensorFrame.lightBumperRight)
+            lightBumperLeftTopic.publish(lastSensorFrame.lightBumperLeft)
+            lightBumperFrontLeftTopic.publish(lastSensorFrame.lightBumperFrontLeft)
+            lightBumperCenterLeftTopic.publish(lastSensorFrame.lightBumperCenterLeft)
+            lightBumperCenterRightTopic.publish(lastSensorFrame.lightBumperCenterRight)
+            lightBumperFrontRightTopic.publish(lastSensorFrame.lightBumperFrontRight)
+            lightBumperRightTopic.publish(lastSensorFrame.lightBumperRight)
 
-        oimodeTopic.publish(lastSensorFrame.oimode)
+            oimodeTopic.publish(lastSensorFrame.oimode)
 
-        syncLock.release()
+            self.syncLock.release()
 
-        rate.sleep()
-
+            rate.sleep()
 
 if __name__ == '__main__':
     try:
-        robotmanager()
+        controller = BaseController()
+        controller.start()
     except rospy.ROSInterruptException:
         pass
