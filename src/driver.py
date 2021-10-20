@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+import rospy
+
 from geometry_msgs.msg import Twist
 
 class Driver:
@@ -26,5 +28,7 @@ class Driver:
         twistMsg.angular.x = .0
         twistMsg.angular.y = .0
         twistMsg.angular.z = speed
+
+        rospy.logdebug("Publishing twist %s", twistMsg)
 
         self.cmdvelPublisher.publish(twistMsg)

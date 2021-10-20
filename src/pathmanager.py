@@ -20,6 +20,8 @@ class PathManager:
     def newOdomMessage(self, data):
         self.syncLock.acquire()
 
+        rospy.logdebug("Received new odometry data")
+
         self.latestOdometry = data
 
         self.syncLock.release()
@@ -27,7 +29,7 @@ class PathManager:
 
     def newMoveBaseSimpleGoalMessage(self, data):
 
-        rospy.loginfo("Received move_base_simple/goal message : %s", data)
+        rospy.logdebug("Received move_base_simple/goal message : %s", data)
 
         self.syncLock.acquire()
 
@@ -59,15 +61,15 @@ class PathManager:
 
             self.syncLock.acquire()
 
-            t = self.pathmanager.transformlistener.getLatestCommonTime("base_footprint", "map")
-            (transformation, rotation) = self.pathmanager.transformlistener.lookupTransform("base_footprint", "map", t)
+            #t = self.transformlistener.getLatestCommonTime("base_footprint", "map")
+            #(transformation, rotation) = self.transformlistener.lookupTransform("base_footprint", "map", t)
 
-            self.worldLatestTime = t
-            self.worldLatestTransformation = transformation
-            self.worldLatestRotation = rotation
-            self.worldLastX = transformation[0]
-            self.worldLastY = transformation[1]
-            self.worldLastZ = transformation[2]
+            #self.worldLatestTime = t
+            #self.worldLatestTransformation = transformation
+            #self.worldLatestRotation = rotation
+            #self.worldLastX = transformation[0]
+            #self.worldLastY = transformation[1]
+            #self.worldLastZ = transformation[2]
 
             self.systemState = self.systemState.process()
 

@@ -83,9 +83,9 @@ class BaseController:
             Estimates the current pose based on the last known reference pose
             and wheel encoder values from a sensor frame
         """
-        rospy.loginfo("Estimating new pose with leftWheelDistance = %s and rightWheelDistance = %s",
+        rospy.logdebug("Estimating new pose with leftWheelDistance = %s and rightWheelDistance = %s",
                       self.robot.leftWheelDistance, self.robot.rightWheelDistance)
-        rospy.loginfo("Last known reference pose is at x = %s m and y = %s m, theta = %s degrees",
+        rospy.logdebug("Last known reference pose is at x = %s m and y = %s m, theta = %s degrees",
                       self.robot.lastKnownReferencePose.x, self.robot.lastKnownReferencePose.y, self.robot.lastKnownReferencePose.theta)
 
         # First case
@@ -97,7 +97,7 @@ class BaseController:
             # Roomba rotated on the spot
             rotationInDegrees = self.robot.leftWheelDistance / (self.robot.fullRotationInSensorTicks / 360)
 
-            rospy.loginfo("Assuming rotation on the spot, as sum of wheel encoders is %s. Rotation is %s degrees",
+            rospy.logdebug("Assuming rotation on the spot, as sum of wheel encoders is %s. Rotation is %s degrees",
                           sumOfWheelEncoders, rotationInDegrees)
 
             poseestimation = RobotPose(self.robot.lastKnownReferencePose.theta - rotationInDegrees,
@@ -120,7 +120,7 @@ class BaseController:
                 deltaXInMeters = math.cos(math.radians(self.robot.lastKnownReferencePose.theta)) * averageMovementInCm / 100
                 deltaYInMeters = math.sin(math.radians(self.robot.lastKnownReferencePose.theta)) * averageMovementInCm / 100
 
-                rospy.loginfo("Assuming movement in straight line, as difference of wheel encoders is %s. distance is %s cm, dx = %s meters, dy = %s meters"
+                rospy.logdebug("Assuming movement in straight line, as difference of wheel encoders is %s. distance is %s cm, dx = %s meters, dy = %s meters"
                               , diffOfWheelEncoders, averageMovementInCm, deltaXInMeters, deltaYInMeters)
 
                 poseestimation = RobotPose(self.robot.lastKnownReferencePose.theta,
@@ -143,7 +143,7 @@ class BaseController:
                     radiusInMeter = L / ((leftWheelDistanceInM / rightWheelDistanceInM) - 1.0)
                     deltaTheta = rightWheelDistanceInM * 360 / (2.0 + math.pi * radiusInMeter)
 
-                    rospy.loginfo("Assuming rotation to the right with radius of %s m and angle of %s degrees",
+                    rospy.logdebug("Assuming rotation to the right with radius of %s m and angle of %s degrees",
                                   radiusInMeter, deltaTheta)
 
                     rotationRadiusToCenterInMeter = radiusInMeter + L / 2
@@ -151,14 +151,14 @@ class BaseController:
                     rotationPointX = self.robot.lastKnownReferencePose.x + math.sin(math.radians(self.robot.lastKnownReferencePose.theta)) * rotationRadiusToCenterInMeter
                     rotationPointY = self.robot.lastKnownReferencePose.y - math.cos(math.radians(self.robot.lastKnownReferencePose.theta)) * rotationRadiusToCenterInMeter
 
-                    rospy.loginfo("Assuming rotation point is at x = %s, y = %s", rotationPointX, rotationPointY)
+                    rospy.logdebug("Assuming rotation point is at x = %s, y = %s", rotationPointX, rotationPointY)
 
                     newPositionX = rotationPointX + math.sin(math.radians(deltaTheta)) * rotationRadiusToCenterInMeter
                     newPositionY = rotationPointY + math.cos(math.radians(deltaTheta)) * rotationRadiusToCenterInMeter
 
                     newTheta = self.robot.lastKnownReferencePose.theta - deltaTheta
 
-                    rospy.loginfo("Estimated position is x = %s, y = %s, theta = %s", newPositionX, newPositionY, newTheta)
+                    rospy.logdebug("Estimated position is x = %s, y = %s, theta = %s", newPositionX, newPositionY, newTheta)
 
                     poseestimation = RobotPose(newTheta,
                                                newPositionX,
@@ -179,7 +179,7 @@ class BaseController:
                     radiusInMeter = L / ((rightWheelDistanceInM / leftWheelDistanceInM) - 1.0)
                     deltaTheta = leftWheelDistanceInM * 360 / (2.0 + math.pi * radiusInMeter)
 
-                    rospy.loginfo("Assuming rotation to the left with radius of %s m and angle of %s degrees",
+                    rospy.logdebug("Assuming rotation to the left with radius of %s m and angle of %s degrees",
                                   radiusInMeter, deltaTheta)
 
                     rotationRadiusToCenterInMeter = radiusInMeter + L / 2
@@ -187,14 +187,14 @@ class BaseController:
                     rotationPointX = self.robot.lastKnownReferencePose.x + math.sin(math.radians(self.robot.lastKnownReferencePose.theta)) * rotationRadiusToCenterInMeter
                     rotationPointY = self.robot.lastKnownReferencePose.y + math.cos(math.radians(self.robot.lastKnownReferencePose.theta)) * rotationRadiusToCenterInMeter
 
-                    rospy.loginfo("Assuming rotation point is at x = %s, y = %s", rotationPointX, rotationPointY)
+                    rospy.logdebug("Assuming rotation point is at x = %s, y = %s", rotationPointX, rotationPointY)
 
                     newPositionX = rotationPointX + math.sin(math.radians(deltaTheta)) * rotationRadiusToCenterInMeter
                     newPositionY = rotationPointY - math.cos(math.radians(deltaTheta)) * rotationRadiusToCenterInMeter
 
                     newTheta = self.robot.lastKnownReferencePose.theta + deltaTheta
 
-                    rospy.loginfo("Estimated position is x = %s, y = %s, theta = %s", newPositionX, newPositionY, newTheta)
+                    rospy.logdebug("Estimated position is x = %s, y = %s, theta = %s", newPositionX, newPositionY, newTheta)
 
                     poseestimation = RobotPose(newTheta,
                                                newPositionX,
@@ -215,7 +215,7 @@ class BaseController:
         """
         temp  = self.estimateAndPublishPose()
 
-        rospy.loginfo("Final Delta rotation left is %s, right is %s",
+        rospy.logdebug("Final Delta rotation left is %s, right is %s",
                       self.overflowSafeWheelRotation(temp.leftWheel - self.robot.lastKnownReferencePose.leftWheel),
                       self.overflowSafeWheelRotation(temp.rightWheel - self.robot.lastKnownReferencePose.rightWheel))
 
@@ -244,7 +244,7 @@ class BaseController:
 
         self.publishFinalPose()
 
-        rospy.loginfo("Received cmd_vel message : %s", data)
+        rospy.logdebug("Received cmd_vel message : %s", data)
 
         linear = data.linear
         angular = data.angular
@@ -299,7 +299,7 @@ class BaseController:
     def newCmdPWMVacuum(self, data):
         self.syncLock.acquire()
 
-        rospy.loginfo("Received vacuum pwm command %s", data)
+        rospy.logdebug("Received vacuum pwm command %s", data)
 
         self.robot.vacuumPWM = data.data
         self.robot.updateMotorControl()
@@ -390,7 +390,7 @@ class BaseController:
             # Bumper right with debounce
             if newSensorFrame.isBumperRight():
                 if not self.robot.lastBumperRight:
-                    rospy.loginfo("Right bumper triggered")
+                    rospy.logdebug("Right bumper triggered")
                     self.stopRobot()
 
                     # Note C
@@ -406,7 +406,7 @@ class BaseController:
             # Bumper left with debounce
             if newSensorFrame.isBumperLeft():
                 if not self.robot.lastBumperLeft:
-                    rospy.loginfo("Left bumper triggered")
+                    rospy.logdebug("Left bumper triggered")
                     self.stopRobot()
 
                     # Note D
@@ -422,7 +422,7 @@ class BaseController:
             # Right wheel drop with debounce
             if newSensorFrame.isWheeldropRight():
                 if not self.robot.lastRightWheelDropped:
-                    rospy.loginfo("Right wheel dropped")
+                    rospy.logdebug("Right wheel dropped")
                     self.stopRobot()
 
                     # Note E
@@ -438,7 +438,7 @@ class BaseController:
             # Left wheel drop with debounce
             if newSensorFrame.isWheeldropLeft():
                 if not self.robot.lastLeftWheelDropped:
-                    rospy.loginfo("Left wheel dropped")
+                    rospy.logdebug("Left wheel dropped")
                     self.stopRobot()
 
                     # Note F
@@ -455,10 +455,10 @@ class BaseController:
             deltaLeft = self.overflowSafeWheelRotation(newSensorFrame.leftWheel - lastSensorFrame.leftWheel)
             deltaRight = self.overflowSafeWheelRotation(newSensorFrame.rightWheel - lastSensorFrame.rightWheel)
 
-            rospy.loginfo("Last wheel left = %s, last wheel right = %s, current wheel left = %s, current wheel right = %s",
+            rospy.logdebug("Last wheel left = %s, last wheel right = %s, current wheel left = %s, current wheel right = %s",
                           lastSensorFrame.leftWheel, lastSensorFrame.rightWheel, newSensorFrame.leftWheel, newSensorFrame.rightWheel)
 
-            rospy.loginfo("Delta rotation left is %s, right is %s",
+            rospy.logdebug("Delta rotation left is %s, right is %s",
                           deltaLeft,
                           deltaRight)
 
@@ -466,7 +466,7 @@ class BaseController:
             self.robot.leftWheelDistance += deltaLeft
             self.robot.rightWheelDistance += deltaRight
 
-            rospy.loginfo("Estimating new position")
+            rospy.logdebug("Estimating new position")
             self.estimateAndPublishPose()
 
             # Remember last sensor data for the next iteration

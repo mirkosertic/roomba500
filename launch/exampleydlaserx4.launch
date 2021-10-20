@@ -14,12 +14,17 @@
     <param name="ignore_array" type="string" value="" />
     <param name="frequency"    type="double" value="8"/>
     <param name="samp_rate"    type="int"    value="5"/>
+    <param name="rosout_disable_topics_generation" value="True" />
   </node>
 
   <node pkg="tf" type="static_transform_publisher" name="base_link_to_laser_frame"
-    args="0.09 0.0 0.15 0.0 0.0 0.0 /base_link /laser_frame 100" />
+    args="0.09 0.0 0.15 0.0 0.0 0.0 /base_link /laser_frame 100">
+    <param name="rosout_disable_topics_generation" value="True" />
+  </node>
 
   <node pkg="tf" type="static_transform_publisher" name="base_link_to_base_footprint"
-    args="0.0 0.0 0.0 0.0 0.0 0.0 /base_link /base_footprint 100" />
+    args="0.0 0.0 0.0 0.0 0.0 0.0 /base_link /base_footprint 100">
+    <param name="rosout_disable_topics_generation" value="True" />
+  </node>
 
 </launch>
