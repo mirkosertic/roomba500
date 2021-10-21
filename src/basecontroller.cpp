@@ -76,7 +76,7 @@ class BaseController {
             odom.child_frame_id = "base_link";
             odom.twist.twist.linear.x = vxInMetersPerSecond;
             odom.twist.twist.linear.y = vyInMetersPerSecond;
-            odom.twist.twist.linear.z = vthInRadiansPerSecond;
+            odom.twist.twist.angular.z = vthInRadiansPerSecond;
 
             odomTopic->publish(odom);
         }
