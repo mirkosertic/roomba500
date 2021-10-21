@@ -43,9 +43,13 @@ class BaseController {
             float distanceY = pose->y - robot->lastKnownReferencePose->y;
             float linearDistanceInMeters = sqrt(distanceX * distanceX + distanceY * distanceY);
 
-            float vxInMetersPerSecond = linearDistanceInMeters / deltaTimeInNanoSeconds * 1000000000;
+            float vxInMetersPerSecond = linearDistanceInMeters / deltaTimeInNanoSeconds * 1000000000.0f;
             float vyInMetersPerSecond = .0f;
-            float vthInRadiansPerSecond = -((pose->theta - robot->lastKnownReferencePose->theta) * M_PI / 180) / deltaTimeInNanoSeconds * 1000000000;
+            float vthInRadiansPerSecond = -((pose->theta - robot->lastKnownReferencePose->theta) * M_PI / 180) / deltaTimeInNanoSeconds * 1000000000.0f;
+
+            if (vyInMetersPerSecond != 0.0f || vthInRadiansPerSecond!= 0.0f) {
+                ROS_INFO("Current velocity vx = %f, vtheta = %f", vxInMetersPerSecond, vthInRadiansPerSecond);
+            }
 
             geometry_msgs::Quaternion odom_quat = tf::createQuaternionMsgFromYaw(radians(pose->theta));
 
@@ -223,6 +227,10 @@ class BaseController {
                       overflowSafeWheelRotation(temp->rightWheel - robot->lastKnownReferencePose->rightWheel));
 
             ROS_INFO("Final pose x = %f, y = %f, theta = %f", temp->x, temp->y, temp->theta);
+
+            int deltaTimeInNanoSeconds = (temp->time - robot->lastKnownReferencePose->time).toNSec();
+
+            ROS_INFO("Delta time in NanoSec = %d", deltaTimeInNanoSeconds);
 
             delete robot->lastKnownReferencePose;
             robot->lastKnownReferencePose = temp;
