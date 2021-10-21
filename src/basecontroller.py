@@ -26,8 +26,8 @@ class BaseController:
         """
             Publish odometry for a given pose
         """
-        deltaTimeInSeconds = (pose.time - self.robot.lastKnownReferencePose.time).to_sec()
-        if (deltaTimeInSeconds == 0):
+        deltaTimeInNanoSeconds = (pose.time - self.robot.lastKnownReferencePose.time).to_nsec()
+        if deltaTimeInNanoSeconds == 0:
             return
 
         # The robot can only move forward ( x - direction in base_link coordinate frame
@@ -35,9 +35,9 @@ class BaseController:
         distanceY = pose.y - self.robot.lastKnownReferencePose.y
         linearDistanceInMeters = math.sqrt(distanceX * distanceX + distanceY * distanceY)
 
-        vxInMetersPerSecond = linearDistanceInMeters / deltaTimeInSeconds
+        vxInMetersPerSecond = linearDistanceInMeters / deltaTimeInNanoSeconds * 1000000000
         vyInMetersPerSecond = .0
-        vthInRadiansPerSecond = -((pose.theta - self.robot.lastKnownReferencePose.theta) * math.pi / 180) / deltaTimeInSeconds
+        vthInRadiansPerSecond = -((pose.theta - self.robot.lastKnownReferencePose.theta) * math.pi / 180) / deltaTimeInNanoSeconds * 1000000000
 
         # Publish odometry
         odom = Odometry()

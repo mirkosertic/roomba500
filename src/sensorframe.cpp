@@ -30,18 +30,18 @@ class SensorFrame {
         }
 
         bool isBumperLeft() {
-            return bumperState & 2 > 0;
+            return (bumperState & 2) > 0;
         }
 
         bool isBumperRight() {
-            return bumperState & 1 > 0;
+            return (bumperState & 1) > 0;
         }
 
         bool isWheeldropLeft() {
-            return bumperState & 8 > 0;
+            return (bumperState & 8) > 0;
         }
 
         bool isWheeldropRight() {
-            return bumperState & 4 > 0;
+            return (bumperState & 4) > 0;
         }
 };
