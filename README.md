@@ -7,9 +7,9 @@ This implementation has been developed and tested on ROS Melodic.
 
 ## Provided Nodes
 
-### basecontroller.py
+### basecontroller
 
-`basecontroller.py` is a base controller (robot driver) for the Roomba. It takes ros commands and sends them to a connected
+`basecontroller` is a base controller (robot driver) for the Roomba. It takes ros commands and sends them to a connected
 Roomba. Connection to the Roomba is established over a serial interface.
 
 This base controller uses the Roomba wheel encoder counts to get a better estimate of the robot odometry position and velocity. The internal Roomba sensors lack precision, depending on the model and firmware version. Using the wheel encoder values gives the best results. Please note that there is no sensor fusion involved, so odometry tends to drift over time. Please combine this node with a laser scanner to get better results of even make if workable with the ROS navigation stack.

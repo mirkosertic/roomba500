@@ -134,8 +134,6 @@ class Roomba500 {
 
     void drive(int speedLeft, int speedRight) {
 
-        ROS_INFO("Deive left %d right %d", speedLeft, speedRight);
-
         unsigned int speedLeftUnsigned;
         if (speedLeft < 0) {
             speedLeftUnsigned = (1<<16) + speedLeft;

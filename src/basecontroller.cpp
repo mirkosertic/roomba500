@@ -32,11 +32,11 @@ class BaseController {
             int deltaTimeInNanoSeconds = (pose->time - robot->lastKnownReferencePose->time).toNSec();
 
             if (deltaTimeInNanoSeconds == 0) {
-                ROS_INFO("Skipping odometry");
+                ROS_DEBUG("Skipping odometry");
                 return;
             }
 
-            ROS_INFO("Publishing odometry, delta t in milliseconds is %d", (int)(deltaTimeInNanoSeconds / 1000000));
+            ROS_DEBUG("Publishing odometry, delta t in milliseconds is %d", (int)(deltaTimeInNanoSeconds / 1000000));
 
             // The robot can only move forward ( x - direction in base_link coordinate frame )
             float distanceX = pose->x - robot->lastKnownReferencePose->x;
@@ -82,9 +82,9 @@ class BaseController {
         }
 
         RobotPose* estimateAndPublishPose() {
-            ROS_INFO("Estimating new pose with leftWheelDistance = %d and rightWheelDistance = %d",
+            ROS_DEBUG("Estimating new pose with leftWheelDistance = %d and rightWheelDistance = %d",
                           robot->leftWheelDistance, robot->rightWheelDistance);
-            ROS_INFO("Last known reference pose is at x = %f m and y = %f m, theta = %f degrees",
+            ROS_DEBUG("Last known reference pose is at x = %f m and y = %f m, theta = %f degrees",
                           robot->lastKnownReferencePose->x, robot->lastKnownReferencePose->y, robot->lastKnownReferencePose->theta);
 
             // First case
@@ -94,9 +94,9 @@ class BaseController {
             int sumOfWheelEncoders = robot->leftWheelDistance + robot->rightWheelDistance;
             if (sumOfWheelEncoders < 20) {
                 // Roomba rotated on the spot
-                float rotationInDegrees = robot->leftWheelDistance / (robot->fullRotationInSensorTicks / 360);
+                float rotationInDegrees = ((float) robot->leftWheelDistance) / (robot->fullRotationInSensorTicks / 360.0);
 
-                ROS_INFO("Assuming rotation on the spot, as sum of wheel encoders is %d. Rotation is %f degrees",
+                ROS_DEBUG("Assuming rotation on the spot, as sum of wheel encoders is %d. Rotation is %f degrees",
                               sumOfWheelEncoders, rotationInDegrees);
 
                 RobotPose* poseestimation = new RobotPose(robot->lastKnownReferencePose->theta - rotationInDegrees,
@@ -116,10 +116,10 @@ class BaseController {
                     float averageMovementInTicks = (robot->leftWheelDistance + robot->rightWheelDistance) / 2.0f;
                     float averageMovementInCm = averageMovementInTicks / robot->ticksPerCm;
 
-                    float deltaXInMeters = cos(radians(robot->lastKnownReferencePose->theta)) * averageMovementInCm / 100;
-                    float deltaYInMeters = sin(radians(robot->lastKnownReferencePose->theta)) * averageMovementInCm / 100;
+                    float deltaXInMeters = cos(radians(robot->lastKnownReferencePose->theta)) * averageMovementInCm / 100.0f;
+                    float deltaYInMeters = sin(radians(robot->lastKnownReferencePose->theta)) * averageMovementInCm / 100.0f;
 
-                    ROS_INFO("Assuming movement in straight line, as difference of wheel encoders is %d. distance is %f cm, dx = %f meters, dy = %f meters"
+                    ROS_DEBUG("Assuming movement in straight line, as difference of wheel encoders is %d. distance is %f cm, dx = %f meters, dy = %f meters"
                                   , diffOfWheelEncoders, averageMovementInCm, deltaXInMeters, deltaYInMeters);
 
                     RobotPose* poseestimation = new RobotPose(robot->lastKnownReferencePose->theta,
@@ -143,7 +143,7 @@ class BaseController {
                         float radiusInMeter = L / ((leftWheelDistanceInM / rightWheelDistanceInM) - 1.0f);
                         float deltaTheta = rightWheelDistanceInM * 360 / (2.0f + M_PI * radiusInMeter);
 
-                        ROS_INFO("Assuming rotation to the right with radius of %f m and angle of %f degrees",
+                        ROS_DEBUG("Assuming rotation to the right with radius of %f m and angle of %f degrees",
                                       radiusInMeter, deltaTheta);
 
                         float rotationRadiusToCenterInMeter = radiusInMeter + L / 2;
@@ -151,14 +151,14 @@ class BaseController {
                         float rotationPointX = robot->lastKnownReferencePose->x + sin(radians(robot->lastKnownReferencePose->theta)) * rotationRadiusToCenterInMeter;
                         float rotationPointY = robot->lastKnownReferencePose->y - cos(radians(robot->lastKnownReferencePose->theta)) * rotationRadiusToCenterInMeter;
 
-                        ROS_INFO("Assuming rotation point is at x = %f, y = %f", rotationPointX, rotationPointY);
+                        ROS_DEBUG("Assuming rotation point is at x = %f, y = %f", rotationPointX, rotationPointY);
 
                         float newPositionX = rotationPointX + sin(radians(deltaTheta)) * rotationRadiusToCenterInMeter;
                         float newPositionY = rotationPointY + cos(radians(deltaTheta)) * rotationRadiusToCenterInMeter;
 
                         float newTheta = robot->lastKnownReferencePose->theta - deltaTheta;
 
-                        ROS_INFO("Estimated position is x = %f, y = %f, theta = %f", newPositionX, newPositionY, newTheta);
+                        ROS_DEBUG("Estimated position is x = %f, y = %f, theta = %f", newPositionX, newPositionY, newTheta);
 
                         RobotPose* poseestimation = new RobotPose(newTheta,
                                                    newPositionX,
@@ -181,7 +181,7 @@ class BaseController {
                         float radiusInMeter = L / ((rightWheelDistanceInM / leftWheelDistanceInM) - 1.0);
                         float deltaTheta = leftWheelDistanceInM * 360 / (2.0f + M_PI * radiusInMeter);
 
-                        ROS_INFO("Assuming rotation to the left with radius of %f m and angle of %f degrees",
+                        ROS_DEBUG("Assuming rotation to the left with radius of %f m and angle of %f degrees",
                                       radiusInMeter, deltaTheta);
 
                         float rotationRadiusToCenterInMeter = radiusInMeter + L / 2;
@@ -189,14 +189,14 @@ class BaseController {
                         float rotationPointX = robot->lastKnownReferencePose->x + sin(radians(robot->lastKnownReferencePose->theta)) * rotationRadiusToCenterInMeter;
                         float rotationPointY = robot->lastKnownReferencePose->y + cos(radians(robot->lastKnownReferencePose->theta)) * rotationRadiusToCenterInMeter;
 
-                        ROS_INFO("Assuming rotation point is at x = %f, y = %f", rotationPointX, rotationPointY);
+                        ROS_DEBUG("Assuming rotation point is at x = %f, y = %f", rotationPointX, rotationPointY);
 
                         float newPositionX = rotationPointX + sin(radians(deltaTheta)) * rotationRadiusToCenterInMeter;
                         float newPositionY = rotationPointY - cos(radians(deltaTheta)) * rotationRadiusToCenterInMeter;
 
                         float newTheta = robot->lastKnownReferencePose->theta + deltaTheta;
 
-                        ROS_INFO("Estimated position is x = %f, y = %f, theta = %f", newPositionX, newPositionY, newTheta);
+                        ROS_DEBUG("Estimated position is x = %f, y = %f, theta = %f", newPositionX, newPositionY, newTheta);
 
                         RobotPose* poseestimation = new RobotPose(newTheta,
                                                    newPositionX,
@@ -213,11 +213,16 @@ class BaseController {
         }
 
         void publishFinalPose() {
+
+            ROS_INFO("Last reference pose x = %f, y = %f, theta = %f", robot->lastKnownReferencePose->x, robot->lastKnownReferencePose->y, robot->lastKnownReferencePose->theta);
+
             RobotPose* temp  = estimateAndPublishPose();
 
-            ROS_INFO("Final Delta rotation left is %d, right is %d",
+            ROS_INFO("Final delta rotation left is %d, right is %d",
                       overflowSafeWheelRotation(temp->leftWheel - robot->lastKnownReferencePose->leftWheel),
                       overflowSafeWheelRotation(temp->rightWheel - robot->lastKnownReferencePose->rightWheel));
+
+            ROS_INFO("Final pose x = %f, y = %f, theta = %f", temp->x, temp->y, temp->theta);
 
             delete robot->lastKnownReferencePose;
             robot->lastKnownReferencePose = temp;
@@ -233,22 +238,17 @@ class BaseController {
 
         void newCmdVelMessage(const geometry_msgs::Twist& data) {
 
-            ROS_INFO("Vel 1");
             this->mutex->lock();
 
-            ROS_INFO("Vel 2");
             publishFinalPose();
 
-            ROS_INFO("Vel 3");
             float speedInMeterPerSecond = data.linear.x; // Meter per second
             float rotationInRadiansPerSecond = data.angular.z; // Radians per second
 
             if (speedInMeterPerSecond == .0f && rotationInRadiansPerSecond == .0f) {
-                ROS_INFO("Vel 4");
                 robot->drive(0, 0);
             } else {
                 if (rotationInRadiansPerSecond == .0f) {
-                    ROS_INFO("Vel 5");
                     float mmPerSecond = speedInMeterPerSecond * 100 * 10;
 
                     if (mmPerSecond > 500) {
@@ -260,7 +260,6 @@ class BaseController {
 
                     robot->drive((int)mmPerSecond, (int)mmPerSecond);
                 } else {
-                    ROS_INFO("Vel 6");
                     float degreePerSecond = rotationInRadiansPerSecond * 180.0f / M_PI;
 
                     float mmPerSecond = robot->fullRotationInSensorTicks / 360.0f * degreePerSecond;
@@ -275,9 +274,7 @@ class BaseController {
                 }
             }
 
-            ROS_INFO("Vel 7");
             this->mutex->unlock();
-            ROS_INFO("Vel 8");
         }
 
         void newCmdPWMMainBrush(const std_msgs::Int16& data) {
@@ -304,7 +301,7 @@ class BaseController {
 
             this->mutex->lock();
 
-            ROS_INFO("Received vacuum pwm command %d", data.data);
+            ROS_DEBUG("Received vacuum pwm command %d", data.data);
 
             robot->vacuumPWM = data.data;
             robot->updateMotorControl();
@@ -346,6 +343,10 @@ class BaseController {
             n.param("ticksPerCm", ticksPerCm, 22.5798f);
             n.param("robotWheelDistanceInCm", robotWheelDistanceInCm, 25.0f);
             n.param("pollingRateInHertz", pollingRateInHertz, 30);
+
+            ROS_INFO("Full rotation in ticks     : %d", fullRotationInSensorTicks);
+            ROS_INFO("Ticks per cm               : %f", ticksPerCm);
+            ROS_INFO("Robot wheel distance in cm : %f", robotWheelDistanceInCm);
 
             ROS_INFO("Connecting to Roomba 5xx on port %s with %d baud", serialport.c_str(), baudrate);
             robot = new Roomba500(serialport, baudrate, fullRotationInSensorTicks, ticksPerCm, robotWheelDistanceInCm);
@@ -418,7 +419,7 @@ class BaseController {
                 this->mutex->lock();
 
                 // Read some sensor data
-                ROS_INFO("Getting new sensorframe");
+                ROS_DEBUG("Getting new sensorframe");
 
                 SensorFrame newSensorFrame = robot->readSensorFrame();
 
@@ -502,10 +503,10 @@ class BaseController {
                 int deltaLeft = overflowSafeWheelRotation(newSensorFrame.leftWheel - lastSensorFrame.leftWheel);
                 int deltaRight = overflowSafeWheelRotation(newSensorFrame.rightWheel - lastSensorFrame.rightWheel);
 
-                ROS_INFO("Last wheel left = %d, last wheel right = %d, current wheel left = %d, current wheel right = %d",
+                ROS_DEBUG("Last wheel left = %d, last wheel right = %d, current wheel left = %d, current wheel right = %d",
                               lastSensorFrame.leftWheel, lastSensorFrame.rightWheel, newSensorFrame.leftWheel, newSensorFrame.rightWheel);
 
-                ROS_INFO("Delta rotation left is %d, right is %d",
+                ROS_DEBUG("Delta rotation left is %d, right is %d",
                               deltaLeft,
                               deltaRight);
 
