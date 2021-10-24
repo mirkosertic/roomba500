@@ -2,5 +2,6 @@
 <launch>
   <node name="basecontroller" pkg="roomba500" type="basecontroller" output="screen" respawn="false">
     <param name="rosout_disable_topics_generation" value="True" />
+    <param name="pollingRateInHertz" value="1" />
   </node>
 </launch>

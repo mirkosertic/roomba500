@@ -29,27 +29,27 @@ class BaseController {
     public:
 
         void publishOdometry(RobotPose* pose) {
-            int deltaTimeInNanoSeconds = (pose->time - robot->lastKnownReferencePose->time).toNSec();
+            double deltaTimeInSeconds = (pose->time - robot->lastKnownReferencePose->time).toSec();
 
-            if (deltaTimeInNanoSeconds == 0) {
-                ROS_DEBUG("Skipping odometry");
-                return;
-            }
+            //if (deltaTimeInSeconds == 0.0) {
+            //    ROS_INFO("Skipping odometry as delta time is zero");
+            //    return;
+            //}
 
-            ROS_DEBUG("Publishing odometry, delta t in milliseconds is %d", (int)(deltaTimeInNanoSeconds / 1000000));
+            ROS_DEBUG("Publishing odometry, delta time is %f seconds", deltaTimeInSeconds);
 
             // The robot can only move forward ( x - direction in base_link coordinate frame )
             float distanceX = pose->x - robot->lastKnownReferencePose->x;
             float distanceY = pose->y - robot->lastKnownReferencePose->y;
             float linearDistanceInMeters = sqrt(distanceX * distanceX + distanceY * distanceY);
 
-            float vxInMetersPerSecond = linearDistanceInMeters / deltaTimeInNanoSeconds * 1000000000.0f;
-            float vyInMetersPerSecond = .0f;
-            float vthInRadiansPerSecond = -((pose->theta - robot->lastKnownReferencePose->theta) * M_PI / 180) / deltaTimeInNanoSeconds * 1000000000.0f;
+            //float vxInMetersPerSecond = linearDistanceInMeters / deltaTimeInSeconds;
+            //float vyInMetersPerSecond = .0f;
+            //float vthInRadiansPerSecond = -((pose->theta - robot->lastKnownReferencePose->theta) * M_PI / 180) / deltaTimeInSeconds;
 
-            if (vyInMetersPerSecond != 0.0f || vthInRadiansPerSecond!= 0.0f) {
-                ROS_INFO("Current velocity vx = %f, vtheta = %f", vxInMetersPerSecond, vthInRadiansPerSecond);
-            }
+            //if (vyInMetersPerSecond != 0.0f || vthInRadiansPerSecond != 0.0f) {
+            //    ROS_INFO("Current velocity vx = %f, vtheta = %f", vxInMetersPerSecond, vthInRadiansPerSecond);
+            //}
 
             geometry_msgs::Quaternion odom_quat = tf::createQuaternionMsgFromYaw(radians(pose->theta));
 
@@ -74,9 +74,9 @@ class BaseController {
             odom.pose.pose.position.z = .0f;
             odom.pose.pose.orientation = odom_quat;
             odom.child_frame_id = "base_link";
-            odom.twist.twist.linear.x = vxInMetersPerSecond;
-            odom.twist.twist.linear.y = vyInMetersPerSecond;
-            odom.twist.twist.angular.z = vthInRadiansPerSecond;
+            //odom.twist.twist.linear.x = vxInMetersPerSecond;
+            //odom.twist.twist.linear.y = vyInMetersPerSecond;
+            //odom.twist.twist.angular.z = vthInRadiansPerSecond;
 
             odomTopic->publish(odom);
         }
@@ -228,9 +228,9 @@ class BaseController {
 
             ROS_INFO("Final pose x = %f, y = %f, theta = %f", temp->x, temp->y, temp->theta);
 
-            int deltaTimeInNanoSeconds = (temp->time - robot->lastKnownReferencePose->time).toNSec();
+            double deltaTimeInSeconds = (temp->time - robot->lastKnownReferencePose->time).toSec();
 
-            ROS_INFO("Delta time in NanoSec = %d", deltaTimeInNanoSeconds);
+            ROS_INFO("Delta time since last reference pose is %f seconds", deltaTimeInSeconds);
 
             delete robot->lastKnownReferencePose;
             robot->lastKnownReferencePose = temp;
@@ -240,18 +240,22 @@ class BaseController {
         }
 
         void stopRobot() {
-            publishFinalPose();
             robot->drive(0, 0);
+            publishFinalPose();
         }
 
         void newCmdVelMessage(const geometry_msgs::Twist& data) {
 
+            ROS_INFO("Received cmd_vel message");
             this->mutex->lock();
 
             publishFinalPose();
 
             float speedInMeterPerSecond = data.linear.x; // Meter per second
             float rotationInRadiansPerSecond = data.angular.z; // Radians per second
+
+            ROS_INFO("Linear speed x      : %f", speedInMeterPerSecond);
+            ROS_INFO("Angular speed z     : %f", rotationInRadiansPerSecond);
 
             if (speedInMeterPerSecond == .0f && rotationInRadiansPerSecond == .0f) {
                 robot->drive(0, 0);
@@ -325,10 +329,12 @@ class BaseController {
 
         int overflowSafeWheelRotation(int rotationDelta) {
             if (rotationDelta < -16384) {
+                ROS_INFO("Forward rotation with overflow : %d", rotationDelta);
                 // Rotation forward with overflow
                 return rotationDelta + 65536;
             }
             if (rotationDelta > 16384) {
+                ROS_INFO("Backward rotation with overflow : %d", rotationDelta);
                 // Rotation backward with overflow
                 return rotationDelta - 65536;
             }
@@ -336,7 +342,7 @@ class BaseController {
             return rotationDelta;
         }
 
-        int run() {
+        int run(ros::NodeHandle* nPriv) {
             ros::NodeHandle n;
 
             std::mutex mutex;
@@ -345,12 +351,12 @@ class BaseController {
             std::string serialport;
             int baudrate;
 
-            n.param<std::string>("serialport", serialport, "/dev/serial0");
-            n.param("baudrate", baudrate, 115200);
-            n.param("fullRotationInSensorTicks", fullRotationInSensorTicks, 1608);
-            n.param("ticksPerCm", ticksPerCm, 22.5798f);
-            n.param("robotWheelDistanceInCm", robotWheelDistanceInCm, 25.0f);
-            n.param("pollingRateInHertz", pollingRateInHertz, 30);
+            nPriv->param<std::string>("serialport", serialport, "/dev/serial0");
+            nPriv->param("baudrate", baudrate, 115200);
+            nPriv->param("fullRotationInSensorTicks", fullRotationInSensorTicks, 1608);
+            nPriv->param("ticksPerCm", ticksPerCm, 22.5798f);
+            nPriv->param("robotWheelDistanceInCm", robotWheelDistanceInCm, 25.0f);
+            nPriv->param("pollingRateInHertz", pollingRateInHertz, 30);
 
             ROS_INFO("Full rotation in ticks     : %d", fullRotationInSensorTicks);
             ROS_INFO("Ticks per cm               : %f", ticksPerCm);
@@ -401,10 +407,6 @@ class BaseController {
             // Used for the tf broadcasting
             tf::TransformBroadcaster broadcaster;
             transform_broadcaster = &broadcaster;
-
-            // We use an async spinner here
-            ros::AsyncSpinner spinner(2);
-            spinner.start();
 
             // We consume steering commands from here
             ros::Subscriber cmdVelSub = n.subscribe("cmd_vel", 1000, &BaseController::newCmdVelMessage, this);
@@ -543,6 +545,7 @@ class BaseController {
 
                 this->mutex->unlock();
 
+                ros::spinOnce();
                 loop_rate.sleep();
             }
 
@@ -555,6 +558,9 @@ class BaseController {
 int main(int argc, char *argv[]) {
     ros::init(argc, argv, "roomba500basecontroller");
 
+    ros::NodeHandle nPriv("~");
+
     BaseController controller;
-    return controller.run();
+
+    return controller.run(&nPriv);
 }
