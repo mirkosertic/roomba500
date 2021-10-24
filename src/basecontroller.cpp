@@ -254,8 +254,8 @@ class BaseController {
             float speedInMeterPerSecond = data.linear.x; // Meter per second
             float rotationInRadiansPerSecond = data.angular.z; // Radians per second
 
-            ROS_INFO("Linear speed x      : %f", speedInMeterPerSecond);
-            ROS_INFO("Angular speed z     : %f", rotationInRadiansPerSecond);
+            ROS_INFO("Linear speed x      : %f m/sec", speedInMeterPerSecond);
+            ROS_INFO("Angular speed z     : %f rad/sec", rotationInRadiansPerSecond);
 
             if (speedInMeterPerSecond == .0f && rotationInRadiansPerSecond == .0f) {
                 robot->drive(0, 0);
