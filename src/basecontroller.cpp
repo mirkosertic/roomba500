@@ -27,6 +27,15 @@ class BaseController {
         tf::TransformBroadcaster* transform_broadcaster;
         std::mutex* mutex;
     public:
+        float normalizeAngleInDegrees(float angle) {
+            while (angle >= 360) {
+                angle-= 360;
+            }
+            while (angle < 0) {
+                angle+= 360;
+            }
+            return angle;
+        }
 
         void publishOdometry(RobotPose* pose) {
             double deltaTimeInSeconds = (pose->time - robot->lastKnownReferencePose->time).toSec();
@@ -103,7 +112,7 @@ class BaseController {
                 ROS_DEBUG("Assuming rotation on the spot, as sum of wheel encoders is %d. Rotation is %f degrees",
                               sumOfWheelEncoders, rotationInDegrees);
 
-                RobotPose* poseestimation = new RobotPose(robot->lastKnownReferencePose->theta - rotationInDegrees,
+                RobotPose* poseestimation = new RobotPose(normalizeAngleInDegrees(robot->lastKnownReferencePose->theta - rotationInDegrees),
                                            robot->lastKnownReferencePose->x,
                                            robot->lastKnownReferencePose->y,
                                            robot->leftWheelDistance, robot->rightWheelDistance, ros::Time::now());
@@ -160,7 +169,7 @@ class BaseController {
                         float newPositionX = rotationPointX + sin(radians(deltaTheta)) * rotationRadiusToCenterInMeter;
                         float newPositionY = rotationPointY + cos(radians(deltaTheta)) * rotationRadiusToCenterInMeter;
 
-                        float newTheta = robot->lastKnownReferencePose->theta - deltaTheta;
+                        float newTheta = normalizeAngleInDegrees(robot->lastKnownReferencePose->theta - deltaTheta);
 
                         ROS_DEBUG("Estimated position is x = %f, y = %f, theta = %f", newPositionX, newPositionY, newTheta);
 
@@ -198,7 +207,7 @@ class BaseController {
                         float newPositionX = rotationPointX + sin(radians(deltaTheta)) * rotationRadiusToCenterInMeter;
                         float newPositionY = rotationPointY - cos(radians(deltaTheta)) * rotationRadiusToCenterInMeter;
 
-                        float newTheta = robot->lastKnownReferencePose->theta + deltaTheta;
+                        float newTheta = normalizeAngleInDegrees(robot->lastKnownReferencePose->theta + deltaTheta);
 
                         ROS_DEBUG("Estimated position is x = %f, y = %f, theta = %f", newPositionX, newPositionY, newTheta);
 
@@ -247,7 +256,7 @@ class BaseController {
         void newCmdVelMessage(const geometry_msgs::Twist& data) {
 
             ROS_INFO("Received cmd_vel message");
-            this->mutex->lock();
+            mutex->lock();
 
             publishFinalPose();
 
@@ -286,39 +295,39 @@ class BaseController {
                 }
             }
 
-            this->mutex->unlock();
+            mutex->unlock();
         }
 
         void newCmdPWMMainBrush(const std_msgs::Int16& data) {
 
-            this->mutex->lock();
+            mutex->lock();
 
             robot->mainbrushPWM = data.data;
             robot->updateMotorControl();
 
-            this->mutex->unlock();
+            mutex->unlock();
         }
 
         void newCmdPWMSideBrush(const std_msgs::Int16& data) {
 
-            this->mutex->lock();
+            mutex->lock();
 
             robot->sidebrushPWM = data.data;
             robot->updateMotorControl();
 
-            this->mutex->unlock();
+            mutex->unlock();
         }
 
         void newCmdPWMVacuum(const std_msgs::Int16& data) {
 
-            this->mutex->lock();
+            mutex->lock();
 
             ROS_DEBUG("Received vacuum pwm command %d", data.data);
 
             robot->vacuumPWM = data.data;
             robot->updateMotorControl();
 
-            this->mutex->unlock();
+            mutex->unlock();
         }
 
         void publishInt16(int value, ros::Publisher* publisher) {
@@ -426,7 +435,7 @@ class BaseController {
             // Processing the sensor polling in an endless loop until this node goes to die
             while (ros::ok()) {
 
-                this->mutex->lock();
+                mutex.lock();
 
                 // Read some sensor data
                 ROS_DEBUG("Getting new sensorframe");
@@ -543,7 +552,7 @@ class BaseController {
 
                 publishInt16(lastSensorFrame.oimode, &oimodeTopic);
 
-                this->mutex->unlock();
+                mutex.unlock();
 
                 ros::spinOnce();
                 loop_rate.sleep();

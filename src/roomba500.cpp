@@ -84,32 +84,32 @@ class Roomba500 {
 
         unsigned char data[] = {128, 131};
 
-        int written = write(this->fd, &data, sizeof(data));
+        int written = write(fd, &data, sizeof(data));
         if (written != sizeof(data)) {
             throw std::invalid_argument("error sending safeMode command");
         }
-        tcdrain(this->fd);
+        tcdrain(fd);
         //self.ser.write(chr(128))
         //self.ser.write(chr(131))
     }
 
     void passiveMode() {
         unsigned char data[] = {128};
-        int written = write(this->fd, &data, sizeof(data));
+        int written = write(fd, &data, sizeof(data));
         if (written != sizeof(data)) {
             throw std::invalid_argument("error sending passiveMode command");
         }
-        tcdrain(this->fd);
+        tcdrain(fd);
         //self.ser.write(chr(128))
     }
 
     void updateMotorControl() {
-        unsigned char data[] = {144, (unsigned char) (this->mainbrushPWM & 0xff), (unsigned char) (this->sidebrushPWM & 0xff), (unsigned char) (this->vacuumPWM & 0xff)};
-        int written = write(this->fd, &data, sizeof(data));
+        unsigned char data[] = {144, (unsigned char) (mainbrushPWM & 0xff), (unsigned char) (sidebrushPWM & 0xff), (unsigned char) (vacuumPWM & 0xff)};
+        int written = write(fd, &data, sizeof(data));
         if (written != sizeof(data)) {
             throw std::invalid_argument("error updating motor control");
         }
-        tcdrain(this->fd);
+        tcdrain(fd);
         //self.ser.write(chr(144))
         //self.ser.write(chr(self.mainbrushPWM & 0xff))
         //self.ser.write(chr(self.sidebrushPWM & 0xff))
@@ -118,11 +118,11 @@ class Roomba500 {
 
     void playNote(unsigned char note, unsigned char duration) {
         unsigned char data[] = {140, 0, 1, note, duration, 141, 0};
-        int written = write(this->fd, &data, sizeof(data));
+        int written = write(fd, &data, sizeof(data));
         if (written != sizeof(data)) {
             throw std::invalid_argument("error playing note");
         }
-        tcdrain(this->fd);
+        tcdrain(fd);
         //self.ser.write(chr(140))
         //self.ser.write(chr(0))
         //self.ser.write(chr(1))
@@ -150,11 +150,11 @@ class Roomba500 {
 
         unsigned char data[] = {145, (unsigned char)((speedRightUnsigned >> 8) & 0xff), (unsigned char)(speedRightUnsigned & 0xff),
                                      (unsigned char)((speedLeftUnsigned >> 8) & 0xff), (unsigned char)(speedLeftUnsigned & 0xff)};
-        int written = write(this->fd, data, sizeof(data));
+        int written = write(fd, data, sizeof(data));
         if (written != sizeof(data)) {
             throw std::invalid_argument("error sending drive command");
         }
-        tcdrain(this->fd);
+        tcdrain(fd);
 
         //leftSpeedHigh, leftSpeedLow = twoComplementOf(speedLeft)
         //rightSpeedHigh, rightSpeedLow = twoComplementOf(speedRight)
@@ -167,20 +167,20 @@ class Roomba500 {
 
     unsigned char readData() {
         unsigned char result;
-        int readBytes = read(this->fd, &result, 1);
+        int readBytes = read(fd, &result, 1);
         return result;
     }
 
     SensorFrame readSensorFrame() {
 
-        tcflush(this->fd, TCIFLUSH);
+        tcflush(fd, TCIFLUSH);
 
         unsigned char data[] = {149, 12, 43, 44, 25, 26, 7, 46, 47, 48, 49, 50, 51, 35};
-        int written = write(this->fd, &data, sizeof(data));
+        int written = write(fd, &data, sizeof(data));
         if (written != sizeof(data)) {
             throw std::invalid_argument("sending read sensors command");
         }
-        tcdrain(this->fd);
+        tcdrain(fd);
 
         int bytesAvailable = 0;
         ioctl(fd, FIONREAD, &bytesAvailable);
@@ -249,6 +249,6 @@ class Roomba500 {
     }
 
     ~Roomba500() {
-        close(this->fd);
+        close(fd);
     }
 };
