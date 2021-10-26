@@ -27,6 +27,10 @@ class Roomba500 {
         char sidebrushPWM;
         char vacuumPWM;
 
+        bool commandQueued;
+        int queuedLeftWheelAccel;
+        int queuedRightWheelAccel;
+
     Roomba500(std::string device, int baudrate, int fullRotationInSensorTicks, float ticksPerCm, float robotWheelDistanceInCm) {
         // Open and initialize serial interface
         // Code taken from https://www.cmrr.umn.edu/~strupp/serial.html
@@ -246,6 +250,25 @@ class Roomba500 {
         //result.lightBumperFrontRight = lightBumpFrontRight
         //result.lightBumperRight = lightBumpRight
         //result.oimode = oimode
+    }
+
+    void resetQueue() {
+        commandQueued = false;
+    }
+
+    void enqueueCommand(int aQueuedLeftWheelAccel, int aQueuedRightWheelAccel) {
+        ROS_INFO("Enqueueing cmd_vel command left = %d, right = %d", aQueuedLeftWheelAccel, queuedRightWheelAccel);
+        commandQueued = true;
+        queuedLeftWheelAccel = aQueuedLeftWheelAccel;
+        queuedRightWheelAccel = aQueuedRightWheelAccel;
+    }
+
+    void dequeueCommand() {
+        if (commandQueued) {
+            ROS_INFO("Dequeueing cmd_vel command left = %d, right = %d", queuedLeftWheelAccel, queuedRightWheelAccel);
+            commandQueued = false;
+            drive(queuedLeftWheelAccel, queuedRightWheelAccel);
+        }
     }
 
     ~Roomba500() {

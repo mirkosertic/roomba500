@@ -22,8 +22,8 @@ class MoveSegmentState(BaseState):
         self.counter = 10
         self.rotating = False
 
-        t = pathmanager.transformlistener.getLatestCommonTime("base_footprint", "map")
-        (transformation, rotation) = pathmanager.transformlistener.lookupTransform("base_footprint", "map", t)
+        t = pathmanager.transformlistener.getLatestCommonTime("base_link", "map")
+        (transformation, rotation) = pathmanager.transformlistener.lookupTransform("base_link", "map", t)
 
         pathmanager.worldLatestTime = t
         pathmanager.worldLatestTransformation = transformation

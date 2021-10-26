@@ -65,9 +65,9 @@ also a [Node-RED Dashboard](https://nodered.org/) available in the node-red-room
   The serial port where the Roomba can be found.
 * `baudrate` (int, default: 115200)
   The baud rate for serial communication.
-* `fullRotationInSensorTicks` (int, default: 1608)
+* `fullRotationInSensorTicks` (int, default: 1696)
   Wheel encoder counts for a full 360 degree rotation. Is individual for each Roomba depending on tyre usage etc. 
-* `ticksPerCm` (float, default: 22.5798)
+* `ticksPerCm` (float, default: 22.836363)
   Wheel encoder counts for a movement of 1 cm. Is individual for each Roomba depending on tyre usage etc.
 * `robotWheelDistanceInCm` (float, default: 25.0)
   The difference between the two robot wheels. Depends on the Roomba model.

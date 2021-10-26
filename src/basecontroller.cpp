@@ -40,10 +40,10 @@ class BaseController {
         void publishOdometry(RobotPose* pose) {
             double deltaTimeInSeconds = (pose->time - robot->lastKnownReferencePose->time).toSec();
 
-            //if (deltaTimeInSeconds == 0.0) {
-            //    ROS_INFO("Skipping odometry as delta time is zero");
-            //    return;
-            //}
+            if (deltaTimeInSeconds == 0.0) {
+                ROS_INFO("Skipping odometry as delta time is zero");
+                return;
+            }
 
             ROS_DEBUG("Publishing odometry, delta time is %f seconds", deltaTimeInSeconds);
 
@@ -52,13 +52,13 @@ class BaseController {
             float distanceY = pose->y - robot->lastKnownReferencePose->y;
             float linearDistanceInMeters = sqrt(distanceX * distanceX + distanceY * distanceY);
 
-            //float vxInMetersPerSecond = linearDistanceInMeters / deltaTimeInSeconds;
-            //float vyInMetersPerSecond = .0f;
-            //float vthInRadiansPerSecond = -((pose->theta - robot->lastKnownReferencePose->theta) * M_PI / 180) / deltaTimeInSeconds;
+            float vxInMetersPerSecond = linearDistanceInMeters / deltaTimeInSeconds;
+            float vyInMetersPerSecond = .0f;
+            float vthInRadiansPerSecond = -((pose->theta - robot->lastKnownReferencePose->theta) * M_PI / 180) / deltaTimeInSeconds;
 
-            //if (vyInMetersPerSecond != 0.0f || vthInRadiansPerSecond != 0.0f) {
-            //    ROS_INFO("Current velocity vx = %f, vtheta = %f", vxInMetersPerSecond, vthInRadiansPerSecond);
-            //}
+            if (vyInMetersPerSecond != 0.0f || vthInRadiansPerSecond != 0.0f) {
+                ROS_INFO("Current velocity vx = %f, vtheta = %f", vxInMetersPerSecond, vthInRadiansPerSecond);
+            }
 
             geometry_msgs::Quaternion odom_quat = tf::createQuaternionMsgFromYaw(radians(pose->theta));
 
@@ -83,9 +83,9 @@ class BaseController {
             odom.pose.pose.position.z = .0f;
             odom.pose.pose.orientation = odom_quat;
             odom.child_frame_id = "base_link";
-            //odom.twist.twist.linear.x = vxInMetersPerSecond;
-            //odom.twist.twist.linear.y = vyInMetersPerSecond;
-            //odom.twist.twist.angular.z = vthInRadiansPerSecond;
+            odom.twist.twist.linear.x = vxInMetersPerSecond;
+            odom.twist.twist.linear.y = vyInMetersPerSecond;
+            odom.twist.twist.angular.z = vthInRadiansPerSecond;
 
             odomTopic->publish(odom);
         }
@@ -249,8 +249,11 @@ class BaseController {
         }
 
         void stopRobot() {
+            // We stop the robot motors here
             robot->drive(0, 0);
-            publishFinalPose();
+            // Pose estimation is done in the main control loop
+            // As soon as there is no movement in the wheel encoders detected
+            // a final odom pose update is published
         }
 
         void newCmdVelMessage(const geometry_msgs::Twist& data) {
@@ -258,16 +261,19 @@ class BaseController {
             ROS_INFO("Received cmd_vel message");
             mutex->lock();
 
-            publishFinalPose();
-
             float speedInMeterPerSecond = data.linear.x; // Meter per second
             float rotationInRadiansPerSecond = data.angular.z; // Radians per second
 
             ROS_INFO("Linear speed x      : %f m/sec", speedInMeterPerSecond);
             ROS_INFO("Angular speed z     : %f rad/sec", rotationInRadiansPerSecond);
 
+            // Robot movement is stopped
+            // Final pose and odom update is handled in the main control loop
+            robot->drive(0, 0);
+            robot->resetQueue();
+
             if (speedInMeterPerSecond == .0f && rotationInRadiansPerSecond == .0f) {
-                robot->drive(0, 0);
+                // Do nothing here
             } else {
                 if (rotationInRadiansPerSecond == .0f) {
                     float mmPerSecond = speedInMeterPerSecond * 100 * 10;
@@ -279,7 +285,7 @@ class BaseController {
                         mmPerSecond = -500;
                     }
 
-                    robot->drive((int)mmPerSecond, (int)mmPerSecond);
+                    robot->enqueueCommand((int) mmPerSecond, (int) mmPerSecond);
                 } else {
                     float degreePerSecond = rotationInRadiansPerSecond * 180.0f / M_PI;
 
@@ -291,7 +297,7 @@ class BaseController {
                         mmPerSecond = -500;
                     }
 
-                    robot->drive((int) -mmPerSecond, (int) mmPerSecond);
+                    robot->enqueueCommand((int) -mmPerSecond, (int) mmPerSecond);
                 }
             }
 
@@ -362,8 +368,8 @@ class BaseController {
 
             nPriv->param<std::string>("serialport", serialport, "/dev/serial0");
             nPriv->param("baudrate", baudrate, 115200);
-            nPriv->param("fullRotationInSensorTicks", fullRotationInSensorTicks, 1608);
-            nPriv->param("ticksPerCm", ticksPerCm, 22.5798f);
+            nPriv->param("fullRotationInSensorTicks", fullRotationInSensorTicks, 1696);
+            nPriv->param("ticksPerCm", ticksPerCm, 22.836363f);
             nPriv->param("robotWheelDistanceInCm", robotWheelDistanceInCm, 25.0f);
             nPriv->param("pollingRateInHertz", pollingRateInHertz, 30);
 
@@ -385,6 +391,8 @@ class BaseController {
             // Reset all movement to zero, e.g. stop motors
             ROS_INFO("Stopping motors");
             robot->drive(0, 0);
+            robot->resetQueue();
+            usleep(100000); // microseconds
 
             // Initialize the last known reference pose with a position
             // and the current values of the wheel encoders
@@ -434,6 +442,8 @@ class BaseController {
 
             // Processing the sensor polling in an endless loop until this node goes to die
             while (ros::ok()) {
+
+                // The main control loop. Everything is handled here
 
                 mutex.lock();
 
@@ -534,7 +544,18 @@ class BaseController {
                 robot->rightWheelDistance += deltaRight;
 
                 ROS_DEBUG("Estimating new position");
-                estimateAndPublishPose();
+                if (deltaLeft == 0 && deltaRight == 0) {
+                    // Movement stopped, we can publish the final pose.
+                    if (robot->leftWheelDistance > 0 || robot->rightWheelDistance > 0) {
+                        publishFinalPose();
+                    }
+
+                    // Dequeue cmd_vel commands here
+                    robot->dequeueCommand();
+                } else {
+                    // We are still moving, we we publish a pose estimation
+                    estimateAndPublishPose();
+                }
 
                 // Remember last sensor data for the next iteration
                 lastSensorFrame = newSensorFrame;
