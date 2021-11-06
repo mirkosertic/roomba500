@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import rospy
 import threading
@@ -16,6 +16,7 @@ class PathManager:
     def __init__(self):
         self.syncLock = threading.Lock()
         self.systemState = None
+        self.latestOdometry = None
 
     def newOdomMessage(self, data):
         self.syncLock.acquire()
@@ -41,7 +42,7 @@ class PathManager:
 
     def start(self):
         rospy.init_node('pathmanager', anonymous=True)
-        pollingRateInHertz = int(rospy.get_param('~pollingRateInHertz', '30'))
+        pollingRateInHertz = int(rospy.get_param('~pollingRateInHertz', '20'))
 
         rospy.loginfo("Checking system state with %s hertz", pollingRateInHertz)
         rate = rospy.Rate(pollingRateInHertz)
@@ -62,7 +63,7 @@ class PathManager:
             self.syncLock.acquire()
 
             #t = self.transformlistener.getLatestCommonTime("base_footprint", "map")
-            #(transformation, rotation) = self.transformlistener.lookupTransform("base_footprint", "map", t)
+            #(transformation, rotation) = self.transformlistener.lookupTransform("base_link", "map", t)
 
             #self.worldLatestTime = t
             #self.worldLatestTransformation = transformation

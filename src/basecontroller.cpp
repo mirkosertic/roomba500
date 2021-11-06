@@ -40,11 +40,6 @@ class BaseController {
         void publishOdometry(RobotPose* pose) {
             double deltaTimeInSeconds = (pose->time - robot->lastKnownReferencePose->time).toSec();
 
-            if (deltaTimeInSeconds == 0.0) {
-                ROS_INFO("Skipping odometry as delta time is zero");
-                return;
-            }
-
             ROS_DEBUG("Publishing odometry, delta time is %f seconds", deltaTimeInSeconds);
 
             // The robot can only move forward ( x - direction in base_link coordinate frame )
@@ -52,9 +47,14 @@ class BaseController {
             float distanceY = pose->y - robot->lastKnownReferencePose->y;
             float linearDistanceInMeters = sqrt(distanceX * distanceX + distanceY * distanceY);
 
-            float vxInMetersPerSecond = linearDistanceInMeters / deltaTimeInSeconds;
+            float vxInMetersPerSecond = 0.0f;
             float vyInMetersPerSecond = .0f;
-            float vthInRadiansPerSecond = -((pose->theta - robot->lastKnownReferencePose->theta) * M_PI / 180) / deltaTimeInSeconds;
+            float vthInRadiansPerSecond = 0.0f;
+
+            if (deltaTimeInSeconds > 0) {
+                vxInMetersPerSecond = linearDistanceInMeters / deltaTimeInSeconds;
+                vthInRadiansPerSecond = -((pose->theta - robot->lastKnownReferencePose->theta) * M_PI / 180) / deltaTimeInSeconds;
+            }
 
             if (vyInMetersPerSecond != 0.0f || vthInRadiansPerSecond != 0.0f) {
                 ROS_INFO("Current velocity vx = %f, vtheta = %f", vxInMetersPerSecond, vthInRadiansPerSecond);
@@ -548,6 +548,14 @@ class BaseController {
                     // Movement stopped, we can publish the final pose.
                     if (robot->leftWheelDistance > 0 || robot->rightWheelDistance > 0) {
                         publishFinalPose();
+                    } else {
+                        // We did not move, but we publish the last known reference as
+                        // the current odometry
+                        RobotPose* temp = robot->lastKnownReferencePose->cloneWithNewTime(ros::Time::now());
+                        delete robot->lastKnownReferencePose;
+                        robot->lastKnownReferencePose = temp;
+
+                        publishOdometry(robot->lastKnownReferencePose);
                     }
 
                     // Dequeue cmd_vel commands here
