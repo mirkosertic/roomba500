@@ -16,44 +16,54 @@ class MoveSegmentState(BaseState):
         self.targetpose = targetpose
 
         orientation_q = targetpose.pose.orientation
-        (roll, pitch, yaw) = euler_from_quaternion([orientation_q.x, orientation_q.y, orientation_q.z, orientation_q.w])
-        self.targetRoll = roll
-        self.targetPitch = pitch
-        self.targetYaw = self.clampRadians(yaw)
-        self.counter = 10
+        (_, _, yaw) = euler_from_quaternion([orientation_q.x, orientation_q.y, orientation_q.z, orientation_q.w])
+
+        self.targetYawInDegrees = self.toDegrees(yaw)
+        self.counter = 0
         self.rotationSpeed = 0.0
 
         odomQuat = pathmanager.latestOdometry.pose.pose.orientation
+        (_, _, odomyaw) = euler_from_quaternion([odomQuat.x, odomQuat.y, odomQuat.z, odomQuat.w])
 
-        (odomroll, odompitch, odomyaw) = euler_from_quaternion([odomQuat.x, odomQuat.y, odomQuat.z, odomQuat.w])
+        odomyawInDegrees = self.toDegrees(odomyaw)
 
-        rospy.loginfo("Current odometry (roll,pitch,yaw) is (%s, %s, %s)", odomroll, odompitch, odomyaw)
+        rospy.loginfo("Current odometry yaw is %s degrees", odomyawInDegrees)
 
-        self.deltaYaw = self.targetYaw - odomyaw
+        deltaYawInDegrees = self.targetYawInDegrees - odomyawInDegrees
 
-        rospy.loginfo("Delta yaw is %s", self.deltaYaw)
+        rospy.loginfo("Delta yaw is %s degrees", deltaYawInDegrees)
 
-        self.targetOdomYaw = self.clampRadians(odomyaw + self.deltaYaw)
+        self.targetOdomYawInDegrees = self.clampDegrees(odomyawInDegrees + deltaYawInDegrees)
 
-        rospy.loginfo("Target odom yaw is %s", self.deltaYaw)
+        rospy.loginfo("Target odom yaw is %s degrees", self.targetOdomYawInDegrees)
 
-    def clampRadians(self, value):
-        doublePi = math.pi * 2
-        if (value > doublePi):
-            value = value - doublePi
-        if (value < -doublePi):
-            value = value + doublePi
+        if (deltaYawInDegrees > 0):
+            if (abs(deltaYawInDegrees) <= 180):
+                # Rotate right
+                self.rotationDirection = -1
+                rospy.loginfo("Rotating right(clockwise)")
+            else:
+                self.rotationDirection = 1
+                rospy.loginfo("Rotating left(counter-clockwise) as an optimization")
+        else:
+            if (abs(deltaYawInDegrees) <= 180):
+                # Rotate left
+                self.rotationDirection = 1
+                rospy.loginfo("Rotating left(counter-clockwise)")
+            else:
+                self.rotationDirection = -1
+                rospy.loginfo("Rotating right(clockwise) as an optimization")
 
-        return value
 
     def setRotationSpeed(self, targetSpeed):
         if self.rotationSpeed != targetSpeed:
             self.pathmanager.driver.rotateZ(targetSpeed)
             self.rotationSpeed = targetSpeed
 
+
     def process(self):
         self.counter = self.counter + 1
-        if (self.counter > 500):
+        if (self.counter > 200):
             # We need to stop
             rospy.loginfo("Stopping robot due to timeout")
 
@@ -63,39 +73,44 @@ class MoveSegmentState(BaseState):
 
         odomQuat = self.pathmanager.latestOdometry.pose.pose.orientation
 
-        (odomroll, odompitch, odomyaw) = euler_from_quaternion([odomQuat.x, odomQuat.y, odomQuat.z, odomQuat.w])
+        (_, _, odomyaw) = euler_from_quaternion([odomQuat.x, odomQuat.y, odomQuat.z, odomQuat.w])
+        odomyawInDegrees = self.toDegrees(odomyaw)
 
-        rospy.loginfo("Current odom yaw %s, target is %s, delta is %s", odomyaw, self.targetOdomYaw, (self.targetOdomYaw - odomyaw))
+        deltaToTargetInDegrees = self.targetOdomYawInDegrees - odomyawInDegrees
 
-        if (abs(odomyaw - self.targetOdomYaw) < 0.03):
+        rospy.loginfo("Current odom yaw %s, target is %s, delta is %s", odomyawInDegrees, self.targetOdomYawInDegrees, deltaToTargetInDegrees)
+
+        # We stop rotation either if we are pretty close
+        # to the target yaw, or if we overshoot.
+        overshot = False
+        if (self.rotationSpeed == 1 and odomyawInDegrees > self.targetOdomYawInDegrees):
+            overshot = True
+        if (self.rotationSpeed == -1 and odomyawInDegrees < self.targetOdomYawInDegrees):
+            overshot = True
+
+        if (abs(deltaToTargetInDegrees) < 1.5 or overshot):
             # We need to stop
-            rospy.loginfo("Stopping robot, as deltaYaw = %s", (odomyaw - self.targetOdomYaw))
+            rospy.loginfo("Stopping robot, as deltaToTarget = %s degrees, overshot = %s", deltaToTargetInDegrees, overshot)
 
             self.pathmanager.driver.stop()
             return DoNothingState(self.pathmanager)
 
         else:
-            if (self.deltaYaw < 0):
-                # Rotate right
-                targetSpeed = -0.25
-                if (abs(odomyaw - self.targetOdomYaw) < 0.25):
-                    targetSpeed = -0.05
+            # Continue rotation with a reasonable speed
+            targetSpeed = 0.25
 
-                rospy.loginfo("Rotate right, as deltaYaw = %s, speed is %s", self.deltaYaw, targetSpeed)
+            # As soon as we come close to the target angle
+            # we slowdown rotation speed to make sure we do not overshoot
+            if (abs(deltaToTargetInDegrees) < 25):
+                targetSpeed = 0.05
 
-                self.setRotationSpeed(targetSpeed)
+            rotationSpeed = targetSpeed * self.rotationDirection
 
-            else:
-                # Rotate left
-                targetSpeed = 0.25
-                if (abs(odomyaw - self.targetOdomYaw) < 0.25):
-                    targetSpeed = 0.05
-
-                rospy.loginfo("Rotate left, as deltaYaw = %s, speed is %s", self.deltaYaw, targetSpeed)
-
-                self.setRotationSpeed(targetSpeed)
+            rospy.loginfo("Continue rotation with speed = %s", targetSpeed)
+            self.setRotationSpeed(rotationSpeed)
 
         return self
+
 
     def abort(self):
         self.pathmanager.driver.stop()

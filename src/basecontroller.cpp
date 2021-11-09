@@ -551,7 +551,7 @@ class BaseController {
                     } else {
                         // We did not move, but we publish the last known reference as
                         // the current odometry
-                        RobotPose* temp = robot->lastKnownReferencePose->cloneWithNewTime(ros::Time::now());
+                        RobotPose* temp = new RobotPose(robot->lastKnownReferencePose, ros::Time::now());
                         delete robot->lastKnownReferencePose;
                         robot->lastKnownReferencePose = temp;
 
@@ -561,8 +561,8 @@ class BaseController {
                     // Dequeue cmd_vel commands here
                     robot->dequeueCommand();
                 } else {
-                    // We are still moving, we we publish a pose estimation
-                    estimateAndPublishPose();
+                    // We are still moving, we will publish a pose estimation
+                    delete estimateAndPublishPose();
                 }
 
                 // Remember last sensor data for the next iteration

@@ -51,6 +51,7 @@ class PathManager:
         rospy.Subscriber("odom", Odometry, self.newOdomMessage)
         rospy.Subscriber("move_base_simple/goal", PoseStamped, self.newMoveBaseSimpleGoalMessage)
 
+        # And the driver will publish twist commands
         self.driver = Driver(rospy.Publisher('cmd_vel', Twist, queue_size = 10))
 
         self.transformlistener = tf.TransformListener()

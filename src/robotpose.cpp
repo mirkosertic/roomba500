@@ -19,7 +19,12 @@ class RobotPose {
         this->time = time;
     }
 
-    RobotPose* cloneWithNewTime(ros::Time time) {
-        return new RobotPose(this->theta, this->x, this->y, this->leftWheel, this->rightWheel, time);
+    RobotPose(RobotPose* source, ros::Time time) {
+        this->theta = source->theta;
+        this->x = source->x;
+        this->y = source->y;
+        this->leftWheel = source->leftWheel;
+        this->rightWheel = source->rightWheel;
+        this->time = time;
     }
 };
