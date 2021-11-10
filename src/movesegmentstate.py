@@ -44,18 +44,18 @@ class MoveSegmentState(BaseState):
             if (abs(deltaYawInDegrees) > 180):
                 # Rotate right
                 self.rotationDirection = -1
-                rospy.loginfo("Rotating right(clockwise)")
+                rospy.loginfo("Rotating right(clockwise) as an optimization")
             else:
                 self.rotationDirection = 1
-                rospy.loginfo("Rotating left(counter-clockwise) as an optimization")
+                rospy.loginfo("Rotating left(counter-clockwise)")
         else:
             if (abs(deltaYawInDegrees) > 180):
                 # Rotate left
                 self.rotationDirection = 1
-                rospy.loginfo("Rotating left(counter-clockwise)")
+                rospy.loginfo("Rotating left(counter-clockwise) as an optimization")
             else:
                 self.rotationDirection = -1
-                rospy.loginfo("Rotating right(clockwise) as an optimization")
+                rospy.loginfo("Rotating right(clockwise)")
 
 
     def setRotationSpeed(self, targetSpeed):
