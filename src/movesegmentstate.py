@@ -21,6 +21,9 @@ class MoveSegmentState(BaseState):
         self.targetYawInDegrees = self.toDegrees(yaw)
         self.counter = 0
         self.rotationSpeed = 0.0
+        self.lastDeltaToTargetInDegrees = None
+
+        rospy.loginfo("Command to rotate to %s degrees in reference frame %s", self.targetYawInDegrees, targetpose.header.frame_id)
 
         odomQuat = pathmanager.latestOdometry.pose.pose.orientation
         (_, _, odomyaw) = euler_from_quaternion([odomQuat.x, odomQuat.y, odomQuat.z, odomQuat.w])
@@ -38,7 +41,7 @@ class MoveSegmentState(BaseState):
         rospy.loginfo("Target odom yaw is %s degrees", self.targetOdomYawInDegrees)
 
         if (deltaYawInDegrees > 0):
-            if (abs(deltaYawInDegrees) <= 180):
+            if (abs(deltaYawInDegrees) > 180):
                 # Rotate right
                 self.rotationDirection = -1
                 rospy.loginfo("Rotating right(clockwise)")
@@ -46,7 +49,7 @@ class MoveSegmentState(BaseState):
                 self.rotationDirection = 1
                 rospy.loginfo("Rotating left(counter-clockwise) as an optimization")
         else:
-            if (abs(deltaYawInDegrees) <= 180):
+            if (abs(deltaYawInDegrees) > 180):
                 # Rotate left
                 self.rotationDirection = 1
                 rospy.loginfo("Rotating left(counter-clockwise)")
@@ -78,17 +81,20 @@ class MoveSegmentState(BaseState):
 
         deltaToTargetInDegrees = self.targetOdomYawInDegrees - odomyawInDegrees
 
-        rospy.loginfo("Current odom yaw %s, target is %s, delta is %s", odomyawInDegrees, self.targetOdomYawInDegrees, deltaToTargetInDegrees)
+        rospy.loginfo("Current odom yaw %s, target is %s, delta is %s, rotationDirection is %s", odomyawInDegrees, self.targetOdomYawInDegrees, deltaToTargetInDegrees, self.rotationDirection)
 
         # We stop rotation either if we are pretty close
         # to the target yaw, or if we overshoot.
         overshot = False
-        if (self.rotationSpeed == 1 and odomyawInDegrees > self.targetOdomYawInDegrees):
-            overshot = True
-        if (self.rotationSpeed == -1 and odomyawInDegrees < self.targetOdomYawInDegrees):
-            overshot = True
+        if (self.lastDeltaToTargetInDegrees != None):
+            if (self.lastDeltaToTargetInDegrees > 0 and deltaToTargetInDegrees < 0 and self.rotationDirection == 1):
+                overshot = True
+            if (self.lastDeltaToTargetInDegrees < 0 and deltaToTargetInDegrees > 0 and self.rotationDirection == -1):
+                overshot = True
 
-        if (abs(deltaToTargetInDegrees) < 1.5 or overshot):
+        self.lastDeltaToTargetInDegrees = deltaToTargetInDegrees
+
+        if (abs(deltaToTargetInDegrees) < 0.5 or overshot):
             # We need to stop
             rospy.loginfo("Stopping robot, as deltaToTarget = %s degrees, overshot = %s", deltaToTargetInDegrees, overshot)
 
@@ -101,7 +107,7 @@ class MoveSegmentState(BaseState):
 
             # As soon as we come close to the target angle
             # we slowdown rotation speed to make sure we do not overshoot
-            if (abs(deltaToTargetInDegrees) < 25):
+            if (abs(deltaToTargetInDegrees) < 33):
                 targetSpeed = 0.05
 
             rotationSpeed = targetSpeed * self.rotationDirection

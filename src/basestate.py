@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+import math
+
 class BaseState:
 
     def __init__(self, pathmanager):
@@ -25,4 +27,4 @@ class BaseState:
 
 
     def toDegrees(self, value):
-        return self.clampDegrees(value * 180 / math.pi)
+        return self.clampDegrees(value * 180.0 / math.pi)

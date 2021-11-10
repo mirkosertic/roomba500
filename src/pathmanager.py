@@ -42,7 +42,7 @@ class PathManager:
 
     def start(self):
         rospy.init_node('pathmanager', anonymous=True)
-        pollingRateInHertz = int(rospy.get_param('~pollingRateInHertz', '20'))
+        pollingRateInHertz = int(rospy.get_param('~pollingRateInHertz', '40'))
 
         rospy.loginfo("Checking system state with %s hertz", pollingRateInHertz)
         rate = rospy.Rate(pollingRateInHertz)
