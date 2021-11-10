@@ -59,7 +59,7 @@ also a [Node-RED Dashboard](https://nodered.org/) available in the node-red-room
 * `lightBumperRight` (int16)
   Value for the right Light-Bumper (0..4095)
 * `oimode` (int16)
-  The current mode of the open interface (0 = Off, 1 = Passive, 2 = Save, 3 = Full)
+  The current mode of the open interface (0 = Off, 1 = Passive, 2 = Safe, 3 = Full)
 
 #### Parameters
 
