@@ -1,5 +1,7 @@
 # Roomba 5xx support for ROS (Robot Operating System)
 
+Current Build status: ![Build Workflow](https://github.com/mirkosertic/roomba500/workflows/build/badge.svg) 
+
 An implementation of a ROS base controller and other utilities for the Roomba 5xx platform based on the Roomba Open Interface
 Specification.
 
