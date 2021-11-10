@@ -1,11 +1,11 @@
-name: Ubuntu 20.04 roomba500
+name: ubuntu-18.04 roomba500
 
 on:
   push:
 
 jobs:
   build:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-18.04
     env:
       ROS_CI_DESKTOP: "`lsb_release -cs`"  # e.g. [trusty|xenial|...]
       ROS_DISTRO: melodic
