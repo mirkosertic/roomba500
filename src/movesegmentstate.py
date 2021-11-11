@@ -15,6 +15,11 @@ class MoveSegmentState(BaseState):
         BaseState.__init__(self, pathmanager)
         self.targetpose = targetpose
 
+        # First of all, we need to translate the current odometry
+        # to the targetpose frame to calculate the correct yaw delta
+        odometryInTargetposeFrame = pathmanager.latestOdometryTransformedToFrame(targetpose.header.frame_id)
+
+        # We calculate the target yaw
         orientation_q = targetpose.pose.orientation
         (_, _, yaw) = euler_from_quaternion([orientation_q.x, orientation_q.y, orientation_q.z, orientation_q.w])
 
@@ -25,12 +30,13 @@ class MoveSegmentState(BaseState):
 
         rospy.loginfo("Command to rotate to %s degrees in reference frame %s", self.targetYawInDegrees, targetpose.header.frame_id)
 
-        odomQuat = pathmanager.latestOdometry.pose.pose.orientation
+        # Now we calculate the current odom yaw in target frame coordinate system
+        odomQuat = odometryInTargetposeFrame.pose.orientation
         (_, _, odomyaw) = euler_from_quaternion([odomQuat.x, odomQuat.y, odomQuat.z, odomQuat.w])
 
         odomyawInDegrees = self.toDegrees(odomyaw)
 
-        rospy.loginfo("Current odometry yaw is %s degrees", odomyawInDegrees)
+        rospy.loginfo("Current odometry yaw is %s degrees in reference frame", odomyawInDegrees)
 
         deltaYawInDegrees = self.targetYawInDegrees - odomyawInDegrees
 
@@ -38,7 +44,7 @@ class MoveSegmentState(BaseState):
 
         self.targetOdomYawInDegrees = self.clampDegrees(odomyawInDegrees + deltaYawInDegrees)
 
-        rospy.loginfo("Target odom yaw is %s degrees", self.targetOdomYawInDegrees)
+        rospy.loginfo("Target odom yaw is %s degrees in reference frame", self.targetOdomYawInDegrees)
 
         if (deltaYawInDegrees > 0):
             if (abs(deltaYawInDegrees) > 180):
@@ -74,8 +80,8 @@ class MoveSegmentState(BaseState):
 
             return DoNothingState(self.pathmanager)
 
-        odomQuat = self.pathmanager.latestOdometry.pose.pose.orientation
-
+        odometryInTargetposeFrame = self.pathmanager.latestOdometryTransformedToFrame(self.targetpose.header.frame_id)
+        odomQuat = odometryInTargetposeFrame.pose.orientation
         (_, _, odomyaw) = euler_from_quaternion([odomQuat.x, odomQuat.y, odomQuat.z, odomQuat.w])
         odomyawInDegrees = self.toDegrees(odomyaw)
 

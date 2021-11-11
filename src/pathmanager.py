@@ -9,7 +9,7 @@ from movesegmentstate import MoveSegmentState
 from driver import Driver
 
 from nav_msgs.msg import Odometry, OccupancyGrid
-from geometry_msgs.msg import Twist, Point, Pose, Quaternion, Twist, Vector3, PoseStamped
+from geometry_msgs.msg import Twist, Point, Pose, PoseStamped, Quaternion, Twist, Vector3, PoseStamped
 
 class PathManager:
 
@@ -30,7 +30,7 @@ class PathManager:
 
     def newMoveBaseSimpleGoalMessage(self, data):
 
-        rospy.logdebug("Received move_base_simple/goal message : %s", data)
+        rospy.loginfo("Received move_base_simple/goal message : %s", data)
 
         self.syncLock.acquire()
 
@@ -39,6 +39,17 @@ class PathManager:
 
         self.syncLock.release()
         return
+
+    def latestOdometryTransformedToFrame(self, targetFrame):
+
+        mpose = PoseStamped()
+        mpose.pose.position = self.latestOdometry.pose.pose.position
+        mpose.pose.orientation = self.latestOdometry.pose.pose.orientation
+        mpose.header.frame_id = self.latestOdometry.header.frame_id
+        mpose.header.stamp = self.latestOdometry.header.stamp
+
+        latestCommonTime = self.transformlistener.getLatestCommonTime(targetFrame, self.latestOdometry.header.frame_id)
+        return self.transformlistener.transformPose(targetFrame, mpose)
 
     def start(self):
         rospy.init_node('pathmanager', anonymous=True)
