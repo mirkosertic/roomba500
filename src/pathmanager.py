@@ -3,13 +3,15 @@
 import rospy
 import threading
 import tf
+import math
 
 from donothingstate import DoNothingState
 from movesegmentstate import MoveSegmentState
+from rotatetoanglestate import RotateToAngleState
 from driver import Driver
 
 from nav_msgs.msg import Odometry, OccupancyGrid
-from geometry_msgs.msg import Twist, Point, Pose, PoseStamped, Quaternion, Twist, Vector3, PoseStamped
+from geometry_msgs.msg import Twist, Point, Pose, PoseStamped, Quaternion, Twist, Vector3
 
 class PathManager:
 
@@ -18,15 +20,18 @@ class PathManager:
         self.systemState = None
         self.latestOdometry = None
 
+
     def newOdomMessage(self, data):
-        self.syncLock.acquire()
 
         rospy.logdebug("Received new odometry data")
+
+        self.syncLock.acquire()
 
         self.latestOdometry = data
 
         self.syncLock.release()
         return
+
 
     def newMoveBaseSimpleGoalMessage(self, data):
 
@@ -35,10 +40,17 @@ class PathManager:
         self.syncLock.acquire()
 
         self.systemState.abort()
-        self.systemState = MoveSegmentState(self, data)
+
+        success = lambda previousState : DoNothingState(self, None, None)
+        error = lambda previousState : DoNothingState(self, None, None)
+
+        # First of all we orientate in the right direction
+        # This is done by the RotateToAngleState
+        self.systemState = RotateToAngleState(self, data, success, error)
 
         self.syncLock.release()
         return
+
 
     def latestOdometryTransformedToFrame(self, targetFrame):
 
@@ -50,6 +62,7 @@ class PathManager:
 
         latestCommonTime = self.transformlistener.getLatestCommonTime(targetFrame, self.latestOdometry.header.frame_id)
         return self.transformlistener.transformPose(targetFrame, mpose)
+
 
     def start(self):
         rospy.init_node('pathmanager', anonymous=True)
@@ -67,28 +80,19 @@ class PathManager:
 
         self.transformlistener = tf.TransformListener()
 
-        self.systemState = DoNothingState(self)
+        self.systemState = DoNothingState(self, None, None)
 
         # Processing the sensor polling in an endless loop until this node goes to die
         while not rospy.is_shutdown():
 
             self.syncLock.acquire()
 
-            #t = self.transformlistener.getLatestCommonTime("base_footprint", "map")
-            #(transformation, rotation) = self.transformlistener.lookupTransform("base_link", "map", t)
-
-            #self.worldLatestTime = t
-            #self.worldLatestTransformation = transformation
-            #self.worldLatestRotation = rotation
-            #self.worldLastX = transformation[0]
-            #self.worldLastY = transformation[1]
-            #self.worldLastZ = transformation[2]
-
             self.systemState = self.systemState.process()
 
             self.syncLock.release()
 
             rate.sleep()
+
 
 if __name__ == '__main__':
     try:

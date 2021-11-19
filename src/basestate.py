@@ -4,9 +4,19 @@ import math
 
 class BaseState:
 
-    def __init__(self, pathmanager):
+    def __init__(self, pathmanager, successLambda, errorLambda):
         self.pathmanager = pathmanager
+        self.successLambda = successLambda
+        self.errorLambda = errorLambda
         return
+
+
+    def success(self):
+        return self.successLambda(self)
+
+
+    def error(self):
+        return self.errorLambda(self)
 
 
     def process(self):
@@ -27,4 +37,9 @@ class BaseState:
 
 
     def toDegrees(self, value):
-        return self.clampDegrees(value * 180.0 / math.pi)
+        return self.clampDegrees(math.degrees(value))
+
+
+    def distanceToDegrees(self, dx, dy):
+        return self.toDegrees(math.atan2(dy, dx))
+
