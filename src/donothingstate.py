@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+import rospy
+
 from basestate import BaseState
 
 class DoNothingState(BaseState):
@@ -7,6 +9,5 @@ class DoNothingState(BaseState):
     def __init__(self, pathmanager, successLambda, errorLambda):
         BaseState.__init__(self, pathmanager, successLambda, errorLambda)
 
+        rospy.loginfo("Current State : DoNothingState")
         pathmanager.driver.stop()
-
-        return

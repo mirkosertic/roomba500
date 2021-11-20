@@ -3,11 +3,10 @@
 import rospy
 import threading
 import tf
-import math
 
 from donothingstate import DoNothingState
-from movesegmentstate import MoveSegmentState
 from rotatetoanglestate import RotateToAngleState
+from movetopositionstate import MoveToPositionState
 from driver import Driver
 
 from nav_msgs.msg import Odometry, OccupancyGrid
@@ -19,6 +18,8 @@ class PathManager:
         self.syncLock = threading.Lock()
         self.systemState = None
         self.latestOdometry = None
+        self.doNothingLambda = lambda previousState: DoNothingState(self, None, None)
+        self.errorLambda = lambda previousState: DoNothingState(self, None, None)
 
 
     def newOdomMessage(self, data):
@@ -41,12 +42,14 @@ class PathManager:
 
         self.systemState.abort()
 
-        success = lambda previousState : DoNothingState(self, None, None)
-        error = lambda previousState : DoNothingState(self, None, None)
+        # After the rotation is done, we continue to move
+        # to the target position. This is done in the
+        # MoveToPositionState
+        success = lambda previousState : MoveToPositionState(self, data, self.doNothingLambda, self.errorLambda)
 
         # First of all we orientate in the right direction
         # This is done by the RotateToAngleState
-        self.systemState = RotateToAngleState(self, data, success, error)
+        self.systemState = RotateToAngleState(self, data, success, self.errorLambda)
 
         self.syncLock.release()
         return

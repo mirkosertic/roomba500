@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 
 import rospy
-import tf
-import math
 
 from basestate import BaseState
 
@@ -12,6 +10,9 @@ class RotateToAngleState(BaseState):
 
     def __init__(self, pathmanager, targetpose, successLambda, errorLambda):
         BaseState.__init__(self, pathmanager, successLambda, errorLambda)
+
+        rospy.loginfo("Current State : RotateToAngleState")
+
         self.targetPose = targetpose
         self.counter = 0
         self.rotationSpeed = 0.0
@@ -67,7 +68,7 @@ class RotateToAngleState(BaseState):
 
     def setRotationSpeed(self, targetSpeed):
         if self.rotationSpeed != targetSpeed:
-            self.pathmanager.driver.rotateZ(targetSpeed)
+            self.pathmanager.driver.drive(.0, targetSpeed)
             self.rotationSpeed = targetSpeed
 
 

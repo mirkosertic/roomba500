@@ -9,6 +9,7 @@ class Driver:
     def __init__(self, cmdvelPublisher):
         self.cmdvelPublisher = cmdvelPublisher
 
+
     def stop(self):
         twistMsg = Twist()
         twistMsg.linear.x = .0
@@ -20,14 +21,15 @@ class Driver:
 
         self.cmdvelPublisher.publish(twistMsg)
 
-    def rotateZ(self, speed):
+
+    def drive(self, speed, angularZRotation):
         twistMsg = Twist()
-        twistMsg.linear.x = .0
+        twistMsg.linear.x = speed
         twistMsg.linear.y = .0
         twistMsg.linear.z = .0
         twistMsg.angular.x = .0
         twistMsg.angular.y = .0
-        twistMsg.angular.z = speed
+        twistMsg.angular.z = angularZRotation
 
         rospy.logdebug("Publishing twist %s", twistMsg)
 
