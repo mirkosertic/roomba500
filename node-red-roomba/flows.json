@@ -878,7 +878,7 @@
         "type": "function",
         "z": "79e0000ef76bb4d1",
         "name": "Initial value",
-        "func": "msg.payload=0.35\nreturn msg;",
+        "func": "msg.payload=0.75\nreturn msg;",
         "outputs": 1,
         "noerr": 0,
         "initialize": "",

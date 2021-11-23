@@ -57,7 +57,7 @@ class RotateToAngleState(BaseState):
                 self.rotationDirection = 1
                 rospy.loginfo("Rotating left(counter-clockwise)")
         else:
-            if (deltaYawInDegrees < 180):
+            if (deltaYawInDegrees < -180):
                 # Rotate left
                 self.rotationDirection = 1
                 rospy.loginfo("Rotating left(counter-clockwise) as an optimization")
@@ -111,12 +111,12 @@ class RotateToAngleState(BaseState):
 
         else:
             # Continue rotation with a reasonable speed
-            targetSpeed = 0.25
+            targetSpeed = 0.70
 
             # As soon as we come close to the target angle
             # we slowdown rotation speed to make sure we do not overshoot
             if (abs(deltaToTargetInDegrees) < 33):
-                targetSpeed = 0.05
+                targetSpeed = 0.35
 
             rotationSpeed = targetSpeed * self.rotationDirection
 

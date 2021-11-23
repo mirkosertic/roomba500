@@ -73,15 +73,26 @@ class MoveToPositionState(BaseState):
         rospy.loginfo("DeltaX = %s, DeltaY = %s, Distance = %s, Angle to Target = %s, Odometry Angle = %s, Delta Angle = %s", deltaX, deltaY, distance, degreesToTarget, odometryDegrees, angleDelta)
 
         # Either we are close to the target position or we overshot (distance is larger than last known distance)
-        deltaDistance = self.lastDistance - distance
-        if (deltaDistance < 0.05 or distance > self.lastDistance):
+        if (distance < 0.05 or distance > self.lastDistance):
             # We are near the right place
-            rospy.loginfo("Stopping due to delta = %s and last distance = %s", deltaDistance, self.lastDistance)
+            rospy.loginfo("Stopping due to distance = %, last distance = %s", distance, self.lastDistance)
 
             self.pathmanager.driver.stop()
             return self.success()
 
-        if (deltaDistance > 0.30):
+        if (abs(angleDelta) > 20):
+            # There is something wrong with our heading, we need to realign
+            # TODO: Implement realign
+            rospy.loginfo("Stopping due angle misalignment with delta = %s", angleDelta)
+
+            self.pathmanager.driver.stop()
+            return self.error()
+
+        #
+        # Positive Angle Delta -> Rotate left, else right
+        #
+
+        if (distance > 0.30):
             # Guess what is happening here
             rospy.loginfo("Far away, using more speed")
             self.setDriveSpeed(0.20, .0)
