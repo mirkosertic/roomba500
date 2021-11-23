@@ -275,30 +275,23 @@ class BaseController {
             if (speedInMeterPerSecond == .0f && rotationInRadiansPerSecond == .0f) {
                 // Do nothing here
             } else {
-                if (rotationInRadiansPerSecond == .0f) {
-                    float mmPerSecond = speedInMeterPerSecond * 100 * 10;
-
-                    if (mmPerSecond > 500) {
-                        mmPerSecond = 500;
-                    }
-                    if (mmPerSecond < - 500) {
-                        mmPerSecond = -500;
-                    }
-
-                    robot->enqueueCommand((int) mmPerSecond, (int) mmPerSecond);
-                } else {
-                    float degreePerSecond = rotationInRadiansPerSecond * 180.0f / M_PI;
-
-                    float mmPerSecond = robot->fullRotationInSensorTicks / 360.0f * degreePerSecond;
-                    if (mmPerSecond > 500) {
-                        mmPerSecond = 500;
-                    }
-                    if (mmPerSecond < - 500) {
-                        mmPerSecond = -500;
-                    }
-
-                    robot->enqueueCommand((int) -mmPerSecond, (int) mmPerSecond);
+                float mmPerSecond = speedInMeterPerSecond * 100 * 10;
+                if (mmPerSecond > 350) {
+                    mmPerSecond = 350;
                 }
+                if (mmPerSecond < - 350) {
+                    mmPerSecond = -350;
+                }
+
+                float robotRadiusAroundCenterInMillimeters = (robot->robotWheelDistanceInCm * 10) / 2;
+                float speedLeftWheel = mmPerSecond - (rotationInRadiansPerSecond * robotRadiusAroundCenterInMillimeters);
+                float speedRightWheel = mmPerSecond + (rotationInRadiansPerSecond * robotRadiusAroundCenterInMillimeters);
+
+                ROS_INFO("Robot radius        : %f mm", robotRadiusAroundCenterInmm);
+                ROS_INFO("Speed left wheel    : %f mm/s", speedLeftWheel);
+                ROS_INFO("Speed right wheel   : %f mm/s", speedRightWheel);
+
+                robot->enqueueCommand((int) speedLeftWheel, (int) speedRightWheel);
             }
 
             mutex->unlock();
@@ -340,21 +333,6 @@ class BaseController {
             std_msgs::Int16 msg;
             msg.data = value;
             publisher->publish(msg);
-        }
-
-        int overflowSafeWheelRotation(int rotationDelta) {
-            if (rotationDelta < -16384) {
-                ROS_INFO("Forward rotation with overflow : %d", rotationDelta);
-                // Rotation forward with overflow
-                return rotationDelta + 65536;
-            }
-            if (rotationDelta > 16384) {
-                ROS_INFO("Backward rotation with overflow : %d", rotationDelta);
-                // Rotation backward with overflow
-                return rotationDelta - 65536;
-            }
-
-            return rotationDelta;
         }
 
         int run(ros::NodeHandle* nPriv) {
@@ -529,8 +507,8 @@ class BaseController {
                 }
 
                 // Calculate the relative movement to last sensor data
-                int deltaLeft = overflowSafeWheelRotation(newSensorFrame.leftWheel - lastSensorFrame.leftWheel);
-                int deltaRight = overflowSafeWheelRotation(newSensorFrame.rightWheel - lastSensorFrame.rightWheel);
+                int deltaLeft = robot->overflowSafeWheelRotation(newSensorFrame.leftWheel - lastSensorFrame.leftWheel);
+                int deltaRight = robot->overflowSafeWheelRotation(newSensorFrame.rightWheel - lastSensorFrame.rightWheel);
 
                 ROS_DEBUG("Last wheel left = %d, last wheel right = %d, current wheel left = %d, current wheel right = %d",
                               lastSensorFrame.leftWheel, lastSensorFrame.rightWheel, newSensorFrame.leftWheel, newSensorFrame.rightWheel);

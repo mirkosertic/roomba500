@@ -11,8 +11,13 @@
 
 class Roomba500 {
 
-    public:
+    private:
         int fd;
+        bool commandQueued;
+        int queuedLeftWheelAccel;
+        int queuedRightWheelAccel;
+
+    public:
         int fullRotationInSensorTicks;
         float ticksPerCm;
         float robotWheelDistanceInCm;
@@ -26,10 +31,6 @@ class Roomba500 {
         char mainbrushPWM;
         char sidebrushPWM;
         char vacuumPWM;
-
-        bool commandQueued;
-        int queuedLeftWheelAccel;
-        int queuedRightWheelAccel;
 
     Roomba500(std::string device, int baudrate, int fullRotationInSensorTicks, float ticksPerCm, float robotWheelDistanceInCm) {
         // Open and initialize serial interface
@@ -93,8 +94,6 @@ class Roomba500 {
             throw std::invalid_argument("error sending safeMode command");
         }
         tcdrain(fd);
-        //self.ser.write(chr(128))
-        //self.ser.write(chr(131))
     }
 
     void passiveMode() {
@@ -104,7 +103,6 @@ class Roomba500 {
             throw std::invalid_argument("error sending passiveMode command");
         }
         tcdrain(fd);
-        //self.ser.write(chr(128))
     }
 
     void updateMotorControl() {
@@ -114,10 +112,6 @@ class Roomba500 {
             throw std::invalid_argument("error updating motor control");
         }
         tcdrain(fd);
-        //self.ser.write(chr(144))
-        //self.ser.write(chr(self.mainbrushPWM & 0xff))
-        //self.ser.write(chr(self.sidebrushPWM & 0xff))
-        //self.ser.write(chr(self.vacuumPWM & 0xff))
     }
 
     void playNote(unsigned char note, unsigned char duration) {
@@ -127,13 +121,6 @@ class Roomba500 {
             throw std::invalid_argument("error playing note");
         }
         tcdrain(fd);
-        //self.ser.write(chr(140))
-        //self.ser.write(chr(0))
-        //self.ser.write(chr(1))
-        //self.ser.write(chr(note))
-        //self.ser.write(chr(duration))
-        //self.ser.write(chr(141))
-        //self.ser.write(chr(0))
     }
 
     void drive(int speedLeft, int speedRight) {
@@ -159,14 +146,6 @@ class Roomba500 {
             throw std::invalid_argument("error sending drive command");
         }
         tcdrain(fd);
-
-        //leftSpeedHigh, leftSpeedLow = twoComplementOf(speedLeft)
-        //rightSpeedHigh, rightSpeedLow = twoComplementOf(speedRight)
-        //self.ser.write(chr(145))
-        //self.ser.write(chr(rightSpeedHigh))
-        //self.ser.write(chr(rightSpeedLow))
-        //self.ser.write(chr(leftSpeedHigh))
-        //self.ser.write(chr(leftSpeedLow))
     }
 
     unsigned char readData() {
@@ -204,52 +183,6 @@ class Roomba500 {
         sensorFrame.oimode = readData(); // packet 35
 
         return sensorFrame;
-
-        //self.ser.write(chr(149))
-        //self.ser.write(chr(12))
-        //self.ser.write(chr(43))
-        //self.ser.write(chr(44))
-        //self.ser.write(chr(25))
-        //self.ser.write(chr(26))
-        //self.ser.write(chr(7))
-
-        //self.ser.write(chr(46))
-        //self.ser.write(chr(47))
-        //self.ser.write(chr(48))
-        //self.ser.write(chr(49))
-        //self.ser.write(chr(50))
-        //self.ser.write(chr(51))
-
-        //self.ser.write(chr(35))
-
-        //leftWheel = ord(self.ser.read()) << 8 | ord(self.ser.read())
-        //rightWheel = ord(self.ser.read()) << 8 | ord(self.ser.read())
-        //batteryCharge = ord(self.ser.read())  << 8 | ord(self.ser.read())
-        //batteryCapacity = ord(self.ser.read()) << 8 | ord(self.ser.read())
-        //bumperState = ord(self.ser.read())
-
-        //lightBumpLeft = ord(self.ser.read()) << 8 | ord(self.ser.read())
-        //lightBumpFrontLeft = ord(self.ser.read()) << 8 | ord(self.ser.read())
-        //lightBumpCenterLeft = ord(self.ser.read()) << 8 | ord(self.ser.read())
-        //lightBumpCenterRight = ord(self.ser.read()) << 8 | ord(self.ser.read())
-        //lightBumpFrontRight = ord(self.ser.read()) << 8 | ord(self.ser.read())
-        //lightBumpRight = ord(self.ser.read()) << 8 | ord(self.ser.read())
-
-        //oimode = ord(self.ser.read())
-
-        // result = SensorFrame()
-        //result.leftWheel = leftWheel
-        //result.rightWheel = rightWheel
-        //result.batteryCharge = batteryCharge
-        //result.batteryCapacity = batteryCapacity
-        //result.bumperState = bumperState
-        //result.lightBumperLeft = lightBumpLeft
-        //result.lightBumperFrontLeft = lightBumpFrontLeft
-        //result.lightBumperCenterLeft = lightBumpCenterLeft
-        //result.lightBumperCenterRight = lightBumpCenterRight
-        //result.lightBumperFrontRight = lightBumpFrontRight
-        //result.lightBumperRight = lightBumpRight
-        //result.oimode = oimode
     }
 
     void resetQueue() {
@@ -269,6 +202,21 @@ class Roomba500 {
             commandQueued = false;
             drive(queuedLeftWheelAccel, queuedRightWheelAccel);
         }
+    }
+
+    int overflowSafeWheelRotation(int rotationDelta) {
+        if (rotationDelta < -16384) {
+            ROS_INFO("Forward rotation with overflow : %d", rotationDelta);
+            // Rotation forward with overflow
+            return rotationDelta + 65536;
+        }
+        if (rotationDelta > 16384) {
+            ROS_INFO("Backward rotation with overflow : %d", rotationDelta);
+            // Rotation backward with overflow
+            return rotationDelta - 65536;
+        }
+
+        return rotationDelta;
     }
 
     ~Roomba500() {
