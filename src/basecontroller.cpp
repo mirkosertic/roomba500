@@ -232,8 +232,8 @@ class BaseController {
             RobotPose* temp  = estimateAndPublishPose();
 
             ROS_INFO("Final delta rotation left is %d, right is %d",
-                      overflowSafeWheelRotation(temp->leftWheel - robot->lastKnownReferencePose->leftWheel),
-                      overflowSafeWheelRotation(temp->rightWheel - robot->lastKnownReferencePose->rightWheel));
+                      robot->overflowSafeWheelRotation(temp->leftWheel - robot->lastKnownReferencePose->leftWheel),
+                      robot->overflowSafeWheelRotation(temp->rightWheel - robot->lastKnownReferencePose->rightWheel));
 
             ROS_INFO("Final pose x = %f, y = %f, theta = %f", temp->x, temp->y, temp->theta);
 
@@ -287,7 +287,7 @@ class BaseController {
                 float speedLeftWheel = mmPerSecond - (rotationInRadiansPerSecond * robotRadiusAroundCenterInMillimeters);
                 float speedRightWheel = mmPerSecond + (rotationInRadiansPerSecond * robotRadiusAroundCenterInMillimeters);
 
-                ROS_INFO("Robot radius        : %f mm", robotRadiusAroundCenterInmm);
+                ROS_INFO("Robot radius        : %f mm", robotRadiusAroundCenterInMillimeters);
                 ROS_INFO("Speed left wheel    : %f mm/s", speedLeftWheel);
                 ROS_INFO("Speed right wheel   : %f mm/s", speedRightWheel);
 
