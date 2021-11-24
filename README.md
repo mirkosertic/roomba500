@@ -71,8 +71,6 @@ also a [Node-RED Dashboard](https://nodered.org/) available in the node-red-room
   Wheel encoder counts for a full 360 degree rotation. Is individual for each Roomba depending on tyre usage etc. 
 * `ticksPerCm` (float, default: 22.836363)
   Wheel encoder counts for a movement of 1 cm. Is individual for each Roomba depending on tyre usage etc.
-* `robotWheelDistanceInCm` (float, default: 25.0)
-  The difference between the two robot wheels. Depends on the Roomba model.
 * `pollingRateInHertz` (int, default: 30)
 
 ## Installation

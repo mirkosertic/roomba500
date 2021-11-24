@@ -348,7 +348,9 @@ class BaseController {
             nPriv->param("baudrate", baudrate, 115200);
             nPriv->param("fullRotationInSensorTicks", fullRotationInSensorTicks, 1696);
             nPriv->param("ticksPerCm", ticksPerCm, 22.836363f);
-            nPriv->param("robotWheelDistanceInCm", robotWheelDistanceInCm, 25.0f); // Full rotation / sensortickspercm / PI ~ 23.64008
+
+            robotWheelDistanceInCm = fullRotationInSensorTicks / ticksPerCm / M_PI; // ~23.64cm, original = 25.0cm
+
             nPriv->param("pollingRateInHertz", pollingRateInHertz, 30);
 
             ROS_INFO("Full rotation in ticks     : %d", fullRotationInSensorTicks);
