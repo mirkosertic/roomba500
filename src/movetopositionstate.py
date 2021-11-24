@@ -15,7 +15,6 @@ class MoveToPositionState(BaseState):
         rospy.loginfo("Current State : MoveToPositionState")
 
         self.targetPose = targetpose
-        self.counter = 0
         self.driveSpeed = 0.0
         self.driveAngularMoment = 0.0
         self.lastDeltaToTargetInDegrees = None
@@ -37,21 +36,13 @@ class MoveToPositionState(BaseState):
 
     def setDriveSpeed(self, targetSpeed, targetAngularMoment):
         if self.driveSpeed != targetSpeed or self.driveAngularMoment != targetAngularMoment:
+            rospy.loginfo("Setting linear velocity = %s, angular velovity = %s", targetSpeed, targetAngularMoment)
             self.pathmanager.driver.drive(targetSpeed, targetAngularMoment)
             self.driveSpeed = targetSpeed
             self.driveAngularMoment = targetAngularMoment
 
 
     def process(self):
-        self.counter = self.counter + 1
-        if (self.counter > 200):
-            # We need to stop
-            rospy.loginfo("Stopping robot due to timeout")
-
-            self.pathmanager.driver.stop()
-
-            return self.error()
-
         odometryInTargetposeFrame = self.pathmanager.latestOdometryTransformedToFrame(self.targetPose.header.frame_id)
         currentPosition = odometryInTargetposeFrame.pose.position
 
@@ -73,9 +64,9 @@ class MoveToPositionState(BaseState):
         rospy.loginfo("DeltaX = %s, DeltaY = %s, Distance = %s, Angle to Target = %s, Odometry Angle = %s, Delta Angle = %s", deltaX, deltaY, distance, degreesToTarget, odometryDegrees, angleDelta)
 
         # Either we are close to the target position or we overshot (distance is larger than last known distance)
-        if (distance < 0.05 or distance > self.lastDistance):
+        if (distance < 0.02 or (self.lastDistance - distance > 0.02)):
             # We are near the right place
-            rospy.loginfo("Stopping due to distance = %, last distance = %s", distance, self.lastDistance)
+            rospy.loginfo("Stopping due to distance = %s, last distance = %s", distance, self.lastDistance)
 
             self.pathmanager.driver.stop()
             return self.success()
@@ -92,14 +83,33 @@ class MoveToPositionState(BaseState):
         # Positive Angle Delta -> Rotate left, else right
         #
 
+        driveSpeed = 0.35
+        rotationSpeed = .0
+        multiplier = 1.0
+
         if (distance > 0.30):
             # Guess what is happening here
             rospy.loginfo("Far away, using more speed")
-            self.setDriveSpeed(0.20, .0)
+            multiplier = 1
         else:
             # This is pretty unclear too
             rospy.loginfo("Comming closer, slowing down")
-            self.setDriveSpeed(0.10, .0)
+            multiplier = 0.5
+
+        if (angleDelta > 0):
+            if (angleDelta > 1):
+                rospy.loginfo("Correcting heading by turning to left")
+                rotationSpeed = 0.25
+            else:
+                rospy.loginfo("No heading correction required")
+        if (angleDelta < 0):
+            if (angleDelta < 1):
+                rospy.loginfo("Correcting heading by turning to right")
+                rotationSpeed = -0.25
+            else:
+                rospy.loginfo("No heading correction required")
+
+        self.setDriveSpeed(driveSpeed * multiplier, rotationSpeed)
 
         self.lastDistance = distance
 

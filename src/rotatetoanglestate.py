@@ -14,7 +14,6 @@ class RotateToAngleState(BaseState):
         rospy.loginfo("Current State : RotateToAngleState")
 
         self.targetPose = targetpose
-        self.counter = 0
         self.rotationSpeed = 0.0
         self.lastDeltaToTargetInDegrees = None
 
@@ -73,15 +72,6 @@ class RotateToAngleState(BaseState):
 
 
     def process(self):
-        self.counter = self.counter + 1
-        if (self.counter > 200):
-            # We need to stop
-            rospy.loginfo("Stopping robot due to timeout")
-
-            self.pathmanager.driver.stop()
-
-            return self.error()
-
         odometryInTargetposeFrame = self.pathmanager.latestOdometryTransformedToFrame(self.targetPose.header.frame_id)
         odomQuat = odometryInTargetposeFrame.pose.orientation
         (_, _, odomyaw) = euler_from_quaternion([odomQuat.x, odomQuat.y, odomQuat.z, odomQuat.w])
@@ -102,7 +92,7 @@ class RotateToAngleState(BaseState):
 
         self.lastDeltaToTargetInDegrees = deltaToTargetInDegrees
 
-        if (abs(deltaToTargetInDegrees) < 0.5 or overshot):
+        if (abs(deltaToTargetInDegrees) < 0.25 or overshot):
             # We need to stop
             rospy.loginfo("Stopping robot, as deltaToTarget = %s degrees, overshot = %s", deltaToTargetInDegrees, overshot)
 
