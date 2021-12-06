@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<launch>
+  <include file="$(find turtlebot3_gazebo)/launch/turtlebot3_empty_world.launch"/>
+  <include file="$(find roomba500)/launch/rviz.launch"/>
+  <include file="$(find roomba500)/launch/pathmanager.launch"/>
+</launch>
