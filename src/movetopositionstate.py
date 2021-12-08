@@ -61,11 +61,17 @@ class MoveToPositionState(BaseState):
 
         relativeAngle = odometryDegrees - degreesToTarget
 
-        rospy.loginfo("Distance = %s, Relative Angle = %s, Odometry angle = %s, Target Angle = %s", distance, relativeAngle, odometryDegrees, degreesToTarget)
+        if (relativeAngle > 180):
+            relativeAngle = 360 - relativeAngle
+
+        if (relativeAngle < -180):
+            relativeAngle = -360 - relativeAngle
+
+        rospy.loginfo("DeltaX = %s, DeltaY = %s, Distance = %s, Relative Angle = %s, Odometry angle = %s, Target Angle = %s", deltaX, deltaY, distance, relativeAngle, odometryDegrees, degreesToTarget)
 
         # Either we are close to the target position or we overshot
         # We are at the nearest point if either the distance is near a reasonable limit
-        # or the angle to the target point is about 90 degrees
+        # or the angle to the target point is equal or more than 90 degrees
         if (distance <= 0.01 or abs(relativeAngle) >= 90.0):
             # We are near the right place
             rospy.loginfo("Stopping, as we can't get nearer to the desired point")
@@ -86,23 +92,28 @@ class MoveToPositionState(BaseState):
             rospy.loginfo("Far away, using more speed")
             multiplier = 1
         else:
-            # This is pretty unclear too
-            rospy.loginfo("Comming closer, slowing down")
-            multiplier = 0.5
+            if (distance > 0.15):
+                # This is pretty unclear too
+                rospy.loginfo("Comming closer, slowing down")
+                multiplier = 0.5
+            else:
+                # This is pretty unclear too
+                rospy.loginfo("Comming more closer, slowing down")
+                multiplier = 0.25
 
-        #if (angleDelta > 0):
-        #    if (angleDelta > 1):
-        #        rospy.loginfo("Correcting heading by turning to left")
-        #        rotationSpeed = 0.25
-        #    else:
-        #        rospy.loginfo("No heading correction required")
+        if (relativeAngle > 0):
+            if (relativeAngle > 1):
+                rospy.loginfo("Correcting heading by turning to right")
+                rotationSpeed = -0.25
+            else:
+                rospy.loginfo("No heading correction required")
 
-        #if (angleDelta < 0):
-        #    if (angleDelta < 1):
-        #        rospy.loginfo("Correcting heading by turning to right")
-        #        rotationSpeed = -0.25
-        #    else:
-        #        rospy.loginfo("No heading correction required")
+        if (relativeAngle < 0):
+            if (relativeAngle < -1):
+                rospy.loginfo("Correcting heading by turning to left")
+                rotationSpeed = 0.25
+            else:
+                rospy.loginfo("No heading correction required")
 
         self.setDriveSpeed(driveSpeed * multiplier, rotationSpeed)
 

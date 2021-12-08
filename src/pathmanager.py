@@ -74,7 +74,7 @@ class PathManager:
         rospy.loginfo("Checking system state with %s hertz", pollingRateInHertz)
         rate = rospy.Rate(pollingRateInHertz)
 
-        # We consume odometry here
+        # We consume odometry and move base goals here
         rospy.Subscriber("odom", Odometry, self.newOdomMessage)
         rospy.Subscriber("move_base_simple/goal", PoseStamped, self.newMoveBaseSimpleGoalMessage)
 
