@@ -8,24 +8,26 @@ from tf.transformations import euler_from_quaternion, quaternion_from_euler
 
 class RotateToAngleState(BaseState):
 
-    def __init__(self, pathmanager, targetpose, successLambda, errorLambda):
+    def __init__(self, pathmanager, targetposition, targetframeid, successLambda, errorLambda):
         BaseState.__init__(self, pathmanager, successLambda, errorLambda)
 
         rospy.loginfo("Current State : RotateToAngleState")
 
-        self.targetPose = targetpose
+        self.targetPosition = targetposition
+        self.targetFrameId = targetframeid
+
         self.rotationSpeed = 0.0
         self.lastDeltaToTargetInDegrees = None
 
         # This is the target movement point
-        targetPosition = targetpose.pose.position
+        targetpositionx, targetpositiony = pathmanager.mapmanager.nearestNavigationPointTo(targetposition)
 
         # Now, we need to get the current position
-        odometryInTargetposeFrame = self.pathmanager.latestOdometryTransformedToFrame(targetpose.header.frame_id)
+        odometryInTargetposeFrame = self.pathmanager.latestOdometryTransformedToFrame(targetframeid)
         currentPosition = odometryInTargetposeFrame.pose.position
 
-        deltaX = targetPosition.x - currentPosition.x
-        deltaY = targetPosition.y - currentPosition.y
+        deltaX = targetpositionx - currentPosition.x
+        deltaY = targetpositiony - currentPosition.y
 
         # We can now calculate the angle to the target position
         self.targetYawInDegrees = self.distanceToDegrees(deltaX, deltaY)
@@ -64,59 +66,60 @@ class RotateToAngleState(BaseState):
                 self.rotationDirection = -1
                 rospy.loginfo("Rotating right(clockwise)")
 
-
     def setRotationSpeed(self, targetSpeed):
         if self.rotationSpeed != targetSpeed:
             self.pathmanager.driver.drive(.0, targetSpeed)
             self.rotationSpeed = targetSpeed
 
-
     def process(self):
-        odometryInTargetposeFrame = self.pathmanager.latestOdometryTransformedToFrame(self.targetPose.header.frame_id)
-        odomQuat = odometryInTargetposeFrame.pose.orientation
-        (_, _, odomyaw) = euler_from_quaternion([odomQuat.x, odomQuat.y, odomQuat.z, odomQuat.w])
-        odomyawInDegrees = self.toDegrees(odomyaw)
+        try:
+            odometryInTargetposeFrame = self.pathmanager.latestOdometryTransformedToFrame(self.targetFrameId)
+            odomQuat = odometryInTargetposeFrame.pose.orientation
+            (_, _, odomyaw) = euler_from_quaternion([odomQuat.x, odomQuat.y, odomQuat.z, odomQuat.w])
+            odomyawInDegrees = self.toDegrees(odomyaw)
 
-        deltaToTargetInDegrees = self.targetOdomYawInDegrees - odomyawInDegrees
+            deltaToTargetInDegrees = self.targetOdomYawInDegrees - odomyawInDegrees
 
-        rospy.loginfo("Current odom yaw %s, target is %s, delta is %s, rotationDirection is %s", odomyawInDegrees, self.targetOdomYawInDegrees, deltaToTargetInDegrees, self.rotationDirection)
+            rospy.loginfo("Current odom yaw %s, target is %s, delta is %s, rotationDirection is %s", odomyawInDegrees, self.targetOdomYawInDegrees, deltaToTargetInDegrees, self.rotationDirection)
 
-        # We stop rotation either if we are pretty close
-        # to the target yaw, or if we overshoot.
-        overshot = False
-        if (self.lastDeltaToTargetInDegrees != None):
-            if (self.lastDeltaToTargetInDegrees > 0 and deltaToTargetInDegrees < 0 and self.rotationDirection == 1):
-                overshot = True
-            if (self.lastDeltaToTargetInDegrees < 0 and deltaToTargetInDegrees > 0 and self.rotationDirection == -1):
-                overshot = True
+            # We stop rotation either if we are pretty close
+            # to the target yaw, or if we overshoot.
+            overshot = False
+            if (self.lastDeltaToTargetInDegrees is not None):
+                if (self.lastDeltaToTargetInDegrees > 0 and deltaToTargetInDegrees < 0 and self.rotationDirection == 1):
+                    overshot = True
+                if (self.lastDeltaToTargetInDegrees < 0 and deltaToTargetInDegrees > 0 and self.rotationDirection == -1):
+                    overshot = True
 
-        self.lastDeltaToTargetInDegrees = deltaToTargetInDegrees
+            self.lastDeltaToTargetInDegrees = deltaToTargetInDegrees
 
-        if (abs(deltaToTargetInDegrees) < 0.25 or overshot):
-            # We need to stop
-            rospy.loginfo("Stopping robot, as deltaToTarget = %s degrees, overshot = %s", deltaToTargetInDegrees, overshot)
+            if (abs(deltaToTargetInDegrees) < 0.25 or overshot):
+                # We need to stop
+                rospy.loginfo("Stopping robot, as deltaToTarget = %s degrees, overshot = %s", deltaToTargetInDegrees, overshot)
 
-            self.pathmanager.driver.stop()
-            return self.success()
+                self.pathmanager.driver.stop()
+                return self.success()
 
-        else:
-            # Continue rotation with a reasonable speed
-            targetSpeed = 0.70
+            else:
+                # Continue rotation with a reasonable speed
+                targetSpeed = 0.70
 
-            # As soon as we come close to the target angle
-            # we slowdown rotation speed to make sure we do not overshoot
-            if (abs(deltaToTargetInDegrees) < 33):
-                targetSpeed = 0.35
-            if (abs(deltaToTargetInDegrees) < 10):
-                targetSpeed = 0.15
+                # As soon as we come close to the target angle
+                # we slow down rotation speed to make sure we do not overshoot
+                if (abs(deltaToTargetInDegrees) < 33):
+                    targetSpeed = 0.35
+                if (abs(deltaToTargetInDegrees) < 10):
+                    targetSpeed = 0.15
 
-            rotationSpeed = targetSpeed * self.rotationDirection
+                rotationSpeed = targetSpeed * self.rotationDirection
 
-            rospy.loginfo("Continue rotation with speed = %s", targetSpeed)
-            self.setRotationSpeed(rotationSpeed)
+                rospy.loginfo("Continue rotation with speed = %s", targetSpeed)
+                self.setRotationSpeed(rotationSpeed)
+
+        except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
+            pass
 
         return self
-
 
     def abort(self):
         self.pathmanager.driver.stop()
