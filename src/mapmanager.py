@@ -1,24 +1,28 @@
 #!/usr/bin/env python3
 
+import math
+
 import cv2
 import numpy as np
 import rospy
-import math
+from geometry_msgs.msg import Point
+from std_msgs.msg import ColorRGBA
 from tf.transformations import euler_from_quaternion
 from tf.transformations import quaternion_from_euler
 from visualization_msgs.msg import Marker, MarkerArray
+
 from priorityqueue import PriorityQueue
-from std_msgs.msg import ColorRGBA
-from geometry_msgs.msg import Point
+
 
 class MapManager:
 
-    def __init__(self, markertopic):
+    def __init__(self, markertopic, debugimagelocation):
         self.latestMap = None
         self.robotNavigationGrid = {}
         self.robotDiameterInMeters = 0.30
         self.occupancyThreshold = .50
         self.markertopic = markertopic
+        self.debugImageLocation = debugimagelocation
 
     def create_blank(self, w, h, rgb_color=(0, 0, 0)):
 
@@ -80,6 +84,25 @@ class MapManager:
         markers.markers.append(marker)
         self.markertopic.publish(markers)
 
+    def compress(self, path):
+        result = []
+        for i, point in enumerate(path):
+            if i == 0 or i == len(path) - 1:
+                # We have to keep the first and the last point of the path
+                result.append(point)
+            else:
+                # We check the trajectory from the previous point to the current
+                (xp, yp) = path[i - 1]
+                (xc, yc) = point
+                (xn, yn) = path[i + 1]
+
+                tprev = math.atan2(yc - yp, xc - xp)
+                tnext = math.atan2(yn - yc, xn - xc)
+
+                if abs(tnext - tprev) > math.pi / 8:  # Change greater than 22.5 degrees
+                    result.append(point)
+
+        return result
 
     def findPath(self, src, target):
 
@@ -124,7 +147,8 @@ class MapManager:
                     currentcell = came_from[currentcell]
 
                 completePath.reverse()
-                return completePath
+
+                return self.compress(completePath)
 
             for nextCell in adjecentcellsfor(currentcell):
                 new_cost = cost_so_far[currentcell] + heuristicscore(currentcell, nextCell)
@@ -265,4 +289,6 @@ class MapManager:
 
 
         self.markertopic.publish(markers)
-        cv2.imwrite('/mnt/d/Mirko/ownCloud/Schaltungen/catkin_ws/src/roomba500/maps/running.png', image)
+
+        if self.debugImageLocation is not None:
+            cv2.imwrite(self.debugImageLocation, image)

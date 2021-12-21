@@ -104,6 +104,8 @@ class PathManager:
         rospy.init_node('pathmanager', anonymous=True)
         pollingRateInHertz = int(rospy.get_param('~pollingRateInHertz', '40'))
 
+        debugimagelocation = rospy.get_param('~debugimagelocation', None)
+
         rospy.loginfo("Checking system state with %s hertz", pollingRateInHertz)
         rate = rospy.Rate(pollingRateInHertz)
 
@@ -113,7 +115,7 @@ class PathManager:
 
         # This is our map manager, responsible for
         # navigation, pathfinding and visualization
-        self.mapmanager = MapManager(rospy.Publisher('visualization_marker', MarkerArray, queue_size=10))
+        self.mapmanager = MapManager(rospy.Publisher('visualization_marker', MarkerArray, queue_size=10), debugimagelocation)
         rospy.Subscriber("map", OccupancyGrid, self.mapmanager.newMapData)
 
         # And the driver will publish twist commands

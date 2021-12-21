@@ -1,5 +1,6 @@
 <?xml version="1.0"?>
 <launch>
   <node name="pathmanager" pkg="roomba500" type="pathmanager.py" output="screen" respawn="false">
+    <param name="debugimagelocation" value="$(find roomba500)/maps/debug-running.png" />
   </node>
 </launch>
