@@ -106,9 +106,9 @@ class RotateToAngleState(BaseState):
 
                 # As soon as we come close to the target angle
                 # we slow down rotation speed to make sure we do not overshoot
-                if (abs(deltaToTargetInDegrees) < 33):
+                if abs(deltaToTargetInDegrees) < 33 or abs(deltaToTargetInDegrees) > 360 - 35:
                     targetSpeed = 0.35
-                if (abs(deltaToTargetInDegrees) < 10):
+                if abs(deltaToTargetInDegrees) < 10 or abs(deltaToTargetInDegrees) > 360 - 10:
                     targetSpeed = 0.15
 
                 rotationSpeed = targetSpeed * self.rotationDirection

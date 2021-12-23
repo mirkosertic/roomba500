@@ -115,6 +115,16 @@ class MapManager:
         came_from[src] = None
         cost_so_far[src] = 0
 
+        def clampDegrees(value):
+            while (value < 0):
+                value += 360
+            while (value >= 360):
+                value -= 360
+            return value
+
+        def toDegrees(value):
+            return clampDegrees(math.degrees(value))
+
         def heuristicscore(src, target):
             x1, y1 = src
             x2, y2 = target
@@ -125,7 +135,7 @@ class MapManager:
 
         def adjecentcellsfor(src):
             x, y = src
-            freeadjecentcells = []
+            neighbours = []
             for cell, status in self.robotNavigationGrid.items():
                 if status is False and cell != src:
                     cellx, celly = cell
@@ -133,9 +143,60 @@ class MapManager:
                     dy = celly - y
                     distance = math.sqrt(dx * dx + dy * dy)
                     if distance < self.robotDiameterInMeters * 1.5:
-                        freeadjecentcells.append(cell)
+                        neighbours.append(cell)
 
-            return freeadjecentcells
+            left = None
+            topleft = None
+            top = None
+            topright = None
+            right = None
+            bottomleft = None
+            bottom = None
+            bottomright = None
+
+            for cell in neighbours:
+                cellx, celly = cell
+                angle = toDegrees(math.atan2(celly - y, cellx - x))
+                print(angle)
+                if angle < 10 or angle > 350:
+                    right = cell
+                if angle > 35 and angle < 55:
+                    topright = cell
+                if angle > 80 and angle < 100:
+                    top = cell
+                if angle > 125 and angle < 145:
+                    topleft = cell
+                if angle > 170 and angle < 190:
+                    left = cell
+                if angle > 215 and angle < 235:
+                    bottomleft = cell
+                if angle > 260 and angle < 280:
+                    bottom = cell
+                if angle > 305 and angle < 325:
+                    bottomright = cell
+
+            cells = []
+            if left is not None:
+                cells.append(left)
+            if right is not None:
+                cells.append(right)
+            if top is not None:
+                cells.append(top)
+            if bottom is not None:
+                cells.append(bottom)
+
+            if top is not None:
+                if right is not None and topright is not None:
+                    cells.append(topright)
+                if left is not None and topleft is not None:
+                    cells.append(topleft)
+            if bottom is not None:
+                if right is not None and bottomright is not None:
+                    cells.append(bottomright)
+                if left is not None and bottomleft is not None:
+                    cells.append(bottomleft)
+
+            return cells
 
         while not frontier.empty():
             currentcell = frontier.get()
