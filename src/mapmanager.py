@@ -85,6 +85,7 @@ class MapManager:
         self.markertopic.publish(markers)
 
     def compress(self, path):
+        # TODO: the first navigation point with a changing direction is the target point, not just the second one
         result = []
         for i, point in enumerate(path):
             if i == 0 or i == len(path) - 1:

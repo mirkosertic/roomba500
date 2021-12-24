@@ -9,7 +9,6 @@ class Driver:
     def __init__(self, cmdvelPublisher):
         self.cmdvelPublisher = cmdvelPublisher
 
-
     def stop(self):
         twistMsg = Twist()
         twistMsg.linear.x = .0
@@ -20,7 +19,6 @@ class Driver:
         twistMsg.angular.z = .0
 
         self.cmdvelPublisher.publish(twistMsg)
-
 
     def drive(self, speed, angularZRotation):
         twistMsg = Twist()

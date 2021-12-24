@@ -6,8 +6,6 @@ import tf
 
 from basestate import BaseState
 
-from tf.transformations import euler_from_quaternion, quaternion_from_euler
-
 class MoveToPositionState(BaseState):
 
     def __init__(self, pathmanager, targetposition, targetframeid, successLambda, errorLambda):
@@ -44,45 +42,27 @@ class MoveToPositionState(BaseState):
 
     def process(self):
         try:
-            odometryInTargetposeFrame = self.pathmanager.latestOdometryTransformedToFrame(self.targetFrameId)
-            currentPosition = odometryInTargetposeFrame.pose.position
+            odomposition, odomyawInDegrees = self.currentOdometryPositionAndOrientation(self.targetFrameId)
 
             # We calculate the current distance to the target position
-            deltaX = self.targetpositionx - currentPosition.x
-            deltaY = self.targetpositiony - currentPosition.y
+            deltaX = self.targetpositionx - odomposition.x
+            deltaY = self.targetpositiony - odomposition.y
             distance = math.sqrt(deltaX * deltaX + deltaY * deltaY)
             degreesToTarget = self.distanceToDegrees(deltaX, deltaY)
 
-            # And we check the current alignment angle using odometry to verify we
-            # are heading in the right direction
-            odomQuat = odometryInTargetposeFrame.pose.orientation
-            (_, _, odomyaw) = euler_from_quaternion([odomQuat.x, odomQuat.y, odomQuat.z, odomQuat.w])
+            shortestAngle = self.shortestAngle(odomyawInDegrees, degreesToTarget)
 
-            odometryDegrees = self.toDegrees(odomyaw)
-
-            relativeAngle = odometryDegrees - degreesToTarget
-
-            if (relativeAngle > 180):
-                relativeAngle = 360 - relativeAngle
-
-            if (relativeAngle < -180):
-                relativeAngle = -360 - relativeAngle
-
-            rospy.loginfo("DeltaX = %s, DeltaY = %s, Distance = %s, Relative Angle = %s, Odometry angle = %s, Target Angle = %s", deltaX, deltaY, distance, relativeAngle, odometryDegrees, degreesToTarget)
+            rospy.loginfo("DeltaX = %s, DeltaY = %s, Distance = %s, shortest angle = %s, Odometry angle = %s, Target Angle = %s", deltaX, deltaY, distance, shortestAngle, odomyawInDegrees, degreesToTarget)
 
             # Either we are close to the target position or we overshot
             # We are at the nearest point if either the distance is near a reasonable limit
             # or the angle to the target point is equal or more than 90 degrees
-            if (distance <= 0.01 or abs(relativeAngle) >= 90.0):
+            if (distance <= 0.01 or abs(shortestAngle) >= 90.0):
                 # We are near the right place
                 rospy.loginfo("Stopping, as we can't get nearer to the desired point")
 
                 self.pathmanager.driver.stop()
                 return self.success()
-
-            #
-            # Positive Angle Delta -> Rotate left, else right
-            #
 
             driveSpeed = 0.35
             rotationSpeed = .0
@@ -102,19 +82,12 @@ class MoveToPositionState(BaseState):
                     rospy.loginfo("Comming more closer, slowing down")
                     multiplier = 0.25
 
-            if (relativeAngle > 0):
-                if (relativeAngle > 1):
-                    rospy.loginfo("Correcting heading by turning to right")
-                    rotationSpeed = -0.25
-                else:
-                    rospy.loginfo("No heading correction required")
-
-            if (relativeAngle < 0):
-                if (relativeAngle < -1):
-                    rospy.loginfo("Correcting heading by turning to left")
-                    rotationSpeed = 0.25
-                else:
-                    rospy.loginfo("No heading correction required")
+            if shortestAngle > 1:
+                rospy.loginfo("Correcting heading by turning to the left")
+                rotationSpeed = 0.25
+            if shortestAngle < -1:
+                rospy.loginfo("Correcting heading by turning to the right")
+                rotationSpeed = -0.25
 
             self.setDriveSpeed(driveSpeed * multiplier, rotationSpeed)
 
