@@ -83,6 +83,9 @@ class Roomba500 {
         this->mainbrushPWM = 0;
         this->sidebrushPWM = 0;
         this->vacuumPWM = 0;
+        this->commandQueued = false;
+        this->queuedLeftWheelAccel = 0;
+        this->queuedRightWheelAccel = 0;
     }
 
     void safeMode() {
