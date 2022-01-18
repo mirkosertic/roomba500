@@ -3,4 +3,5 @@
     <include file="$(find roomba500)/launch/basecontroller.launch"/>
     <include file="$(find roomba500)/launch/exampleydlaserx4.launch"/>
     <include file="$(find roomba500)/launch/slamtoolbox.launch"/>
+    <!-- <include file="$(find roomba500)/launch/pathmanager.launch"/> -->
 </launch>

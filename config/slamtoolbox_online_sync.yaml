@@ -13,6 +13,9 @@ base_frame: base_link
 scan_topic: /scan
 mode: mapping #localization
 
+# map_file_name: /home/mirkosertic/.ros/map01
+# map_start_pose: [0.0, 0.0, 0.0]
+
 debug_logging: false
 throttle_scans: 1
 transform_publish_period: 0.02 #if 0 never publishes odometry

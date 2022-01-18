@@ -239,8 +239,8 @@ class MapManager:
 
         def isOccupied(x, y):
             containsunknownareas = False
-            for x2 in range(x, x + math.ceil(scansquaresize)):
-                for y2 in range(y, y + math.ceil(scansquaresize)):
+            for x2 in range(x, x + math.floor(scansquaresize)):
+                for y2 in range(y, y + math.floor(scansquaresize)):
                     probability = message.data[(mapwidth - y2 - 1) * mapwidth + x2]
                     if probability == -1:
                         containsunknownareas = True

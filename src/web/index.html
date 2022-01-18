@@ -1,0 +1,234 @@
+<html>
+    <head>
+        <title>Roomba Remote Control</title>
+        <style>
+            .controlcontainer {
+                display: grid;
+                grid-template-columns: 1fr 1fr 1fr;
+                grid-template-rows: 2rem 2rem 2rem;
+                gap: 0.5rem 0.5rem;
+                grid-template-areas:
+    "wakeup . shutdown"
+    ". forward ."
+    "left stop right";
+                width: 50rem;
+            }
+
+            .wakeupbutton {
+                grid-area: wakeup;
+            }
+
+            .shutdownbutton {
+                grid-area: shutdown;
+            }
+
+            .leftbutton {
+                grid-area: left;
+            }
+
+            .rightbutton {
+                grid-area: right;
+            }
+
+            .stopbutton {
+                grid-area: stop;
+            }
+
+            .forwardbutton {
+                grid-area: forward;
+            }
+
+            .sensorcontainer {
+                display: grid;
+                grid-template-columns: auto auto auto auto auto auto;
+                grid-template-rows: auto 1rem auto auto;
+                gap: 0px 0px;
+                grid-template-areas:
+    ". bumperLeft . . bumperRight ."
+    "lightFrontLeft . lightCenterLeft lightCenterRight . lightFrontRight"
+    ". . batteryStatus batteryStatus . ."
+    "lightLeft . . . . lightRight";
+                width: 55rem;
+                height: 30rem;
+            }
+
+            .batteryStatus {
+                grid-area: batteryStatus;
+                align-self: center;
+                text-align: center;
+            }
+
+            .statusLED {
+                width: 2em;
+                height: 2em;
+                border-radius: 50%;
+                background-color: green;
+                text-align: center;
+                align-self: center;
+            }
+
+            .statusLED[data-status='false'] {
+                border: 2px solid black;
+                background-color: green;
+            }
+
+            .statusLED[data-status='true'] {
+                border: 2px solid black;
+                background-color: red;
+            }
+
+            .lightSensor::before {
+                content: attr(data-value);
+            }
+
+            .lightSensor {
+                width: 4rem;
+                border: 1px solid black;
+                text-align: center;
+            }
+
+            .bumperLeft {
+                grid-area: bumperLeft;
+                align-self: center;
+            }
+
+            .bumperRight {
+                grid-area: bumperRight;
+                align-self: center;
+            }
+
+            .lightsensorLeft {
+                grid-area: lightLeft;
+                align-self: center;
+            }
+
+            .lightsensorFrontLeft {
+                grid-area: lightFrontLeft;
+                align-self: center;
+            }
+
+            .lightsensorCenterLeft {
+                grid-area: lightCenterLeft;
+                align-self: center;
+            }
+
+            .lightsensorCenterRight {
+                grid-area: lightCenterRight;
+                align-self: center;
+            }
+
+            .lightsensorFrontRight {
+                grid-area: lightFrontRight;
+                align-self: center;
+            }
+
+            .lightsensorRight {
+                grid-area: lightRight;
+                align-self: center;
+            }
+
+
+        </style>
+    </head>
+    <body>
+        <h1>Roomba Remote</h1>
+
+        <div class='controlcontainer'>
+            <input class='wakeupbutton' id='wakeupbutton' type='submit' value='Wakeup'/>
+            <input class='shutdownbutton' id='shutdownbutton' type='submit' value='Shutdown'/>
+            <input class='leftbutton' id='leftbutton' type='submit' value='Turn Left'/>
+            <input class='stopbutton' id='stopbutton' type='submit' value='Stop'/>
+            <input class='rightbutton' id='rightbutton' type='submit' value='Turn Right'/>
+            <input class='forwardbutton' id='forwardbutton' type='submit' value='Forward'/>
+        </div>
+
+        <div class='sensorcontainer'>
+            <div class='bumperLeft statusLED' data-status='true'></div>
+            <div class='bumperRight statusLED' data-status='false'></div>
+            <div class='lightsensorLeft lightSensor' data-value="0"></div>
+            <div class='lightsensorFrontLeft lightSensor' data-value="0"></div>
+            <div class='lightsensorCenterLeft lightSensor' data-value="0"></div>
+            <div class='lightsensorCenterRight lightSensor' data-value="0"></div>
+            <div class='lightsensorFrontRight lightSensor' data-value="0"></div>
+            <div class='lightsensorRight lightSensor' data-value="0"></div>
+            <div class='roomba'></div>
+            <div class='batteryStatus' id='batteryStatus'>Battery : <span id='batteryCharge'>&nbsp;</span> mAH / <span id='batteryCapacity'>&nbsp;</span> mAH</div>
+        </div>
+
+        <script>
+            let wakeupButton = document.getElementById('wakeupbutton');
+            let shutdownButton = document.getElementById('shutdownbutton');
+            let batteryStatus = document.getElementById('batteryStatus');
+            let batteryCharge = document.getElementById('batteryCharge');
+            let batteryCapacity = document.getElementById('batteryCapacity');
+            let leftbutton = document.getElementById('leftbutton');
+            let rightbutton = document.getElementById('rightbutton');
+            let forwardbutton = document.getElementById('forwardbutton');
+            let stopbutton = document.getElementById('stopbutton');
+
+            function updateUI(data) {
+                if (data.awake) {
+                    batteryStatus.style.display = 'block';
+                    batteryCharge.innerText = '' + data.batteryCharge;
+                    batteryCapacity.innerText = '' + data.batteryCapacity;
+                    wakeupButton.disabled = true;
+                    shutdownButton.disabled = false;
+                    leftbutton.disabled = false;
+                    rightbutton.disabled = false;
+                    forwardbutton.disabled = false;
+                    stopbutton.disabled = false;
+                } else {
+                    batteryStatus.style.display = 'hidden';
+                    wakeupButton.disabled = false;
+                    shutdownButton.disabled = true;
+                    leftbutton.disabled = true;
+                    rightbutton.disabled = true;
+                    forwardbutton.disabled = true;
+                    stopbutton.disabled = true;
+                }
+            }
+
+            function fetchState() {
+                fetch('/systemstate.json')
+                    .then(response => response.json())
+                    .then(data => updateUI(data))
+            }
+
+            function wakeup() {
+                fetch('/actions/wakeup').then(response => fetchState());
+            }
+
+            function shutdown() {
+                fetch('/actions/shutdown').then(response => fetchState());
+            }
+
+            function turnleft() {
+                fetch('/actions/turnleft').then(response => fetchState());
+            }
+
+            function turnright() {
+                fetch('/actions/turnright').then(response => fetchState());
+            }
+
+            function stop() {
+                fetch('/actions/stop').then(response => fetchState());
+            }
+
+            function forward() {
+                fetch('/actions/forward').then(response => fetchState());
+            }
+
+            wakeupButton.addEventListener('click', wakeup);
+            shutdownButton.addEventListener('click', shutdown);
+
+            leftbutton.addEventListener('click', turnleft);
+            rightbutton.addEventListener('click', turnright);
+            stopbutton.addEventListener('click', stop);
+            forwardbutton.addEventListener('click', forward);
+
+            fetchState();
+            setInterval(fetchState, 2000);
+
+        </script>
+    </body>
+</html>

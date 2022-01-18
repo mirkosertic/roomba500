@@ -344,7 +344,7 @@ class BaseController {
             std::string serialport;
             int baudrate;
 
-            nPriv->param<std::string>("serialport", serialport, "/dev/serial0");
+            nPriv->param<std::string>("serialport", serialport, "/dev/ttyAMA0");
             nPriv->param("baudrate", baudrate, 115200);
             nPriv->param("fullRotationInSensorTicks", fullRotationInSensorTicks, 1696);
             nPriv->param("ticksPerCm", ticksPerCm, 22.836363f);
@@ -567,6 +567,10 @@ class BaseController {
                 loop_rate.sleep();
             }
 
+            ROS_INFO("Entering passive mode");
+            robot->passiveMode();
+
+            ROS_INFO("Finishing");
             delete robot;
 
             return 0;

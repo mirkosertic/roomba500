@@ -36,7 +36,7 @@ class Roomba500 {
         // Open and initialize serial interface
         // Code taken from https://www.cmrr.umn.edu/~strupp/serial.html
         //this->fd = open(device.c_str(), O_RDWR | O_NOCTTY | O_NDELAY);
-        this->fd = open(device.c_str(), O_RDWR | O_NOCTTY);
+        this->fd = open(device.c_str(), O_RDWR | O_NOCTTY | O_NDELAY);
         if (this->fd == -1) {
             throw std::invalid_argument("cannot open serial interface");
         } else {
