@@ -105,7 +105,7 @@ class SupervisorState:
 
     def gathersystemstate(self):
         data = {
-            'awake': self.robotnode is not None or True,
+            'awake': self.robotnode is not None,
             'batteryCapacity': self.latestbatterycapacity,
             'batteryCharge': self.latestbatterycharge,
             'bumperLeft': True if self.bumperleft > 0 else False,

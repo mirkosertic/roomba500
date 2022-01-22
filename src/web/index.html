@@ -40,6 +40,7 @@
 
             .sensorcontainer {
                 display: grid;
+                visibility: hidden;
                 grid-template-columns: auto auto auto auto auto auto;
                 grid-template-rows: auto 1rem auto auto;
                 gap: 0px 0px;
@@ -142,33 +143,43 @@
             <input class='forwardbutton' id='forwardbutton' type='submit' value='Forward'/>
         </div>
 
-        <div class='sensorcontainer'>
-            <div class='bumperLeft statusLED' data-status='true'></div>
-            <div class='bumperRight statusLED' data-status='false'></div>
-            <div class='lightsensorLeft lightSensor' data-value="0"></div>
-            <div class='lightsensorFrontLeft lightSensor' data-value="0"></div>
-            <div class='lightsensorCenterLeft lightSensor' data-value="0"></div>
-            <div class='lightsensorCenterRight lightSensor' data-value="0"></div>
-            <div class='lightsensorFrontRight lightSensor' data-value="0"></div>
-            <div class='lightsensorRight lightSensor' data-value="0"></div>
+        <div id='sensorcontainer' class='sensorcontainer'>
+            <div id='bumperleft' class='bumperLeft statusLED' data-status='true'></div>
+            <div id='bumperright' class='bumperRight statusLED' data-status='false'></div>
+            <div id='lightsensorLeft' class='lightsensorLeft lightSensor' data-value="0"></div>
+            <div id='lightsensorFrontLeft' class='lightsensorFrontLeft lightSensor' data-value="0"></div>
+            <div id='lightsensorCenterLeft' class='lightsensorCenterLeft lightSensor' data-value="0"></div>
+            <div id='lightsensorCenterRight' class='lightsensorCenterRight lightSensor' data-value="0"></div>
+            <div id='lightsensorFrontRight' class='lightsensorFrontRight lightSensor' data-value="0"></div>
+            <div id='lightsensorRight' class='lightsensorRight lightSensor' data-value="0"></div>
             <div class='roomba'></div>
-            <div class='batteryStatus' id='batteryStatus'>Battery : <span id='batteryCharge'>&nbsp;</span> mAH / <span id='batteryCapacity'>&nbsp;</span> mAH</div>
+            <div class='batteryStatus' >Battery : <span id='batteryCharge'>&nbsp;</span> mAH / <span id='batteryCapacity'>&nbsp;</span> mAH</div>
         </div>
 
         <script>
+            let sensorcontainer = document.getElementById('sensorcontainer');
+
             let wakeupButton = document.getElementById('wakeupbutton');
             let shutdownButton = document.getElementById('shutdownbutton');
-            let batteryStatus = document.getElementById('batteryStatus');
             let batteryCharge = document.getElementById('batteryCharge');
             let batteryCapacity = document.getElementById('batteryCapacity');
             let leftbutton = document.getElementById('leftbutton');
             let rightbutton = document.getElementById('rightbutton');
             let forwardbutton = document.getElementById('forwardbutton');
             let stopbutton = document.getElementById('stopbutton');
+            let bumperleft = document.getElementById('bumperleft');
+            let bumperright = document.getElementById('bumperright');
+            let lightsensorLeft = document.getElementById('lightsensorLeft');
+            let lightsensorFrontLeft = document.getElementById('lightsensorFrontLeft');
+            let lightsensorCenterLeft = document.getElementById('lightsensorCenterLeft');
+            let lightsensorCenterRight = document.getElementById('lightsensorCenterRight');
+            let lightsensorFrontRight = document.getElementById('lightsensorFrontRight');
+            let lightsensorRight = document.getElementById('lightsensorRight');
 
             function updateUI(data) {
                 if (data.awake) {
-                    batteryStatus.style.display = 'block';
+                    sensorcontainer.style.visibility = 'visible';
+
                     batteryCharge.innerText = '' + data.batteryCharge;
                     batteryCapacity.innerText = '' + data.batteryCapacity;
                     wakeupButton.disabled = true;
@@ -177,8 +188,19 @@
                     rightbutton.disabled = false;
                     forwardbutton.disabled = false;
                     stopbutton.disabled = false;
+
+                    bumperleft.dataset.status = '' + data.bumperLeft;
+                    bumperright.dataset.status = '' + data.bumperRight;
+
+                    lightsensorLeft.dataset.value = '' + data.lightbumperLeft;
+                    lightsensorFrontLeft.dataset.value = '' + data.lightbumperFrontLeft;
+                    lightsensorCenterLeft.dataset.value = '' + data.lightbumperCenterLeft;
+                    lightsensorCenterRight.dataset.value = '' + data.lightbumperCenterRight;
+                    lightsensorFrontRight.dataset.value = '' + data.lightbumperFrontRight;
+                    lightsensorRight.dataset.value = '' + data.lightbumperRight;
                 } else {
-                    batteryStatus.style.display = 'hidden';
+                    sensorcontainer.style.visibility = 'hidden';
+
                     wakeupButton.disabled = false;
                     shutdownButton.disabled = true;
                     leftbutton.disabled = true;
@@ -192,6 +214,21 @@
                 fetch('/systemstate.json')
                     .then(response => response.json())
                     .then(data => updateUI(data))
+                    .catch(function(error) {
+                        updateUI({
+                            awake: true,
+                            batteryCharge: '100',
+                            batteryCapacity: '200',
+                            bumperLeft: false,
+                            bumperRight: false,
+                            lightbumperLeft: 1,
+                            lightbumperFrontLeft: 2,
+                            lightbumperCenterLeft: 3,
+                            lightbumperCenterRight: 4,
+                            lightbumperFrontRight: 5,
+                            lightbumperRight: 6
+                        })
+                    })
             }
 
             function wakeup() {

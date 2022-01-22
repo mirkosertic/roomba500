@@ -284,7 +284,7 @@ class Supervisor:
 
             if self.processshutdown and self.state.robotnode is not None:
 
-                self.savestateformap()
+                # self.savestateformap()
 
                 try:
                     rospy.loginfo('Shutting down running node')
