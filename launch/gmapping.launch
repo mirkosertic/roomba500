@@ -1,6 +1,6 @@
 <launch>
 
-  <node pkg="gmapping" type="slam_mapping" name="slam_mapping" output="screen">
+  <node pkg="gmapping" type="slam_gmapping" name="slam_gmapping" output="screen">
     <param name="rosout_disable_topics_generation" value="True" />
   </node>
 
