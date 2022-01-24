@@ -9,13 +9,13 @@ import pathlib
 import socket
 import fcntl
 import struct
+import time
 
 import roslaunch
 import rospy
 from std_msgs.msg import Int16
 from geometry_msgs.msg import Twist, Pose2D
 from nav_msgs.msg import Odometry
-from slam_toolbox_msgs.srv import SerializePoseGraph, DeserializePoseGraph
 
 from flask import Flask, render_template, make_response, jsonify
 
@@ -158,31 +158,23 @@ class Supervisor:
                 return default
 
     def restorestateformap(self):
-        rospy.loginfo('Loading pose graph %s from file...', self.mapname)
-        try:
-            rospy.loginfo('Waiting for service...')
-            rospy.wait_for_service('/slam_toolbox/deserialize_map')
-            rospy.loginfo('Calling...')
-            service = rospy.ServiceProxy('/slam_toolbox/deserialize_map', DeserializePoseGraph)
-
-            service(self.mapname, int(8), Pose2D())
-        except Exception as e:
-            logging.error(traceback.format_exc())
-            rospy.logerr('Error loading pose graph : %s', e)
-
-        rospy.loginfo('Done')
+        pass
 
     def savestateformap(self):
         try:
-            rospy.loginfo('Saving pose graph %s to file...', self.mapname)
-            rospy.loginfo('Waiting for service')
-            rospy.wait_for_service('/slam_toolbox/serialize_map')
-            rospy.loginfo('Calling...')
-            service = rospy.ServiceProxy('/slam_toolbox/serialize_map', SerializePoseGraph)
-            service(self.mapname)
+            filename = str(pathlib.Path(__file__).parent.resolve().parent.joinpath('maps', self.mapname))
+            rospy.loginfo('Saving map %s to file %s...', self.mapname, filename)
+
+            node = roslaunch.core.Node('map_server', 'map_saver', args='-f ' + filename)
+            launch = roslaunch.scriptapi.ROSLaunch()
+            launch.start()
+            rospy.loginfo('Launching save process and waiting to finish')
+            process = launch.launch(node)
+            time.sleep(5)
+            process.stop()
         except Exception as e:
             logging.error(traceback.format_exc())
-            rospy.logerr('Error saving pose graph : %s', e)
+            rospy.logerr('Error saving map : %s', e)
 
         rospy.loginfo('Done')
 
@@ -284,7 +276,7 @@ class Supervisor:
 
             if self.processshutdown and self.state.robotnode is not None:
 
-                # self.savestateformap()
+                self.savestateformap()
 
                 try:
                     rospy.loginfo('Shutting down running node')

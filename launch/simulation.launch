@@ -7,7 +7,7 @@
     <arg name="open_rviz" value="false"/>
   </include>-->
 
-  <!-- <include file="$(find roomba500)/launch/slamtoolbox.launch"/> -->
+  <include file="$(find roomba500)/launch/gmapping.launch"/>
 
   <node type="rviz" name="rviz" pkg="rviz" args="-d $(find roomba500)/rviz/turtlebot3.rviz" />
 </launch>
