@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="initialx" default="0"/>
+  <arg name="initialy" default="0"/>
+  <arg name="initialyaw" default="0"/>
+
+  <node pkg="amcl" type="amcl" name="amcl" output="screen">
+    <param name="rosout_disable_topics_generation" value="True" />
+    <param name="initial_pose_x" value="$(arg initialx)" />
+    <param name="initial_pose_y" value="$(arg initialy)" />
+    <param name="initial_pose_a" value="$(arg initialyaw)" />
+  </node>
+</launch>

@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
 
 import threading
+
 import tf
+
+from geometry_msgs.msg import PoseStamped
+from tf.transformations import euler_from_quaternion
 
 class SupervisorState:
 
-    def __init__(self):
+    def __init__(self, transformlistener, mapframe):
         self.syncLock = threading.Lock()
         self.robotnode = None
         self.latestbatterycharge = None
@@ -22,6 +26,12 @@ class SupervisorState:
         self.lightbumperright = 0
         self.odometrylog = None
         self.lastcommand = ''
+
+        self.mapframe = mapframe
+        self.transformlistener = transformlistener
+
+        self.latestpositiononmap = None
+        self.latestyawonmap = None
         pass
 
     def newBatteryCapacity(self, message):
@@ -101,7 +111,29 @@ class SupervisorState:
         self.odometrylog.flush()
 
         self.lastcommand = ''
+
+        try:
+            mpose = PoseStamped()
+            mpose.pose.position = message.pose.pose.position
+            mpose.pose.orientation = message.pose.pose.orientation
+            mpose.header.frame_id = message.header.frame_id
+            mpose.header.stamp = message.header.stamp
+
+            latestcommontime = self.transformlistener.getLatestCommonTime(self.mapframe, message.header.frame_id)
+            odometryInTargetposeFrame = self.transformlistener.transformPose(self.mapframe, mpose)
+
+            odomQuat = odometryInTargetposeFrame.pose.orientation
+            (_, _, odomyaw) = euler_from_quaternion([odomQuat.x, odomQuat.y, odomQuat.z, odomQuat.w])
+
+            self.latestpositiononmap = odometryInTargetposeFrame.pose.position
+            self.latestyawonmap = odomyaw
+
+        except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException) as e:
+            # Do nothing here
+            pass
+
         pass
+
 
     def gathersystemstate(self):
         data = {

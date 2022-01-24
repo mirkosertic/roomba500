@@ -11,8 +11,10 @@ import fcntl
 import struct
 import time
 
+import tf
 import roslaunch
 import rospy
+
 from std_msgs.msg import Int16
 from geometry_msgs.msg import Twist, Pose2D
 from nav_msgs.msg import Odometry
@@ -31,13 +33,14 @@ from PIL import ImageFont
 class Supervisor:
 
     def __init__(self):
+        self.mapframe = None
         self.app = None
         self.wsport = None
         self.wsinterface = None
         self.nodelaunchfile = None
         self.mapname = 'map01'
 
-        self.state = SupervisorState()
+        self.state = None
 
         self.driver = None
 
@@ -157,9 +160,6 @@ class Supervisor:
             except Exception as e2:
                 return default
 
-    def restorestateformap(self):
-        pass
-
     def savestateformap(self):
         try:
             filename = str(pathlib.Path(__file__).parent.resolve().parent.joinpath('maps', self.mapname))
@@ -172,6 +172,16 @@ class Supervisor:
             process = launch.launch(node)
             time.sleep(5)
             process.stop()
+
+            latestposfilename = str(pathlib.Path(__file__).parent.resolve().parent.joinpath('maps', self.mapname + '.position'))
+            rospy.loginfo('Saving latest position to %s', latestposfilename)
+            handle = open(latestposfilename, 'w')
+            handle.write('{:.6f}'.format(self.state.latestpositiononmap.x) + '\n')
+            handle.write('{:.6f}'.format(self.state.latestpositiononmap.y) + '\n')
+            handle.write('{:.6f}'.format(self.state.latestyawonmap) + '\n')
+            handle.flush()
+            handle.close()
+
         except Exception as e:
             logging.error(traceback.format_exc())
             rospy.logerr('Error saving map : %s', e)
@@ -188,11 +198,14 @@ class Supervisor:
         staticContentFolder = str(pathlib.Path(__file__).parent.resolve().joinpath('web'))
         rospy.loginfo('Using %s as static content folder', staticContentFolder)
 
-        self.nodelaunchfile = str(pathlib.Path(__file__).parent.resolve().parent.joinpath('launch', rospy.get_param('~launchfile', 'slamtoolbox.launch')))
+        self.nodelaunchfile = str(pathlib.Path(__file__).parent.resolve().parent.joinpath('launch', rospy.get_param('~launchfile', 'pathmanagersimulation.launch')))
         rospy.loginfo('Using %s as the launch file for nodes', self.nodelaunchfile)
 
         rospy.loginfo('Checking system state with %s hertz', pollingRateInHertz)
         rate = rospy.Rate(pollingRateInHertz)
+
+        self.mapframe = rospy.get_param('~mapframe', 'map')
+        self.state = SupervisorState(tf.TransformListener(), self.mapframe)
 
         self.driver = Driver(rospy.Publisher('cmd_vel', Twist, queue_size=10))
 
@@ -260,12 +273,36 @@ class Supervisor:
             if self.processwakeup and self.state.robotnode is None:
                 try:
                     rospy.loginfo('Starting new node with launch file %s', self.nodelaunchfile)
+
+                    latestposfilename = str(pathlib.Path(__file__).parent.resolve().parent.joinpath('maps', self.mapname + '.position'))
+                    arguments = []
+                    if os.path.exists(latestposfilename):
+                        rospy.loginfo('Loading latest position from %s', latestposfilename)
+                        handle = open(latestposfilename, 'r')
+
+                        x = float(handle.readline())
+                        y = float(handle.readline())
+                        yaw = float(handle.readline())
+
+                        rospy.loginfo('Latest position is x=%s, y=%s, yaw=%s', x, y, yaw)
+
+                        arguments.append('initialx:=' + str(x))
+                        arguments.append('initialy:=' + str(y))
+                        arguments.append('initialyaw:=' + str(yaw))
+                        arguments.append('loadmap:=true')
+                        arguments.append('createmap:=false')
+                        arguments.append('mapfile:=' + str(pathlib.Path(__file__).parent.resolve().parent.joinpath('maps', self.mapname + '.yaml')))
+                    else:
+                        rospy.loginfo('Using a new map which will be stored as %s', self.mapname)
+                        arguments.append('loadmap:=false')
+                        arguments.append('createmap:=true')
+
+                    rospy.loginfo('Launching with arguments %s', str(arguments))
                     uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
                     roslaunch.configure_logging(uuid)
-                    self.state.robotnode = roslaunch.parent.ROSLaunchParent(uuid, [self.nodelaunchfile])
+                    self.state.robotnode = roslaunch.parent.ROSLaunchParent(uuid, [(self.nodelaunchfile, arguments)])
                     self.state.robotnode.start()
 
-                    # self.restorestateformap()
                 except Exception as e:
                     self.state.robotnode = None
 

@@ -1,6 +1,31 @@
 <?xml version="1.0"?>
 <launch>
-  <include file="$(find turtlebot3_gazebo)/launch/turtlebot3_empty_world.launch"/>
-  <include file="$(find roomba500)/launch/rviz.launch"/>
-  <include file="$(find roomba500)/launch/pathmanager.launch"/>
+  <arg name="createmap" default="false"/>
+  <arg name="loadmap" default="false"/>
+  <arg name="mapfile" default="unknown"/>
+  <arg name="initialx" default="0"/>
+  <arg name="initialy" default="0"/>
+  <arg name="initialyaw" default="0"/>
+
+  <group if="$(arg createmap)">
+      <include file="$(find turtlebot3_slam)/launch/turtlebot3_slam.launch">
+        <arg name="slam_methods" value="gmapping"/>
+        <arg name="open_rviz" value="false"/>
+      </include>
+  </group>
+
+  <group if="$(arg loadmap)">
+    <include file="$(find turtlebot3_bringup)/launch/turtlebot3_remote.launch">
+      <arg name="model" value="waffle" />
+    </include>
+
+    <node pkg="map_server" type="map_server" name="map_server" output="screen" args="$(arg mapfile)" />
+    <include file="$(find roomba500)/launch/amcl.launch">
+        <arg name="initialx" value="$(arg initialx)"/>
+        <arg name="initialy" value="$(arg initialy)"/>
+        <arg name="initialyaw" value="$(arg initialyaw)"/>
+    </include>
+  </group>
+
+  <!-- <include file="$(find roomba500)/launch/pathmanager.launch"/> -->
 </launch>

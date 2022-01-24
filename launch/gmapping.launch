@@ -2,8 +2,8 @@
 
   <node pkg="gmapping" type="slam_gmapping" name="slam_gmapping" output="screen">
     <param name="rosout_disable_topics_generation" value="True" />
-    <param name="map_update_interval" value="2.0" />
-    <param name="maxUrange" value="5.0" />
+    <param name="map_update_interval" value="1.0" />
+    <param name="maxUrange" value="8.0" />
     <param name="xmin" value="-5.0" />
     <param name="xmax" value="5.0" />
     <param name="ymin" value="-5.0" />
