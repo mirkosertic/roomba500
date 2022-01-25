@@ -15,6 +15,7 @@ import tf
 import roslaunch
 import rospy
 
+from std_srvs.srv import Empty
 from std_msgs.msg import Int16
 from geometry_msgs.msg import Twist, Pose2D
 from nav_msgs.msg import Odometry
@@ -130,6 +131,27 @@ class Supervisor:
         self.state.lastcommand = 'stop'
         return make_response(jsonify(data), 200)
 
+    def relocalization(self):
+
+        data = {
+        }
+
+        self.driver.stop()
+        self.state.lastcommand = 'relocalization'
+
+        try:
+            rospy.loginfo('Waiting for service global_localization')
+            rospy.wait_for_service('global_localization')
+            rospy.loginfo('Invoking service')
+            service = rospy.ServiceProxy('global_localization', Empty)
+            service()
+            rospy.loginfo('Ready to rumble!')
+        except rospy.ServiceException as e:
+            logging.error(traceback.format_exc())
+            rospy.logerr('Error initiating relocalization : %s', e)
+
+        return make_response(jsonify(data), 200)
+
     def updateDisplay(self):
         device = self.displaydevice
         state = self.state.gathersystemstate()
@@ -221,6 +243,7 @@ class Supervisor:
         self.app.add_url_rule('/actions/turnright', view_func=self.turnright)
         self.app.add_url_rule('/actions/forward', view_func=self.forward)
         self.app.add_url_rule('/actions/stop', view_func=self.stop)
+        self.app.add_url_rule('/actions/relocalization', view_func=self.relocalization)
 
         wsThread = threading.Thread(target=self.startWebServer)
         wsThread.start()
@@ -279,10 +302,11 @@ class Supervisor:
                     if os.path.exists(latestposfilename):
                         rospy.loginfo('Loading latest position from %s', latestposfilename)
                         handle = open(latestposfilename, 'r')
-
                         x = float(handle.readline())
                         y = float(handle.readline())
                         yaw = float(handle.readline())
+                        handle.close()
+
 
                         rospy.loginfo('Latest position is x=%s, y=%s, yaw=%s', x, y, yaw)
 
@@ -292,10 +316,14 @@ class Supervisor:
                         arguments.append('loadmap:=true')
                         arguments.append('createmap:=false')
                         arguments.append('mapfile:=' + str(pathlib.Path(__file__).parent.resolve().parent.joinpath('maps', self.mapname + '.yaml')))
+
+                        self.state.amclmode = True
                     else:
                         rospy.loginfo('Using a new map which will be stored as %s', self.mapname)
                         arguments.append('loadmap:=false')
                         arguments.append('createmap:=true')
+
+                        self.state.amclmode = False
 
                     rospy.loginfo('Launching with arguments %s', str(arguments))
                     uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)

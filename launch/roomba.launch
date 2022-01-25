@@ -23,5 +23,5 @@
       </include>
   </group>
 
-  <include file="$(find roomba500)/launch/pathmanager.launch"/>
+  <!-- <include file="$(find roomba500)/launch/pathmanager.launch"/> -->
 </launch>

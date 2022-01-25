@@ -26,6 +26,7 @@ class SupervisorState:
         self.lightbumperright = 0
         self.odometrylog = None
         self.lastcommand = ''
+        self.amclmode = False
 
         self.mapframe = mapframe
         self.transformlistener = transformlistener
@@ -150,5 +151,6 @@ class SupervisorState:
             'lightbumperCenterRight': self.lightbumpercenterright,
             'lightbumperFrontRight': self.lightbumperfrontright,
             'lightbumperRight': self.lightbumperright,
+            'amclmode': self.amclmode,
         }
         return data
