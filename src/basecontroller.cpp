@@ -395,8 +395,6 @@ class BaseController {
             ros::Publisher lightBumperFrontRightTopic = n.advertise<std_msgs::Int16>("lightBumperFrontRight", 1000);
             ros::Publisher lightBumperRightTopic = n.advertise<std_msgs::Int16>("lightBumperRight", 1000);
 
-            ros::Publisher oimodeTopic = n.advertise<std_msgs::Int16>("oimode", 1000);
-
             // Here goes the odometry data
             ros::Publisher odom = n.advertise<nav_msgs::Odometry>("odom", 50);
             odomTopic = &odom;
@@ -558,8 +556,6 @@ class BaseController {
                 publishInt16(lastSensorFrame.lightBumperCenterRight, &lightBumperCenterRightTopic);
                 publishInt16(lastSensorFrame.lightBumperFrontRight, &lightBumperFrontRightTopic);
                 publishInt16(lastSensorFrame.lightBumperRight, &lightBumperRightTopic);
-
-                publishInt16(lastSensorFrame.oimode, &oimodeTopic);
 
                 mutex.unlock();
 
