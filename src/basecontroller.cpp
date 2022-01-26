@@ -57,7 +57,7 @@ class BaseController {
             }
 
             if (vyInMetersPerSecond != 0.0f || vthInRadiansPerSecond != 0.0f) {
-                ROS_INFO("Current velocity vx = %f, vtheta = %f", vxInMetersPerSecond, vthInRadiansPerSecond);
+                ROS_DEBUG("Current velocity vx = %f, vtheta = %f", vxInMetersPerSecond, vthInRadiansPerSecond);
             }
 
             geometry_msgs::Quaternion odom_quat = tf::createQuaternionMsgFromYaw(radians(pose->theta));
