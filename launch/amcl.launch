@@ -9,5 +9,6 @@
     <param name="initial_pose_x" value="$(arg initialx)" />
     <param name="initial_pose_y" value="$(arg initialy)" />
     <param name="initial_pose_a" value="$(arg initialyaw)" />
+    <param name="transform_tolerance" value="0.5" />
   </node>
 </launch>

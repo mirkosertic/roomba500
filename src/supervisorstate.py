@@ -101,15 +101,20 @@ class SupervisorState:
         self.odometrylog.write('event' + separator + 'timestamp' + separator + 'positionx' + separator + 'positiony' + separator + 'rotationz' + separator + 'velocityx' + separator + 'velocityy' + separator + 'velocityz\n')
         self.odometrylog.flush()
 
+    def closeOdometryLog(self):
+        self.odometrylog.close()
+        self.odometrylog = None
+
     def newOdometry(self, message):
         position = message.pose.pose.position
         orientation_q = message.pose.pose.orientation
         (_, _, yaw) = tf.transformations.euler_from_quaternion([orientation_q.x, orientation_q.y, orientation_q.z, orientation_q.w])
         velocity = message.twist.twist
 
-        separator = ','
-        self.odometrylog.write(self.lastcommand + separator + str(message.header.stamp) + separator + '{:.2f}'.format(position.x) + separator + '{:.2f}'.format(position.y) + separator + '{:.2f}'.format(yaw) + separator + '{:.2f}'.format(velocity.linear.x) + separator + '{:.2f}'.format(velocity.linear.y) + separator + '{:.2f}'.format(velocity.angular.z) + '\n')
-        self.odometrylog.flush()
+        if self.odometrylog is not None:
+            separator = ','
+            self.odometrylog.write(self.lastcommand + separator + str(message.header.stamp) + separator + '{:.2f}'.format(position.x) + separator + '{:.2f}'.format(position.y) + separator + '{:.2f}'.format(yaw) + separator + '{:.2f}'.format(velocity.linear.x) + separator + '{:.2f}'.format(velocity.linear.y) + separator + '{:.2f}'.format(velocity.angular.z) + '\n')
+            self.odometrylog.flush()
 
         self.lastcommand = ''
 

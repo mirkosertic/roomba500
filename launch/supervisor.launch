@@ -1,6 +1,7 @@
 <?xml version='1.0'?>
 <launch>
   <node name='supervisor' pkg='roomba500' type='supervisor.py' output='screen' respawn='false'>
+    <param name="rosout_disable_topics_generation" value="True" />
     <param name="launchfile" value="roomba.launch" />
     <param name="displaytype" value="ssd1306" />
   </node>

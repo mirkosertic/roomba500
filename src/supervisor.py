@@ -122,6 +122,15 @@ class Supervisor:
         self.state.lastcommand = 'forward'
         return make_response(jsonify(data), 200)
 
+    def backward(self):
+
+        data = {
+        }
+
+        self.driver.drive(-.20, .0)
+        self.state.lastcommand = 'backward'
+        return make_response(jsonify(data), 200)
+
     def stop(self):
 
         data = {
@@ -237,12 +246,14 @@ class Supervisor:
         self.app.add_url_rule('/index.htm', view_func=self.deliverStart)
 
         self.app.add_url_rule('/systemstate.json', view_func=self.systemstate)
+
         self.app.add_url_rule('/actions/wakeup', view_func=self.wakeup)
         self.app.add_url_rule('/actions/shutdown', view_func=self.shutdown)
         self.app.add_url_rule('/actions/turnleft', view_func=self.turnleft)
         self.app.add_url_rule('/actions/turnright', view_func=self.turnright)
         self.app.add_url_rule('/actions/forward', view_func=self.forward)
         self.app.add_url_rule('/actions/stop', view_func=self.stop)
+        self.app.add_url_rule('/actions/backward', view_func=self.backward)
         self.app.add_url_rule('/actions/relocalization', view_func=self.relocalization)
 
         wsThread = threading.Thread(target=self.startWebServer)
@@ -263,11 +274,6 @@ class Supervisor:
         rospy.Subscriber("lightBumperRight", Int16, self.state.newLightBumperRight)
 
         rospy.Subscriber("odom", Odometry, self.state.newOdometry)
-
-        odometrylogfilename = str(pathlib.Path(__file__).parent.resolve().parent.joinpath('maps', 'odometry.txt'))
-        rospy.loginfo('Writing odometry debug to %s', odometrylogfilename)
-        odometrylogfile = open(odometrylogfilename, 'w')
-        self.state.initOdometryLog(odometrylogfile)
 
         rospy.loginfo('Initializing physical display')
         font0path = str(pathlib.Path(__file__).resolve().parent.joinpath('ttf', 'C&C Red Alert [INET].ttf'))
@@ -295,6 +301,11 @@ class Supervisor:
 
             if self.processwakeup and self.state.robotnode is None:
                 try:
+                    odometrylogfilename = str(pathlib.Path(__file__).parent.resolve().parent.joinpath('maps', self.mapname + '.odometry.txt'))
+                    rospy.loginfo('Writing odometry debug to %s', odometrylogfilename)
+                    odometrylogfile = open(odometrylogfilename, 'w')
+                    self.state.initOdometryLog(odometrylogfile)
+
                     rospy.loginfo('Starting new node with launch file %s', self.nodelaunchfile)
 
                     latestposfilename = str(pathlib.Path(__file__).parent.resolve().parent.joinpath('maps', self.mapname + '.position'))
@@ -343,6 +354,9 @@ class Supervisor:
 
                 self.savestateformap()
 
+                rospy.loginfo('Closing odometry log')
+                self.state.closeOdometryLog()
+
                 try:
                     rospy.loginfo('Shutting down running node')
                     self.state.robotnode.shutdown()
@@ -361,9 +375,6 @@ class Supervisor:
 
         rospy.loginfo('Clearing status display')
         self.displaydevice.clear()
-
-        rospy.loginfo('Closing odometry log')
-        odometrylogfile.close()
 
         rospy.loginfo('Suicide to stop all services')
 

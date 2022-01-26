@@ -5,12 +5,13 @@
             .controlcontainer {
                 display: grid;
                 grid-template-columns: 1fr 1fr 1fr;
-                grid-template-rows: 2rem 2rem 2rem 2rem;
+                grid-template-rows: 2rem 2rem 2rem 2rem 2rem;
                 gap: 0.5rem 0.5rem;
                 grid-template-areas:
     "wakeup . shutdown"
     ". forward ."
     "left stop right"
+    ". backward ."
     ". relocalization .";
                 width: 50rem;
             }
@@ -37,6 +38,10 @@
 
             .forwardbutton {
                 grid-area: forward;
+            }
+
+            .backwardbutton {
+                grid-area: backward;
             }
 
             .relocalizatiobutton {
@@ -146,6 +151,7 @@
             <input class='stopbutton' id='stopbutton' type='submit' value='Stop'/>
             <input class='rightbutton' id='rightbutton' type='submit' value='Turn Right'/>
             <input class='forwardbutton' id='forwardbutton' type='submit' value='Forward'/>
+            <input class='backwardbutton' id='backwardbutton' type='submit' value='Backward'/>
             <input class='relocalizatiobutton' id='relocalizatiobutton' type='submit' value='Relocalization'/>
         </div>
 
@@ -173,6 +179,9 @@
             let rightbutton = document.getElementById('rightbutton');
             let forwardbutton = document.getElementById('forwardbutton');
             let stopbutton = document.getElementById('stopbutton');
+            let backwardbutton = document.getElementById('backwardbutton');
+            let relocalizatiobutton = document.getElementById('relocalizatiobutton');
+
             let bumperleft = document.getElementById('bumperleft');
             let bumperright = document.getElementById('bumperright');
             let lightsensorLeft = document.getElementById('lightsensorLeft');
@@ -181,7 +190,6 @@
             let lightsensorCenterRight = document.getElementById('lightsensorCenterRight');
             let lightsensorFrontRight = document.getElementById('lightsensorFrontRight');
             let lightsensorRight = document.getElementById('lightsensorRight');
-            let relocalizatiobutton = document.getElementById('relocalizatiobutton');
 
             function updateUI(data) {
                 if (data.awake) {
@@ -195,6 +203,7 @@
                     rightbutton.disabled = false;
                     forwardbutton.disabled = false;
                     stopbutton.disabled = false;
+                    backwardbutton.disabled = false;
                     relocalizatiobutton.disabled = !data.amclmode;
 
                     bumperleft.dataset.status = '' + data.bumperLeft;
@@ -216,6 +225,7 @@
                     forwardbutton.disabled = true;
                     stopbutton.disabled = true;
                     relocalizatiobutton.disabled = true;
+                    backwardbutton.disabled = true;
                 }
             }
 
@@ -265,6 +275,10 @@
                 fetch('/actions/forward').then(response => fetchState());
             }
 
+            function backward() {
+                fetch('/actions/backward').then(response => fetchState());
+            }
+
             function relocalization() {
                 fetch('/actions/relocalization').then(response => fetchState());
             }
@@ -276,6 +290,7 @@
             rightbutton.addEventListener('click', turnright);
             stopbutton.addEventListener('click', stop);
             forwardbutton.addEventListener('click', forward);
+            backwardbutton.addEventListener('click', backward);
 
             relocalizatiobutton.addEventListener('click', relocalization);
 

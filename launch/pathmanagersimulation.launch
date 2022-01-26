@@ -12,17 +12,28 @@
   </include>
 
   <group if="$(arg createmap)">
-      <include file="$(find roomba500)/launch/gmapping.launch"/>
+    <include file="$(find roomba500)/launch/gmapping.launch"/>
+
+    <include file="$(find roomba500)/launch/pathmanager.launch">
+        <arg name="initfrommapserver" value="true"/>
+        <arg name="servicename" value="dynamic_map"/>
+    </include>
   </group>
 
   <group if="$(arg loadmap)">
-    <node pkg="map_server" type="map_server" name="map_server" output="screen" args="$(arg mapfile)" />
+    <node pkg="map_server" type="map_server" name="map_server" output="screen" args="$(arg mapfile)">
+        <param name="rosout_disable_topics_generation" value="True" />
+    </node>
+
     <include file="$(find roomba500)/launch/amcl.launch">
         <arg name="initialx" value="$(arg initialx)"/>
         <arg name="initialy" value="$(arg initialy)"/>
         <arg name="initialyaw" value="$(arg initialyaw)"/>
     </include>
-  </group>
 
-  <!-- <include file="$(find roomba500)/launch/pathmanager.launch"/> -->
+    <include file="$(find roomba500)/launch/pathmanager.launch">
+        <arg name="initfrommapserver" value="true"/>
+        <arg name="servicename" value="static_map"/>
+    </include>
+  </group>
 </launch>

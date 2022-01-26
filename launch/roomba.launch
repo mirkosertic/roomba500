@@ -15,7 +15,10 @@
   </group>
 
   <group if="$(arg loadmap)">
-      <node pkg="map_server" type="map_server" name="map_server" output="screen" args="$(arg mapfile)" />
+      <node pkg="map_server" type="map_server" name="map_server" output="screen" args="$(arg mapfile)">
+        <param name="rosout_disable_topics_generation" value="True" />
+      </node>
+
       <include file="$(find roomba500)/launch/amcl.launch">
         <arg name="initialx" value="$(arg initialx)"/>
         <arg name="initialy" value="$(arg initialy)"/>

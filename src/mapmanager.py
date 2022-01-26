@@ -349,8 +349,8 @@ class MapManager:
 
             markers.markers.append(marker)
 
-
         self.markertopic.publish(markers)
 
         if self.debugImageLocation is not None:
+
             cv2.imwrite(self.debugImageLocation, image)

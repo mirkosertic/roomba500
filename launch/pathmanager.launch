@@ -1,6 +1,12 @@
 <?xml version="1.0"?>
 <launch>
-  <node name="pathmanager" pkg="roomba500" type="pathmanager.py" output="screen" respawn="false">
+  <arg name="initfrommapserver" default="false"/>
+  <arg name="servicename" default="static_map"/>
+
+  <node name="pathmanager" pkg="roomba500" type="pathmanager.py" output="screen">
+    <param name="rosout_disable_topics_generation" value="True" />
     <param name="debugimagelocation" value="$(find roomba500)/maps/debug-running.png" />
+    <param name="initfrommapserver" value="$(arg initfrommapserver)"/>
+    <param name="servicename" value="$(arg servicename)"/>
   </node>
 </launch>

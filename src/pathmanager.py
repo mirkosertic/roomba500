@@ -10,6 +10,7 @@ from movetopositionstate import MoveToPositionState
 from driver import Driver
 from mapmanager import MapManager
 
+from nav_msgs.srv import GetMap
 from nav_msgs.msg import Odometry, OccupancyGrid
 from geometry_msgs.msg import Twist, Point, Pose, PoseStamped, Quaternion, Twist, Vector3
 from visualization_msgs.msg import MarkerArray
@@ -52,7 +53,7 @@ class PathManager:
         targetposition = self.mapmanager.nearestNavigationPointTo(data.pose.position)
 
         path = self.mapmanager.findPath(currentposition, targetposition)
-        if path is not None:
+        if path is not None and len(path) > 0:
 
             # Draw some debug information
             points = []
@@ -85,6 +86,8 @@ class PathManager:
             # This is done by the RotateToAngleState
             (x, y) = path[0]
             self.systemState = RotateToAngleState(self, Point(x, y, 0), data.header.frame_id, nextstate, self.errorLambda)
+        else:
+            rospy.loginfo("Cannot follow path, as there is no path or path is too short : %s", str(path))
 
         self.syncLock.release()
         return
@@ -124,6 +127,21 @@ class PathManager:
         self.transformlistener = tf.TransformListener()
 
         self.systemState = DoNothingState(self, None, None)
+
+        # Check if we should init the map by calling the map_server instead of
+        # waiting for a published map. This is the case if we are running AMCL instead of SLAM
+        if rospy.get_param('~initfrommapserver', False):
+            servicename = rospy.get_param('~servicename', 'static_map')
+
+            rospy.loginfo('Waiting for service %s', servicename)
+            rospy.wait_for_service(servicename)
+            rospy.loginfo('Invoking service')
+            service = rospy.ServiceProxy(servicename, GetMap)
+            response = service()
+            rospy.loginfo('Ready to rumble!')
+
+            self.mapmanager.newMapData(response.map)
+
 
         # Processing the sensor polling in an endless loop until this node goes to die
         while not rospy.is_shutdown():
