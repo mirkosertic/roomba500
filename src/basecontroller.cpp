@@ -60,6 +60,7 @@ class BaseController {
             if (deltaTimeInSeconds > 0) {
                 vxInMetersPerSecond = linearDistanceInMeters / deltaTimeInSeconds;
                 vthInRadiansPerSecond = -((pose->theta - robot->lastKnownReferencePose->theta) * M_PI / 180) / deltaTimeInSeconds;
+                vthInRadiansPerSecond = 0.0f;
             }
 
             if (vyInMetersPerSecond != 0.0f || vthInRadiansPerSecond != 0.0f) {
