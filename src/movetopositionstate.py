@@ -35,7 +35,7 @@ class MoveToPositionState(BaseState):
 
     def setDriveSpeed(self, targetSpeed, targetAngularMoment):
         if self.driveSpeed != targetSpeed or self.driveAngularMoment != targetAngularMoment:
-            rospy.loginfo("Setting linear velocity = %s, angular velovity = %s", targetSpeed, targetAngularMoment)
+            rospy.loginfo("Setting linear velocity = %s, angular velocity = %s", targetSpeed, targetAngularMoment)
             self.pathmanager.driver.drive(targetSpeed, targetAngularMoment)
             self.driveSpeed = targetSpeed
             self.driveAngularMoment = targetAngularMoment
@@ -84,10 +84,10 @@ class MoveToPositionState(BaseState):
 
             if shortestAngle > 1:
                 rospy.loginfo("Correcting heading by turning to the left")
-                rotationSpeed = 0.20
+                rotationSpeed = 0.10
             if shortestAngle < -1:
                 rospy.loginfo("Correcting heading by turning to the right")
-                rotationSpeed = -0.20
+                rotationSpeed = -0.10
 
             self.setDriveSpeed(driveSpeed * multiplier, rotationSpeed)
 

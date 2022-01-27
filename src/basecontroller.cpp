@@ -18,6 +18,10 @@
 
 #include "roomba500.cpp"
 
+template <typename T> int sgn(T val) {
+    return (T(0) < val) - (val < T(0));
+}
+
 class BaseController {
     private:
         int fullRotationInSensorTicks;
@@ -106,8 +110,10 @@ class BaseController {
             // Rotation on the spot
             // one wheel rotation is positive, the other is negative
             // If they sum up roughly to zero, the robot rotated on the spot
+            int signOfLeftWheelDelta = sgn(robot->leftWheelDistance);
+            int signOfRightWheelDelta = sgn(robot->rightWheelDistance);
             int sumOfWheelEncoders = robot->leftWheelDistance + robot->rightWheelDistance;
-            if (sumOfWheelEncoders < 20) {
+            if (sumOfWheelEncoders < 20 && (signOfLeftWheelDelta != signOfRightWheelDelta) && signOfRightWheelDelta != 0 && signOfRightWheelDelta != 0) {
                 // Roomba rotated on the spot
                 float rotationInDegrees = ((float) robot->leftWheelDistance) / (robot->fullRotationInSensorTicks / 360.0);
 
