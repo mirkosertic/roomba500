@@ -84,10 +84,10 @@ class MoveToPositionState(BaseState):
 
             if shortestAngle > 1:
                 rospy.loginfo("Correcting heading by turning to the left")
-                rotationSpeed = 0.25
+                rotationSpeed = 0.20
             if shortestAngle < -1:
                 rospy.loginfo("Correcting heading by turning to the right")
-                rotationSpeed = -0.25
+                rotationSpeed = -0.20
 
             self.setDriveSpeed(driveSpeed * multiplier, rotationSpeed)
 

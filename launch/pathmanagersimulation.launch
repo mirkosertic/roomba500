@@ -36,4 +36,6 @@
         <arg name="servicename" value="static_map"/>
     </include>
   </group>
+
+  <include file="$(find roomba500)/launch/roombalogger.launch"/>
 </launch>

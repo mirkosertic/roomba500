@@ -10,3 +10,5 @@ int16 lightBumperCenterLeft
 int16 lightBumperCenterRight
 int16 lightBumperFrontRight
 int16 lightBumperRight
+int16 wheelEncoderLeft
+int16 wheelEncoderRight

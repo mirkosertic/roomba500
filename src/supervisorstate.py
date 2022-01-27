@@ -24,8 +24,6 @@ class SupervisorState:
         self.lightbumpercenterright = 0
         self.lightbumperfrontright = 0
         self.lightbumperright = 0
-        self.odometrylog = None
-        self.lastcommand = ''
         self.amclmode = False
 
         self.mapframe = mapframe
@@ -33,7 +31,6 @@ class SupervisorState:
 
         self.latestpositiononmap = None
         self.latestyawonmap = None
-        pass
 
     def newSensorFrame(self, message):
         self.syncLock.acquire()
@@ -50,31 +47,8 @@ class SupervisorState:
         self.lightbumperfrontright = message.lightBumperFrontRight
         self.lightbumperright = message.lightBumperRight
         self.syncLock.release()
-        pass
-
-    def initOdometryLog(self, file):
-        self.odometrylog = file
-        separator = ','
-        self.odometrylog.write('event' + separator + 'timestamp' + separator + 'positionx' + separator + 'positiony' + separator + 'rotationz' + separator + 'velocityx' + separator + 'velocityy' + separator + 'velocityz\n')
-        self.odometrylog.flush()
-
-    def closeOdometryLog(self):
-        self.odometrylog.close()
-        self.odometrylog = None
 
     def newOdometry(self, message):
-        position = message.pose.pose.position
-        orientation_q = message.pose.pose.orientation
-        (_, _, yaw) = tf.transformations.euler_from_quaternion([orientation_q.x, orientation_q.y, orientation_q.z, orientation_q.w])
-        velocity = message.twist.twist
-
-        if self.odometrylog is not None:
-            separator = ','
-            self.odometrylog.write(self.lastcommand + separator + str(message.header.stamp) + separator + '{:.2f}'.format(position.x) + separator + '{:.2f}'.format(position.y) + separator + '{:.2f}'.format(yaw) + separator + '{:.2f}'.format(velocity.linear.x) + separator + '{:.2f}'.format(velocity.linear.y) + separator + '{:.2f}'.format(velocity.angular.z) + '\n')
-            self.odometrylog.flush()
-
-        self.lastcommand = ''
-
         try:
             mpose = PoseStamped()
             mpose.pose.position = message.pose.pose.position
@@ -94,8 +68,6 @@ class SupervisorState:
         except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException) as e:
             # Do nothing here
             pass
-
-        pass
 
 
     def gathersystemstate(self):

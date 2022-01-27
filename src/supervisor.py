@@ -103,7 +103,6 @@ class Supervisor:
         }
 
         self.driver.drive(.0, .4)
-        self.state.lastcommand = 'turnleft'
         return make_response(jsonify(data), 200)
 
     def turnright(self):
@@ -112,7 +111,6 @@ class Supervisor:
         }
 
         self.driver.drive(.0, -.4)
-        self.state.lastcommand = 'turnright'
         return make_response(jsonify(data), 200)
 
     def forward(self):
@@ -121,7 +119,6 @@ class Supervisor:
         }
 
         self.driver.drive(.20, .0)
-        self.state.lastcommand = 'forward'
         return make_response(jsonify(data), 200)
 
     def backward(self):
@@ -130,7 +127,6 @@ class Supervisor:
         }
 
         self.driver.drive(-.20, .0)
-        self.state.lastcommand = 'backward'
         return make_response(jsonify(data), 200)
 
     def stop(self):
@@ -139,7 +135,6 @@ class Supervisor:
         }
 
         self.driver.stop()
-        self.state.lastcommand = 'stop'
         return make_response(jsonify(data), 200)
 
     def relocalization(self):
@@ -148,7 +143,6 @@ class Supervisor:
         }
 
         self.driver.stop()
-        self.state.lastcommand = 'relocalization'
 
         try:
             rospy.loginfo('Waiting for service global_localization')
@@ -293,11 +287,6 @@ class Supervisor:
 
             if self.processwakeup and self.state.robotnode is None:
                 try:
-                    odometrylogfilename = str(pathlib.Path(__file__).parent.resolve().parent.joinpath('maps', self.mapname + '.odometry.txt'))
-                    rospy.loginfo('Writing odometry debug to %s', odometrylogfilename)
-                    odometrylogfile = open(odometrylogfilename, 'w')
-                    self.state.initOdometryLog(odometrylogfile)
-
                     rospy.loginfo('Starting new node with launch file %s', self.nodelaunchfile)
 
                     latestposfilename = str(pathlib.Path(__file__).parent.resolve().parent.joinpath('maps', self.mapname + '.position'))
@@ -348,9 +337,6 @@ class Supervisor:
                 shutdownTopic.publish(Int16(1))
 
                 self.savestateformap()
-
-                rospy.loginfo('Closing odometry log')
-                self.state.closeOdometryLog()
 
                 try:
                     rospy.loginfo('Shutting down running node')

@@ -1,0 +1,5 @@
+<?xml version="1.0"?>
+<launch>
+  <node name="roombalogger" pkg="roomba500" type="roombalogger.py" output="screen">
+  </node>
+</launch>

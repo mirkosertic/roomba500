@@ -551,6 +551,8 @@ class BaseController {
                 sensorFrameData.lightBumperCenterRight = lastSensorFrame.lightBumperCenterRight;
                 sensorFrameData.lightBumperFrontRight = lastSensorFrame.lightBumperFrontRight;
                 sensorFrameData.lightBumperRight = lastSensorFrame.lightBumperRight;
+                sensorFrameData.wheelEncoderLeft = lastSensorFrame.leftWheel;
+                sensorFrameData.wheelEncoderRight = lastSensorFrame.rightWheel;
 
                 sensorFrameTopic.publish(sensorFrameData);
 
