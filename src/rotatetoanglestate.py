@@ -47,9 +47,9 @@ class RotateToAngleState(BaseState):
 
             rotationSpeed = 0.15
             if abs(shortestAngle) > 15:
-                rotationSpeed = 0.35
+                rotationSpeed = 0.25
             if abs(shortestAngle) > 30:
-                rotationSpeed = 0.7
+                rotationSpeed = 0.4
 
             if shortestAngle > 0:
                 self.setRotationSpeed(rotationSpeed)
