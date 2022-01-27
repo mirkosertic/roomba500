@@ -128,7 +128,7 @@ class PathManager:
 
         # This is our map manager, responsible for
         # navigation, pathfinding and visualization
-        self.mapmanager = MapManager(rospy.Publisher('visualization_marker', MarkerArray, queue_size=10, latched=True), debugimagelocation)
+        self.mapmanager = MapManager(rospy.Publisher('visualization_marker', MarkerArray, queue_size=10, latch=True), debugimagelocation)
         rospy.Subscriber("map", OccupancyGrid, self.mapmanager.newMapData)
 
         # And the driver will publish twist commands
