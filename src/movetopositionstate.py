@@ -64,7 +64,7 @@ class MoveToPositionState(BaseState):
                 self.pathmanager.driver.stop()
                 return self.success()
 
-            driveSpeed = 0.35
+            driveSpeed = 0.25
             rotationSpeed = .0
             multiplier = 1.0
 
