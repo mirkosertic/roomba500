@@ -10,6 +10,7 @@ from movetopositionstate import MoveToPositionState
 from driver import Driver
 from mapmanager import MapManager
 
+from std_msgs.msg import Int16
 from nav_msgs.srv import GetMap
 from nav_msgs.msg import Odometry, OccupancyGrid
 from geometry_msgs.msg import Twist, Point, Pose, PoseStamped, Quaternion, Twist, Vector3
@@ -37,7 +38,6 @@ class PathManager:
         self.latestOdometry = data
 
         self.syncLock.release()
-        return
 
     def newMoveBaseSimpleGoalMessage(self, data):
 
@@ -90,6 +90,16 @@ class PathManager:
             rospy.loginfo("Cannot follow path, as there is no path or path is too short : %s", str(path))
 
         self.syncLock.release()
+
+    def newShutdownCommand(self, data):
+
+        rospy.logdebug("Received shutdown command")
+
+        self.syncLock.acquire()
+
+        rospy.signal_shutdown('Shutdown requested')
+
+        self.syncLock.release()
         return
 
     def latestOdometryTransformedToFrame(self, targetframe):
@@ -124,6 +134,9 @@ class PathManager:
         # And the driver will publish twist commands
         self.driver = Driver(rospy.Publisher('cmd_vel', Twist, queue_size=10))
 
+        # Handling for administrative shutdowns
+        rospy.Subscriber("shutdown", Int16, self.newShutdownCommand)
+
         self.transformlistener = tf.TransformListener()
 
         self.systemState = DoNothingState(self, None, None)
@@ -142,8 +155,7 @@ class PathManager:
 
             self.mapmanager.newMapData(response.map)
 
-
-        # Processing the sensor polling in an endless loop until this node goes to die
+        # Processing the sensor polling in an endless loop until this node shuts down
         while not rospy.is_shutdown():
 
             self.syncLock.acquire()
@@ -154,6 +166,7 @@ class PathManager:
 
             rate.sleep()
 
+        rospy.loginfo('Pathmanager terminated.')
 
 if __name__ == '__main__':
     try:

@@ -31,6 +31,8 @@ from luma.emulator.device import pygame
 from luma.oled.device import ssd1306
 from PIL import ImageFont
 
+from roomba500.msg import RoombaSensorFrame
+
 class Supervisor:
 
     def __init__(self):
@@ -259,19 +261,9 @@ class Supervisor:
         wsThread = threading.Thread(target=self.startWebServer)
         wsThread.start()
 
-        rospy.Subscriber("batteryCharge", Int16, self.state.newBatteryCharge)
-        rospy.Subscriber("batteryCapacity", Int16, self.state.newBatteryCapacity)
-        rospy.Subscriber("bumperLeft", Int16, self.state.newBumperLeft)
-        rospy.Subscriber("bumperRight", Int16, self.state.newBumperRight)
-        rospy.Subscriber("wheeldropLeft", Int16, self.state.newWheeldropLeft)
-        rospy.Subscriber("wheeldropRight", Int16, self.state.newWheeldropRight)
+        shutdownTopic = rospy.Publisher('shutdown', Int16, queue_size=10)
 
-        rospy.Subscriber("lightBumperLeft", Int16, self.state.newLightBumperLeft)
-        rospy.Subscriber("lightBumperFrontLeft", Int16, self.state.newLightBumperFrontLeft)
-        rospy.Subscriber("lightBumperCenterLeft", Int16, self.state.newLightBumperCenterLeft)
-        rospy.Subscriber("lightBumperCenterRight", Int16, self.state.newLightBumperCenterRight)
-        rospy.Subscriber("lightBumperFrontRight", Int16, self.state.newLightBumperFrontRight)
-        rospy.Subscriber("lightBumperRight", Int16, self.state.newLightBumperRight)
+        rospy.Subscriber("sensorframe", RoombaSensorFrame, self.state.newSensorFrame)
 
         rospy.Subscriber("odom", Odometry, self.state.newOdometry)
 
@@ -318,7 +310,6 @@ class Supervisor:
                         yaw = float(handle.readline())
                         handle.close()
 
-
                         rospy.loginfo('Latest position is x=%s, y=%s, yaw=%s', x, y, yaw)
 
                         arguments.append('initialx:=' + str(x))
@@ -351,6 +342,10 @@ class Supervisor:
                 self.processwakeup = False
 
             if self.processshutdown and self.state.robotnode is not None:
+
+                # We publish the shutdown command
+                # This requests a shutdown of subscribing nodes (BaseController, PathManager)
+                shutdownTopic.publish(Int16(1))
 
                 self.savestateformap()
 

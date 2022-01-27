@@ -14,6 +14,8 @@
 #include <stdexcept>
 #include <mutex>
 
+#include <roomba500/RoombaSensorFrame.h>
+
 #include "roomba500.cpp"
 
 class BaseController {
@@ -329,13 +331,19 @@ class BaseController {
             mutex->unlock();
         }
 
-        void publishInt16(int value, ros::Publisher* publisher) {
-            std_msgs::Int16 msg;
-            msg.data = value;
-            publisher->publish(msg);
+        void newShutdownCommand(const std_msgs::Int16& data) {
+
+            mutex->lock();
+
+            ROS_DEBUG("Received shutdown command %d", data.data);
+
+            ros::shutdown();
+
+            mutex->unlock();
         }
 
         int run(ros::NodeHandle* nPriv) {
+
             ros::NodeHandle n;
 
             std::mutex mutex;
@@ -380,20 +388,8 @@ class BaseController {
             SensorFrame lastSensorFrame = robot->readSensorFrame();
             robot->lastKnownReferencePose = new RobotPose(0, 0, 0, robot->leftWheelDistance, robot->rightWheelDistance, ros::Time::now());
 
-            // Topics for battery charge, capacity and light bumpers
-            ros::Publisher batteryChargeTopic = n.advertise<std_msgs::Int16>("batteryCharge", 1000);
-            ros::Publisher batteryCapacityTopic = n.advertise<std_msgs::Int16>("batteryCapacity", 1000);
-            ros::Publisher bumperLeftTopic = n.advertise<std_msgs::Int16>("bumperLeft", 1000);
-            ros::Publisher bumperRightTopic = n.advertise<std_msgs::Int16>("bumperRight", 1000);
-            ros::Publisher wheeldropLeftTopic = n.advertise<std_msgs::Int16>("wheeldropLeft", 1000);
-            ros::Publisher wheeldropRightTopic = n.advertise<std_msgs::Int16>("wheeldropRight", 1000);
-
-            ros::Publisher lightBumperLeftTopic = n.advertise<std_msgs::Int16>("lightBumperLeft", 1000);
-            ros::Publisher lightBumperFrontLeftTopic = n.advertise<std_msgs::Int16>("lightBumperFrontLeft", 1000);
-            ros::Publisher lightBumperCenterLeftTopic = n.advertise<std_msgs::Int16>("lightBumperCenterLeft", 1000);
-            ros::Publisher lightBumperCenterRightTopic = n.advertise<std_msgs::Int16>("lightBumperCenterRight", 1000);
-            ros::Publisher lightBumperFrontRightTopic = n.advertise<std_msgs::Int16>("lightBumperFrontRight", 1000);
-            ros::Publisher lightBumperRightTopic = n.advertise<std_msgs::Int16>("lightBumperRight", 1000);
+            // Topic for battery charge, capacity and light bumpers etc
+            ros::Publisher sensorFrameTopic = n.advertise<::roomba500::RoombaSensorFrame>("sensorframe", 1000);
 
             // Here goes the odometry data
             ros::Publisher odom = n.advertise<nav_msgs::Odometry>("odom", 50);
@@ -411,6 +407,9 @@ class BaseController {
             ros::Subscriber sidebrushSub = n.subscribe("cmd_sidebrush", 1000, &BaseController::newCmdPWMSideBrush, this);
             ros::Subscriber vacuumSub = n.subscribe("cmd_vacuum", 1000, &BaseController::newCmdPWMVacuum, this);
 
+            // Proper shutdown handling
+            ros::Subscriber shutdownSub = n.subscribe("shutdown", 1000, &BaseController::newShutdownCommand, this);
+
             // Initialize sensor polling
             ROS_INFO("Polling Roomba sensors with %d hertz", pollingRateInHertz);
             ros::Rate loop_rate(pollingRateInHertz);
@@ -418,7 +417,7 @@ class BaseController {
             // We start at the last known reference pose
             publishOdometry(robot->lastKnownReferencePose);
 
-            // Processing the sensor polling in an endless loop until this node goes to die
+            // Processing the sensor polling in an endless loop until this node is shutting down
             while (ros::ok()) {
 
                 // The main control loop. Everything is handled here
@@ -440,12 +439,10 @@ class BaseController {
                         robot->playNote(72, 16);
 
                         robot->lastBumperRight = true;
-                        publishInt16(1, &bumperRightTopic);
                     }
                 } else {
                     if (robot->lastBumperRight) {
                         robot->lastBumperRight = false;
-                        publishInt16(0, &bumperRightTopic);
                     }
                 }
 
@@ -459,12 +456,10 @@ class BaseController {
                         robot->playNote(74, 16);
 
                         robot->lastBumperLeft = true;
-                        publishInt16(1, &bumperLeftTopic);
                     }
                 } else {
                     if (robot->lastBumperLeft) {
                         robot->lastBumperLeft = false;
-                        publishInt16(0, &bumperLeftTopic);
                     }
                 }
 
@@ -478,12 +473,10 @@ class BaseController {
                         robot->playNote(76, 16);
 
                         robot->lastRightWheelDropped = true;
-                        publishInt16(1, &wheeldropRightTopic);
                     }
                 } else {
                     if (robot->lastRightWheelDropped) {
                         robot->lastRightWheelDropped = false;
-                        publishInt16(0, &wheeldropRightTopic);
                     }
                 }
 
@@ -497,12 +490,10 @@ class BaseController {
                         robot->playNote(77, 16);
 
                         robot->lastLeftWheelDropped = true;
-                        publishInt16(1, &wheeldropLeftTopic);
                     }
                 } else {
                     if (robot->lastLeftWheelDropped) {
                         robot->lastLeftWheelDropped = false;
-                        publishInt16(0, &wheeldropLeftTopic);
                     }
                 }
 
@@ -547,15 +538,21 @@ class BaseController {
                 lastSensorFrame = newSensorFrame;
 
                 // Publish telemetry data such as battery charge etc.
-                publishInt16(lastSensorFrame.batteryCharge, &batteryChargeTopic);
-                publishInt16(lastSensorFrame.batteryCapacity, &batteryCapacityTopic);
+                ::roomba500::RoombaSensorFrame sensorFrameData = ::roomba500::RoombaSensorFrame();
+                sensorFrameData.batteryCharge = lastSensorFrame.batteryCharge;
+                sensorFrameData.batteryCapacity = lastSensorFrame.batteryCapacity;
+                sensorFrameData.bumperLeft = newSensorFrame.isBumperLeft();
+                sensorFrameData.bumperRight = newSensorFrame.isBumperRight();
+                sensorFrameData.wheeldropLeft = newSensorFrame.isWheeldropLeft();
+                sensorFrameData.wheeldropRight = newSensorFrame.isWheeldropRight();
+                sensorFrameData.lightBumperLeft = lastSensorFrame.lightBumperLeft;
+                sensorFrameData.lightBumperFrontLeft = lastSensorFrame.lightBumperFrontLeft;
+                sensorFrameData.lightBumperCenterLeft = lastSensorFrame.lightBumperCenterLeft;
+                sensorFrameData.lightBumperCenterRight = lastSensorFrame.lightBumperCenterRight;
+                sensorFrameData.lightBumperFrontRight = lastSensorFrame.lightBumperFrontRight;
+                sensorFrameData.lightBumperRight = lastSensorFrame.lightBumperRight;
 
-                publishInt16(lastSensorFrame.lightBumperLeft, &lightBumperLeftTopic);
-                publishInt16(lastSensorFrame.lightBumperFrontLeft, &lightBumperFrontLeftTopic);
-                publishInt16(lastSensorFrame.lightBumperCenterLeft, &lightBumperCenterLeftTopic);
-                publishInt16(lastSensorFrame.lightBumperCenterRight, &lightBumperCenterRightTopic);
-                publishInt16(lastSensorFrame.lightBumperFrontRight, &lightBumperFrontRightTopic);
-                publishInt16(lastSensorFrame.lightBumperRight, &lightBumperRightTopic);
+                sensorFrameTopic.publish(sensorFrameData);
 
                 mutex.unlock();
 
@@ -569,6 +566,7 @@ class BaseController {
             ROS_INFO("Finishing");
             delete robot;
 
+            ROS_INFO("BaseController terminated.");
             return 0;
         }
 };

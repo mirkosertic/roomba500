@@ -14,10 +14,10 @@ class SupervisorState:
         self.robotnode = None
         self.latestbatterycharge = None
         self.latestbatterycapacity = None
-        self.bumperleft = 0
-        self.bumperright = 0
-        self.wheeldropleft = 0
-        self.wheeldropright = 0
+        self.bumperleft = False
+        self.bumperright = False
+        self.wheeldropleft = False
+        self.wheeldropright = False
         self.lightbumperleft = 0
         self.lightbumperfrontleft = 0
         self.lightbumpercenterleft = 0
@@ -35,65 +35,22 @@ class SupervisorState:
         self.latestyawonmap = None
         pass
 
-    def newBatteryCapacity(self, message):
+    def newSensorFrame(self, message):
         self.syncLock.acquire()
-        self.latestbatterycapacity = message.data
+        self.latestbatterycharge = message.batteryCharge.data
+        self.latestbatterycapacity = message.batteryCapacity.data
+        self.bumperleft = message.bumperLeft
+        self.bumperright = message.bumperRight
+        self.wheeldropleft = message.wheeldropLeft
+        self.wheeldropright = message.wheeldropRight
+        self.lightbumperleft = message.lightBumperLeft.data
+        self.lightbumperfrontleft = message.lightBumperFrontLeft.data
+        self.lightbumpercenterleft = message.lightBumperCenterLeft.data
+        self.lightbumpercenterright = message.lightBumperCenterRight.data
+        self.lightbumperfrontright = message.lightBumperFrontRight.data
+        self.lightbumperright = message.lightBumperRight.data
         self.syncLock.release()
-
-    def newBatteryCharge(self, message):
-        self.syncLock.acquire()
-        self.latestbatterycharge = message.data
-        self.syncLock.release()
-
-    def newBumperLeft(self, message):
-        self.syncLock.acquire()
-        self.bumperleft = message.data
-        self.syncLock.release()
-
-    def newBumperRight(self, message):
-        self.syncLock.acquire()
-        self.bumperright = message.data
-        self.syncLock.release()
-
-    def newWheeldropLeft(self, message):
-        self.syncLock.acquire()
-        self.wheeldropleft = message.data
-        self.syncLock.release()
-
-    def newWheeldropRight(self, message):
-        self.syncLock.acquire()
-        self.wheeldropright = message.data
-        self.syncLock.release()
-
-    def newLightBumperLeft(self, message):
-        self.syncLock.acquire()
-        self.lightbumperleft = message.data
-        self.syncLock.release()
-
-    def newLightBumperFrontLeft(self, message):
-        self.syncLock.acquire()
-        self.lightbumperfrontleft = message.data
-        self.syncLock.release()
-
-    def newLightBumperCenterLeft(self, message):
-        self.syncLock.acquire()
-        self.lightbumpercenterleft = message.data
-        self.syncLock.release()
-
-    def newLightBumperCenterRight(self, message):
-        self.syncLock.acquire()
-        self.lightbumpercenterright = message.data
-        self.syncLock.release()
-
-    def newLightBumperFrontRight(self, message):
-        self.syncLock.acquire()
-        self.lightbumperfrontright = message.data
-        self.syncLock.release()
-
-    def newLightBumperRight(self, message):
-        self.syncLock.acquire()
-        self.lightbumperright = message.data
-        self.syncLock.release()
+        pass
 
     def initOdometryLog(self, file):
         self.odometrylog = file
@@ -146,10 +103,10 @@ class SupervisorState:
             'awake': self.robotnode is not None,
             'batteryCapacity': self.latestbatterycapacity,
             'batteryCharge': self.latestbatterycharge,
-            'bumperLeft': True if self.bumperleft > 0 else False,
-            'bumperRight': True if self.bumperright > 0 else False,
-            'wheeldropLeft': True if self.wheeldropleft > 0 else False,
-            'wheeldropRight': True if self.wheeldropright > 0 else False,
+            'bumperLeft': self.bumperleft,
+            'bumperRight': self.bumperright,
+            'wheeldropLeft': self.wheeldropleft,
+            'wheeldropRight': self.wheeldropright,
             'lightbumperLeft': self.lightbumperleft,
             'lightbumperFrontLeft': self.lightbumperfrontleft,
             'lightbumperCenterLeft': self.lightbumpercenterleft,

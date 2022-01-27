@@ -1,0 +1,12 @@
+int16 batteryCharge
+int16 batteryCapacity
+bool bumperLeft
+bool bumperRight
+bool wheeldropLeft
+bool wheeldropRight
+int16 lightBumperLeft
+int16 lightBumperFrontLeft
+int16 lightBumperCenterLeft
+int16 lightBumperCenterRight
+int16 lightBumperFrontRight
+int16 lightBumperRight
