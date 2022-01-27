@@ -37,18 +37,18 @@ class SupervisorState:
 
     def newSensorFrame(self, message):
         self.syncLock.acquire()
-        self.latestbatterycharge = message.batteryCharge.data
-        self.latestbatterycapacity = message.batteryCapacity.data
+        self.latestbatterycharge = message.batteryCharge
+        self.latestbatterycapacity = message.batteryCapacity
         self.bumperleft = message.bumperLeft
         self.bumperright = message.bumperRight
         self.wheeldropleft = message.wheeldropLeft
         self.wheeldropright = message.wheeldropRight
-        self.lightbumperleft = message.lightBumperLeft.data
-        self.lightbumperfrontleft = message.lightBumperFrontLeft.data
-        self.lightbumpercenterleft = message.lightBumperCenterLeft.data
-        self.lightbumpercenterright = message.lightBumperCenterRight.data
-        self.lightbumperfrontright = message.lightBumperFrontRight.data
-        self.lightbumperright = message.lightBumperRight.data
+        self.lightbumperleft = message.lightBumperLeft
+        self.lightbumperfrontleft = message.lightBumperFrontLeft
+        self.lightbumpercenterleft = message.lightBumperCenterLeft
+        self.lightbumpercenterright = message.lightBumperCenterRight
+        self.lightbumperfrontright = message.lightBumperFrontRight
+        self.lightbumperright = message.lightBumperRight
         self.syncLock.release()
         pass
 
