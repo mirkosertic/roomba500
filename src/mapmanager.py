@@ -13,7 +13,6 @@ from visualization_msgs.msg import Marker, MarkerArray
 
 from priorityqueue import PriorityQueue
 
-
 class MapManager:
 
     def __init__(self, markertopic, debugimagelocation):

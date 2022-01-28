@@ -1,6 +1,8 @@
 <?xml version="1.0"?>
 <launch>
-  <node name="differentialodometry" pkg="roomba500" type="differentialodometry.py.py" output="screen">
+  <node name="differentialodometry" pkg="roomba500" type="differentialodometry.py" output="screen">
     <param name="rosout_disable_topics_generation" value="True" />
+    <param name="ticksPerCm" value="22.7157014" />
+    <param name="fullRotationInSensorTicks" value="1415" />
   </node>
 </launch>

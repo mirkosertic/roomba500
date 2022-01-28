@@ -418,7 +418,7 @@ class BaseController {
             transform_broadcaster = &broadcaster;
 
             // We consume steering commands from here
-            ros::Subscriber cmdVelSub = n.subscribe("cmd_vel", 1000, &BaseController::newCmdVelMessage, this);
+            // ros::Subscriber cmdVelSub = n.subscribe("cmd_vel", 1000, &BaseController::newCmdVelMessage, this);
 
             // We also consume motor control commands
             ros::Subscriber mainbrushSub = n.subscribe("cmd_mainbrush", 1000, &BaseController::newCmdPWMMainBrush, this);

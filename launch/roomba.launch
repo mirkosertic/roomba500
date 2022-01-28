@@ -7,9 +7,8 @@
   <arg name="initialy" default="0"/>
   <arg name="initialyaw" default="0"/>
 
-  <include file="$(find roomba500)/launch/basecontroller.launch"/>
-  <!--<include file="$(find roomba500)/launch/differentialodometry.launch"/>-->
-  <include file="$(find roomba500)/launch/exampleydlaserx4.launch"/>
+  <include file="$(find roomba500)/launch/hardware.launch"/>
+  <include file="$(find roomba500)/launch/differentialodometry.launch"/>
   <include file="$(find roomba500)/launch/roombalogger.launch"/>
 
   <group if="$(arg createmap)">

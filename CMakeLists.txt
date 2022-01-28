@@ -137,20 +137,20 @@ include_directories(
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-add_executable(${PROJECT_NAME}_basecontroller src/basecontroller.cpp)
+add_executable(${PROJECT_NAME}_roombainterface src/roombainterface.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
 ## target back to the shorter version for ease of user use
 ## e.g. "rosrun someones_pkg node" instead of "rosrun someones_pkg someones_pkg_node"
-set_target_properties(${PROJECT_NAME}_basecontroller PROPERTIES OUTPUT_NAME basecontroller PREFIX "")
+set_target_properties(${PROJECT_NAME}_roombainterface PROPERTIES OUTPUT_NAME roombainterface PREFIX "")
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
-add_dependencies(${PROJECT_NAME}_basecontroller ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(${PROJECT_NAME}_roombainterface ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(${PROJECT_NAME}_basecontroller
+target_link_libraries(${PROJECT_NAME}_roombainterface
    ${catkin_LIBRARIES}
 )
 
@@ -207,4 +207,12 @@ target_link_libraries(${PROJECT_NAME}_basecontroller
 # endif()
 
 ## Add folders to be run by python nosetests
-#catkin_add_nosetests(test)
+if (CATKIN_ENABLE_TESTING)
+    catkin_add_nosetests(tests)
+endif()
+
+if (CATKIN_ENABLE_TESTING)
+  find_package(rostest REQUIRED)
+#  add_rostest(tests/your_first_rostest.test)
+#  add_rostest(tests/your_second_rostest.test)
+endif()
