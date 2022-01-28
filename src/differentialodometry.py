@@ -58,7 +58,7 @@ class DifferentialOdometry:
 
         self.syncLock.release()
 
-    def computeAndPublishOdometry(self, data):
+    def computeAndPublishOdometry(self):
         pass
 
     def start(self):
