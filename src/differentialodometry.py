@@ -36,8 +36,8 @@ class DifferentialOdometry:
 
         forwardSpeedMillimetersPerSecond = forwardSpeedMetersPerSecond * 100 * 10
 
-        speedLeftWheelMillimeterPerSecond = int(forwardSpeedMillimetersPerSecond - (rotationRadPerSecond * self.robotWheelRadiusInCm))
-        speedRightWheelMillimeterPerSecond = int(forwardSpeedMillimetersPerSecond + (rotationRadPerSecond * self.robotWheelRadiusInCm))
+        speedLeftWheelMillimeterPerSecond = int(forwardSpeedMillimetersPerSecond - (rotationRadPerSecond * self.robotWheelRadiusInCm * 10))
+        speedRightWheelMillimeterPerSecond = int(forwardSpeedMillimetersPerSecond + (rotationRadPerSecond * self.robotWheelRadiusInCm * 10))
 
         rospy.loginfo("Commanding motors with left wheel speed = %f mm/s and right wheel speed = %f mm/s", speedLeftWheelMillimeterPerSecond, speedRightWheelMillimeterPerSecond)
 
