@@ -54,7 +54,7 @@ class Supervisor:
         self.font8 = None
 
         self.forwardspeed = .2
-        self.rotationspeed = .4
+        self.rotationspeed = .6 # 0.4 is bare minimum
 
     def startWebServer(self):
         rospy.loginfo('Starting supervisor at %s:%s', self.wsinterface, self.wsport)

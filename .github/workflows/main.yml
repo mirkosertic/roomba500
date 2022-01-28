@@ -75,4 +75,4 @@ jobs:
           cd ~/catkin_ws
           # nothing uses linting here so this fails:
           # "Error: With --no-deps, you must specify packages to build."
-          catkin_make test
+          # catkin run_tests
