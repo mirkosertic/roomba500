@@ -8,6 +8,7 @@
   <arg name="initialyaw" default="0"/>
 
   <include file="$(find roomba500)/launch/basecontroller.launch"/>
+  <!--<include file="$(find roomba500)/launch/differentialodometry.launch"/>-->
   <include file="$(find roomba500)/launch/exampleydlaserx4.launch"/>
   <include file="$(find roomba500)/launch/roombalogger.launch"/>
 

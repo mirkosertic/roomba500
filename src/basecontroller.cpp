@@ -15,6 +15,7 @@
 #include <mutex>
 
 #include <roomba500/RoombaSensorFrame.h>
+#include <roomba500/DiffMotorSpeeds.h>
 
 #include "roomba500.cpp"
 
@@ -349,6 +350,16 @@ class BaseController {
             mutex->unlock();
         }
 
+        void newMotorSpeedsCommand(const ::roomba500::DiffMotorSpeeds& data) {
+            mutex->lock();
+
+            ROS_INFO("Got new DiffMotorSpeeds message: left = %d mm/s, right = %d mm/s", data.leftMillimetersPerSecond, data.rightMillimetersPerSecond);
+
+            robot->enqueueCommand((int) data.leftMillimetersPerSecond, (int) data.rightMillimetersPerSecond);
+
+            mutex->unlock();
+        }
+
         int run(ros::NodeHandle* nPriv) {
 
             ros::NodeHandle n;
@@ -413,6 +424,7 @@ class BaseController {
             ros::Subscriber mainbrushSub = n.subscribe("cmd_mainbrush", 1000, &BaseController::newCmdPWMMainBrush, this);
             ros::Subscriber sidebrushSub = n.subscribe("cmd_sidebrush", 1000, &BaseController::newCmdPWMSideBrush, this);
             ros::Subscriber vacuumSub = n.subscribe("cmd_vacuum", 1000, &BaseController::newCmdPWMVacuum, this);
+            ros::Subscriber motorSpeedsSub = n.subscribe("cmd_motorspeeds", 1000, &BaseController::newMotorSpeedsCommand, this);
 
             // Proper shutdown handling
             ros::Subscriber shutdownSub = n.subscribe("shutdown", 1000, &BaseController::newShutdownCommand, this);
@@ -428,7 +440,6 @@ class BaseController {
             while (ros::ok()) {
 
                 // The main control loop. Everything is handled here
-
                 mutex.lock();
 
                 // Read some sensor data

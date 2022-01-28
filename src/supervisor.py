@@ -121,6 +121,22 @@ class Supervisor:
         self.driver.drive(.20, .0)
         return make_response(jsonify(data), 200)
 
+    def forwardleft(self):
+
+        data = {
+        }
+
+        self.driver.drive(.20, .15)
+        return make_response(jsonify(data), 200)
+
+    def forwardright(self):
+
+        data = {
+        }
+
+        self.driver.drive(.20, -.15)
+        return make_response(jsonify(data), 200)
+
     def backward(self):
 
         data = {
@@ -247,7 +263,9 @@ class Supervisor:
         self.app.add_url_rule('/actions/shutdown', view_func=self.shutdown)
         self.app.add_url_rule('/actions/turnleft', view_func=self.turnleft)
         self.app.add_url_rule('/actions/turnright', view_func=self.turnright)
+        self.app.add_url_rule('/actions/forwardleft', view_func=self.forwardleft)
         self.app.add_url_rule('/actions/forward', view_func=self.forward)
+        self.app.add_url_rule('/actions/forwardright', view_func=self.forwardright)
         self.app.add_url_rule('/actions/stop', view_func=self.stop)
         self.app.add_url_rule('/actions/backward', view_func=self.backward)
         self.app.add_url_rule('/actions/relocalization', view_func=self.relocalization)

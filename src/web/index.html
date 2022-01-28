@@ -5,11 +5,11 @@
             .controlcontainer {
                 display: grid;
                 grid-template-columns: 1fr 1fr 1fr;
-                grid-template-rows: 2rem 2rem 2rem 2rem 2rem;
+                grid-template-rows: 2rem 2rem 2rem 2rem 2rem 2rem;
                 gap: 0.5rem 0.5rem;
                 grid-template-areas:
     "wakeup . shutdown"
-    ". forward ."
+    "forwardleft forward forwardright"
     "left stop right"
     ". backward ."
     ". relocalization .";
@@ -40,6 +40,14 @@
                 grid-area: forward;
             }
 
+            .forwardleftbutton {
+                grid-area: forwardleft;
+            }
+
+            .forwardrightbutton {
+                grid-area: forwardright;
+            }
+
             .backwardbutton {
                 grid-area: backward;
             }
@@ -57,14 +65,14 @@
                 grid-template-areas:
     ". bumperLeft . . bumperRight ."
     "lightFrontLeft . lightCenterLeft lightCenterRight . lightFrontRight"
-    ". . batteryStatus batteryStatus . ."
+    ". . commonstatus commonstatus . ."
     "lightLeft . . . . lightRight";
                 width: 55rem;
                 height: 30rem;
             }
 
-            .batteryStatus {
-                grid-area: batteryStatus;
+            .commonstatus {
+                grid-area: commonstatus;
                 align-self: center;
                 text-align: center;
             }
@@ -150,7 +158,9 @@
             <input class='leftbutton' id='leftbutton' type='submit' value='Turn Left'/>
             <input class='stopbutton' id='stopbutton' type='submit' value='Stop'/>
             <input class='rightbutton' id='rightbutton' type='submit' value='Turn Right'/>
+            <input class='forwardleftbutton' id='forwardleftbutton' type='submit' value='Forward-Left'/>
             <input class='forwardbutton' id='forwardbutton' type='submit' value='Forward'/>
+            <input class='forwardrightbutton' id='forwardrightbutton' type='submit' value='Forward-Right'/>
             <input class='backwardbutton' id='backwardbutton' type='submit' value='Backward'/>
             <input class='relocalizatiobutton' id='relocalizatiobutton' type='submit' value='Relocalization'/>
         </div>
@@ -165,7 +175,7 @@
             <div id='lightsensorFrontRight' class='lightsensorFrontRight lightSensor' data-value="0"></div>
             <div id='lightsensorRight' class='lightsensorRight lightSensor' data-value="0"></div>
             <div class='roomba'></div>
-            <div class='batteryStatus' >Battery : <span id='batteryCharge'>&nbsp;</span> mAH / <span id='batteryCapacity'>&nbsp;</span> mAH</div>
+            <div class='commonstatus' >Battery : <span id='batteryCharge'>&nbsp;</span> mAH / <span id='batteryCapacity'>&nbsp;</span> mAH<br>Left Wheel Encoder : <span id='leftWheelEncoder'> </span> Ticks / Right Wheel Encoder : <span id='rightWheelEncoder'> </span> Ticks</div>
         </div>
 
         <script>
@@ -177,10 +187,15 @@
             let batteryCapacity = document.getElementById('batteryCapacity');
             let leftbutton = document.getElementById('leftbutton');
             let rightbutton = document.getElementById('rightbutton');
+            let forwardleftbutton = document.getElementById('forwardleftbutton');
             let forwardbutton = document.getElementById('forwardbutton');
+            let forwardrightbutton = document.getElementById('forwardrightbutton');
             let stopbutton = document.getElementById('stopbutton');
             let backwardbutton = document.getElementById('backwardbutton');
             let relocalizatiobutton = document.getElementById('relocalizatiobutton');
+            let leftWheelEncoder = document.getElementById('leftWheelEncoder');
+            let rightWheelEncoder = document.getElementById('rightWheelEncoder');
+
 
             let bumperleft = document.getElementById('bumperleft');
             let bumperright = document.getElementById('bumperright');
@@ -201,7 +216,9 @@
                     shutdownButton.disabled = false;
                     leftbutton.disabled = false;
                     rightbutton.disabled = false;
+                    forwardleftbutton.disabled = false;
                     forwardbutton.disabled = false;
+                    forwardrightbutton.disabled = false;
                     stopbutton.disabled = false;
                     backwardbutton.disabled = false;
                     relocalizatiobutton.disabled = !data.amclmode;
@@ -215,6 +232,10 @@
                     lightsensorCenterRight.dataset.value = '' + data.lightbumperCenterRight;
                     lightsensorFrontRight.dataset.value = '' + data.lightbumperFrontRight;
                     lightsensorRight.dataset.value = '' + data.lightbumperRight;
+
+                    leftWheelEncoder.innerText = '' + data.wheelEncoderLeft;
+                    rightWheelEncoder.innerText = '' + data.wheelEncoderRight;
+
                 } else {
                     sensorcontainer.style.visibility = 'hidden';
 
@@ -222,7 +243,9 @@
                     shutdownButton.disabled = true;
                     leftbutton.disabled = true;
                     rightbutton.disabled = true;
+                    forwardleftbutton.disabled = true;
                     forwardbutton.disabled = true;
+                    forwardrightbutton.disabled = true;
                     stopbutton.disabled = true;
                     relocalizatiobutton.disabled = true;
                     backwardbutton.disabled = true;
@@ -246,6 +269,8 @@
                             lightbumperCenterRight: 4,
                             lightbumperFrontRight: 5,
                             lightbumperRight: 6,
+                            wheelEncoderLeft: 18,
+                            wheelEncoderRight: 19,
                             amclmode: true
                         })
                     })
@@ -271,9 +296,18 @@
                 fetch('/actions/stop').then(response => fetchState());
             }
 
+            function forwardleft() {
+                fetch('/actions/forwardleft').then(response => fetchState());
+            }
+
             function forward() {
                 fetch('/actions/forward').then(response => fetchState());
             }
+
+            function forwardright() {
+                fetch('/actions/forwardright').then(response => fetchState());
+            }
+
 
             function backward() {
                 fetch('/actions/backward').then(response => fetchState());
@@ -289,7 +323,9 @@
             leftbutton.addEventListener('click', turnleft);
             rightbutton.addEventListener('click', turnright);
             stopbutton.addEventListener('click', stop);
+            forwardleftbutton.addEventListener('click', forwardleft);
             forwardbutton.addEventListener('click', forward);
+            forwardrightbutton.addEventListener('click', forwardright);
             backwardbutton.addEventListener('click', backward);
 
             relocalizatiobutton.addEventListener('click', relocalization);

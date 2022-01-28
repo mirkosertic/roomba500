@@ -24,6 +24,8 @@ class SupervisorState:
         self.lightbumpercenterright = 0
         self.lightbumperfrontright = 0
         self.lightbumperright = 0
+        self.wheelEncoderLeft = 0
+        self.wheelEncoderRight = 0
         self.amclmode = False
 
         self.mapframe = mapframe
@@ -46,6 +48,8 @@ class SupervisorState:
         self.lightbumpercenterright = message.lightBumperCenterRight
         self.lightbumperfrontright = message.lightBumperFrontRight
         self.lightbumperright = message.lightBumperRight
+        self.wheelEncoderLeft = message.wheelEncoderLeft
+        self.wheelEncoderRight = message.wheelEncoderRight
         self.syncLock.release()
 
     def newOdometry(self, message):
@@ -86,5 +90,7 @@ class SupervisorState:
             'lightbumperFrontRight': self.lightbumperfrontright,
             'lightbumperRight': self.lightbumperright,
             'amclmode': self.amclmode,
+            'wheelEncoderLeft': self.wheelEncoderLeft,
+            'wheelEncoderRight': self.wheelEncoderRight
         }
         return data

@@ -54,6 +54,7 @@ find_package(catkin REQUIRED COMPONENTS
 add_message_files(
   FILES
   RoombaSensorFrame.msg
+  DiffMotorSpeeds.msg
 )
 
 ## Generate services in the 'srv' folder

@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<launch>
+  <node name="differentialodometry" pkg="roomba500" type="differentialodometry.py.py" output="screen">
+    <param name="rosout_disable_topics_generation" value="True" />
+  </node>
+</launch>

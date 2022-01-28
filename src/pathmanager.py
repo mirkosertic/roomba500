@@ -13,7 +13,7 @@ from mapmanager import MapManager
 from std_msgs.msg import Int16
 from nav_msgs.srv import GetMap
 from nav_msgs.msg import Odometry, OccupancyGrid
-from geometry_msgs.msg import Twist, Point, Pose, PoseStamped, Quaternion, Twist, Vector3
+from geometry_msgs.msg import Twist, Point, Pose, PoseStamped, Quaternion, Vector3
 from visualization_msgs.msg import MarkerArray
 
 
@@ -100,7 +100,6 @@ class PathManager:
         rospy.signal_shutdown('Shutdown requested')
 
         self.syncLock.release()
-        return
 
     def latestOdometryTransformedToFrame(self, targetframe):
 
