@@ -175,7 +175,7 @@
             <div id='lightsensorFrontRight' class='lightsensorFrontRight lightSensor' data-value="0"></div>
             <div id='lightsensorRight' class='lightsensorRight lightSensor' data-value="0"></div>
             <div class='roomba'></div>
-            <div class='commonstatus' >Battery : <span id='batteryCharge'>&nbsp;</span> mAH / <span id='batteryCapacity'>&nbsp;</span> mAH<br>Left Wheel Encoder : <span id='leftWheelEncoder'> </span> Ticks / Right Wheel Encoder : <span id='rightWheelEncoder'> </span> Ticks</div>
+            <div class='commonstatus' >Battery : <span id='batteryCharge'>&nbsp;</span> mAH / <span id='batteryCapacity'>&nbsp;</span> mAH<br>Left Wheel Encoder : <span id='leftWheelEncoder'> </span> Ticks / Right Wheel Encoder : <span id='rightWheelEncoder'> </span> Ticks<br>Stopwatch: <span id='stopwatch'>0</span> ms</div>
         </div>
 
         <script>
@@ -206,6 +206,19 @@
             let lightsensorFrontRight = document.getElementById('lightsensorFrontRight');
             let lightsensorRight = document.getElementById('lightsensorRight');
 
+            let stopwatch = document.getElementById('stopwatch');
+
+            let uistate = {
+                starttime : undefined,
+            }
+
+            function updateStopwatch() {
+                if (uistate.starttime > 0) {
+                    delta = Date.now() - uistate.starttime;
+                    stopwatch.innerText = '' + delta;
+                }
+            }
+
             function updateUI(data) {
                 if (data.awake) {
                     sensorcontainer.style.visibility = 'visible';
@@ -235,6 +248,8 @@
 
                     leftWheelEncoder.innerText = '' + data.wheelEncoderLeft;
                     rightWheelEncoder.innerText = '' + data.wheelEncoderRight;
+
+                    updateStopwatch()
 
                 } else {
                     sensorcontainer.style.visibility = 'hidden';
@@ -285,31 +300,38 @@
             }
 
             function turnleft() {
+                uistate.starttime = Date.now()
                 fetch('/actions/turnleft').then(response => fetchState());
             }
 
             function turnright() {
+                uistate.starttime = Date.now()
                 fetch('/actions/turnright').then(response => fetchState());
             }
 
             function stop() {
                 fetch('/actions/stop').then(response => fetchState());
+                updateStopwatch()
+                uistate.starttime = undefined
             }
 
             function forwardleft() {
+                uistate.starttime = Date.now()
                 fetch('/actions/forwardleft').then(response => fetchState());
             }
 
             function forward() {
+                uistate.starttime = Date.now()
                 fetch('/actions/forward').then(response => fetchState());
             }
 
             function forwardright() {
+                uistate.starttime = Date.now()
                 fetch('/actions/forwardright').then(response => fetchState());
             }
 
-
             function backward() {
+                uistate.starttime = Date.now()
                 fetch('/actions/backward').then(response => fetchState());
             }
 

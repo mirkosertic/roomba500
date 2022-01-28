@@ -53,6 +53,9 @@ class Supervisor:
         self.displaydevice = None
         self.font8 = None
 
+        self.forwardspeed = .2
+        self.rotationspeed = .4
+
     def startWebServer(self):
         rospy.loginfo('Starting supervisor at %s:%s', self.wsinterface, self.wsport)
         self.app.run(host=self.wsinterface, port=self.wsport)
@@ -102,7 +105,7 @@ class Supervisor:
         data = {
         }
 
-        self.driver.drive(.0, .4)
+        self.driver.drive(.0, self.rotationspeed)
         return make_response(jsonify(data), 200)
 
     def turnright(self):
@@ -110,7 +113,7 @@ class Supervisor:
         data = {
         }
 
-        self.driver.drive(.0, -.4)
+        self.driver.drive(.0, -self.rotationspeed)
         return make_response(jsonify(data), 200)
 
     def forward(self):
@@ -118,7 +121,7 @@ class Supervisor:
         data = {
         }
 
-        self.driver.drive(.20, .0)
+        self.driver.drive(self.forwardspeed, .0)
         return make_response(jsonify(data), 200)
 
     def forwardleft(self):
@@ -126,7 +129,7 @@ class Supervisor:
         data = {
         }
 
-        self.driver.drive(.20, .15)
+        self.driver.drive(self.forwardspeed, self.rotationspeed / 2)
         return make_response(jsonify(data), 200)
 
     def forwardright(self):
@@ -134,7 +137,7 @@ class Supervisor:
         data = {
         }
 
-        self.driver.drive(.20, -.15)
+        self.driver.drive(self.forwardspeed, -(self.rotationspeed / 2))
         return make_response(jsonify(data), 200)
 
     def backward(self):
@@ -142,7 +145,7 @@ class Supervisor:
         data = {
         }
 
-        self.driver.drive(-.20, .0)
+        self.driver.drive(-self.forwardspeed, .0)
         return make_response(jsonify(data), 200)
 
     def stop(self):
