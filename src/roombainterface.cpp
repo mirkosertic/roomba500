@@ -355,7 +355,7 @@ class BaseController {
 
             ROS_INFO("Got new DiffMotorSpeeds message: left = %d mm/s, right = %d mm/s", data.leftMillimetersPerSecond, data.rightMillimetersPerSecond);
 
-            robot->enqueueCommand((int) data.leftMillimetersPerSecond, (int) data.rightMillimetersPerSecond);
+            robot->drive((int) data.leftMillimetersPerSecond, (int) data.rightMillimetersPerSecond);
 
             mutex->unlock();
         }
