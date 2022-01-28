@@ -100,6 +100,6 @@ class DifferentialOdometry:
 if __name__ == '__main__':
     try:
         odometry = DifferentialOdometry()
-        DifferentialOdometry.start()
+        odometry.start()
     except rospy.ROSInterruptException:
         pass
