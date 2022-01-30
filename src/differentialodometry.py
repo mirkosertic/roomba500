@@ -15,7 +15,6 @@ class DifferentialOdometry:
         self.syncLock = threading.Lock()
 
         self.ticksPerCm = None
-        self.fullRotationInSensorTicks = None
         self.robotWheelRadiusInCm = None
 
         self.diffmotorspeedspub = None
@@ -69,13 +68,9 @@ class DifferentialOdometry:
         rate = rospy.Rate(pollingRateInHertz)
 
         self.ticksPerCm = float(rospy.get_param('~ticksPerCm', '22.7157014'))
-        self.fullRotationInSensorTicks = float(rospy.get_param('~fullRotationInSensorTicks', '1415'))
-
-        fullRotationInCm = self.fullRotationInSensorTicks / self.ticksPerCm
-        self.robotWheelRadiusInCm = fullRotationInCm / (math.pi * 2)
+        self.robotWheelRadiusInCm = float(rospy.get_param('~robotWheelRadiusInCm', '11.6'))
 
         rospy.loginfo("Configured with ticksPerCm                = %s ", self.ticksPerCm)
-        rospy.loginfo("Configured with fullRotationInSensorTicks = %s ", self.fullRotationInSensorTicks)
         rospy.loginfo("Configured with robotWheelRadiusInCm      = %s ", self.robotWheelRadiusInCm)
 
         self.diffmotorspeedspub = rospy.Publisher('cmd_motorspeeds', DiffMotorSpeeds, queue_size=10)
