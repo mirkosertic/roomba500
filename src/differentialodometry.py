@@ -15,7 +15,7 @@ class DifferentialOdometry:
         self.syncLock = threading.Lock()
 
         self.ticksPerCm = None
-        self.robotWheelRadiusInCm = None
+        self.robotWheelSeparationInCm = None
 
         self.diffmotorspeedspub = None
         self.odompub = None
@@ -35,8 +35,8 @@ class DifferentialOdometry:
 
         forwardSpeedMillimetersPerSecond = forwardSpeedMetersPerSecond * 100.0 * 10.0
 
-        speedLeftWheelMillimeterPerSecond = int(forwardSpeedMillimetersPerSecond - (rotationRadPerSecond * self.robotWheelRadiusInCm * 10.0))
-        speedRightWheelMillimeterPerSecond = int(forwardSpeedMillimetersPerSecond + (rotationRadPerSecond * self.robotWheelRadiusInCm * 10.0))
+        speedLeftWheelMillimeterPerSecond = int(forwardSpeedMillimetersPerSecond - (rotationRadPerSecond * self.robotWheelSeparationInCm * 10.0))
+        speedRightWheelMillimeterPerSecond = int(forwardSpeedMillimetersPerSecond + (rotationRadPerSecond * self.robotWheelSeparationInCm * 10.0))
 
         rospy.loginfo("Commanding motors with left wheel speed = %f mm/s and right wheel speed = %f mm/s", speedLeftWheelMillimeterPerSecond, speedRightWheelMillimeterPerSecond)
 
@@ -68,10 +68,10 @@ class DifferentialOdometry:
         rate = rospy.Rate(pollingRateInHertz)
 
         self.ticksPerCm = float(rospy.get_param('~ticksPerCm', '22.7157014'))
-        self.robotWheelRadiusInCm = float(rospy.get_param('~robotWheelRadiusInCm', '11.6'))
+        self.robotWheelSeparationInCm = float(rospy.get_param('~robotWheelSeparationInCm', '23.51'))
 
         rospy.loginfo("Configured with ticksPerCm                = %s ", self.ticksPerCm)
-        rospy.loginfo("Configured with robotWheelRadiusInCm      = %s ", self.robotWheelRadiusInCm)
+        rospy.loginfo("Configured with robotWheelSeparationInCm  = %s ", self.robotWheelSeparationInCm)
 
         self.diffmotorspeedspub = rospy.Publisher('cmd_motorspeeds', DiffMotorSpeeds, queue_size=10)
         self.odompub = rospy.Publisher('odom', Odometry, queue_size=10)
