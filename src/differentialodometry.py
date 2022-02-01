@@ -119,18 +119,20 @@ class DifferentialOdometry:
         self.yvel = 0
         self.thetavel = deltatheta / deltatime if deltatime > 0 else 0.
 
+        now = rospy.Time.now()
+
         # Publish odometry and transform
         q = quaternion_from_euler(0, 0, self.theta)
         self.transformbroadcaster.sendTransform(
             (self.x, self.y, 0),
             (q[0], q[1], q[2], q[3]),
-            currenttime,
+            now,
             'base_link',
             'odom'
         )
 
         odom = Odometry()
-        odom.header.stamp = currenttime
+        odom.header.stamp = now
         odom.header.frame_id = 'odom'
         odom.child_frame_id = 'base_link'
         odom.pose.pose.position.x = self.x
