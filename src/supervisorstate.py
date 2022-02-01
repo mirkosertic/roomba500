@@ -34,6 +34,11 @@ class SupervisorState:
         self.latestpositiononmap = None
         self.latestyawonmap = None
 
+        self.lastcommandedvelx = .0
+        self.lastcommandedveltheta = .0
+        self.odomvelx = .0
+        self.odomveltheta = .0
+
     def newSensorFrame(self, message):
         self.syncLock.acquire()
         self.latestbatterycharge = message.batteryCharge
@@ -69,6 +74,9 @@ class SupervisorState:
             self.latestpositiononmap = odometryInTargetposeFrame.pose.position
             self.latestyawonmap = odomyaw
 
+            self.odomvelx = message.twist.twist.linear.x
+            self.odomveltheta = message.twist.twist.angular.z
+
         except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException) as e:
             # Do nothing here
             pass
@@ -91,6 +99,10 @@ class SupervisorState:
             'lightbumperRight': self.lightbumperright,
             'amclmode': self.amclmode,
             'wheelEncoderLeft': self.wheelEncoderLeft,
-            'wheelEncoderRight': self.wheelEncoderRight
+            'wheelEncoderRight': self.wheelEncoderRight,
+            'lastcommandedvelx': self.lastcommandedvelx,
+            'lastcommandedveltheta': self.lastcommandedveltheta,
+            'odomvelx': self.odomvelx,
+            'odomveltheta': self.odomveltheta,
         }
         return data

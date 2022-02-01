@@ -7,6 +7,12 @@
     <param name="fullRotationInSensorTicks" value="1415" />
   </node>
 
+  <node name="differentialodometry" pkg="roomba500" type="differentialodometry.py" output="screen">
+    <param name="rosout_disable_topics_generation" value="True" />
+    <param name="ticksPerCm" value="22.7157014" />
+    <param name="robotWheelRadiusInCm" value="11.8" />
+  </node>
+
   <node name="ydlidar_node"  pkg="ydlidar_ros"  type="ydlidar_node" output="screen" respawn="false" >
     <param name="rosout_disable_topics_generation" value="True" />
     <param name="port" type="string" value="/dev/ttyUSB0"/>
@@ -28,4 +34,5 @@
     args="-0.11 0.0 0.15 0.0 0.0 0.0 /base_link /laser_frame 100">
     <param name="rosout_disable_topics_generation" value="True" />
   </node>
+
 </launch>

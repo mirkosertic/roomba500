@@ -175,7 +175,7 @@
             <div id='lightsensorFrontRight' class='lightsensorFrontRight lightSensor' data-value="0"></div>
             <div id='lightsensorRight' class='lightsensorRight lightSensor' data-value="0"></div>
             <div class='roomba'></div>
-            <div class='commonstatus' >Battery : <span id='batteryCharge'>&nbsp;</span> mAH / <span id='batteryCapacity'>&nbsp;</span> mAH<br>Left Wheel Encoder : <span id='leftWheelEncoder'> </span> Ticks / Right Wheel Encoder : <span id='rightWheelEncoder'> </span> Ticks<br>Stopwatch: <span id='stopwatch'>0</span> ms</div>
+            <div class='commonstatus' >Battery : <span id='batteryCharge'>&nbsp;</span> mAH / <span id='batteryCapacity'>&nbsp;</span> mAH<br>Left Wheel Encoder : <span id='leftWheelEncoder'> </span> Ticks / Right Wheel Encoder : <span id='rightWheelEncoder'> </span> Ticks<br>Stopwatch: <span id='stopwatch'>0</span> ms<br>Vel X Commanded/Real : <span id='velxstatus'>1/2 </span> m/s<br>Vel Theta Commanded/Real : <span id='velthetastatus'>1/2 </span> rad/s</div>
         </div>
 
         <script>
@@ -195,6 +195,8 @@
             let relocalizatiobutton = document.getElementById('relocalizatiobutton');
             let leftWheelEncoder = document.getElementById('leftWheelEncoder');
             let rightWheelEncoder = document.getElementById('rightWheelEncoder');
+            let velxstatus = document.getElementById('velxstatus');
+            let velthetastatus = document.getElementById('velthetastatus');
 
 
             let bumperleft = document.getElementById('bumperleft');
@@ -249,6 +251,9 @@
                     leftWheelEncoder.innerText = '' + data.wheelEncoderLeft;
                     rightWheelEncoder.innerText = '' + data.wheelEncoderRight;
 
+                    velxstatus.innerText = '' + data.lastcommandedvelx.toFixed(3) + ' / ' + data.odomvelx.toFixed(3) + ' (' + (data.odomvelx / data.lastcommandedvelx * 100).toFixed(1) + '%)';
+                    velthetastatus.innerText = '' + data.lastcommandedveltheta.toFixed(3) + ' / ' + data.odomveltheta.toFixed(3) + ' (' + (data.odomveltheta / data.lastcommandedveltheta * 100).toFixed(1) + '%)';
+
                     updateStopwatch()
 
                 } else {
@@ -284,9 +289,13 @@
                             lightbumperCenterRight: 4,
                             lightbumperFrontRight: 5,
                             lightbumperRight: 6,
+                            amclmode: true,
                             wheelEncoderLeft: 18,
                             wheelEncoderRight: 19,
-                            amclmode: true
+                            lastcommandedvelx: 0.2,
+                            lastcommandedveltheta: 1.2,
+                            odomvelx: 0.19,
+                            odomveltheta: 1.1,
                         })
                     })
             }

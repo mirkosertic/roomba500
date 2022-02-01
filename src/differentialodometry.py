@@ -37,6 +37,9 @@ class DifferentialOdometry:
         self.odompub = None
         self.transformbroadcaster = None
 
+        self.odomframe = 'odom'
+        self.baselinkframe = 'base_link'
+
     def newShutdownCommand(self, data):
         self.syncLock.acquire()
         rospy.signal_shutdown('Shutdown requested')
@@ -94,13 +97,18 @@ class DifferentialOdometry:
         deltaleftinm = deltaleft / self.ticksPerCm / 100.0
         deltarightinm = deltaright / self.ticksPerCm / 100.0
 
-        deltatravel = (deltarightinm + deltaleftinm) / 2
+        sumofdistances = deltaleftinm + deltarightinm
+        deltatravel = (sumofdistances) / 2
         deltatheta = (deltarightinm - deltaleftinm) / (self.robotWheelSeparationInCm / 100.0)
 
         if deltaleftinm == deltarightinm:
-            # Movement in straight line
+            # Movement in straight line, either forward or backward
             deltax = deltaleftinm * math.cos(self.theta)
             deltay = deltaleftinm * math.sin(self.theta)
+        elif abs(sumofdistances) < 10 and ((deltaleftinm > 0 and deltarightinm < 0) or (deltaleftinm < 0 and deltarightinm > 0)):
+            # Rotation on the spot
+            deltax = .0
+            deltay = .0
         else:
             # Some rotation involved
             radius = deltatravel / deltatheta
@@ -127,14 +135,14 @@ class DifferentialOdometry:
             (self.x, self.y, 0),
             (q[0], q[1], q[2], q[3]),
             now,
-            'base_link',
-            'odom'
+            self.baselinkframe,
+            self.odomframe
         )
 
         odom = Odometry()
         odom.header.stamp = now
-        odom.header.frame_id = 'odom'
-        odom.child_frame_id = 'base_link'
+        odom.header.frame_id = self.odomframe
+        odom.child_frame_id = self.baselinkframe
         odom.pose.pose.position.x = self.x
         odom.pose.pose.position.y = self.y
         odom.pose.pose.orientation.x = q[0]
@@ -149,7 +157,7 @@ class DifferentialOdometry:
 
     def start(self):
         rospy.init_node('differentialodometry', anonymous=True)
-        pollingRateInHertz = int(rospy.get_param('~pollingRateInHertz', '20'))
+        pollingRateInHertz = int(rospy.get_param('~pollingRateInHertz', '1'))
 
         rospy.loginfo("Checking system state with %s hertz", pollingRateInHertz)
         rate = rospy.Rate(pollingRateInHertz)

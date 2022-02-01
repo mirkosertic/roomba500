@@ -100,12 +100,17 @@ class Supervisor:
         self.state.syncLock.release()
         return make_response(jsonify(data), 200)
 
+    def command(self, velx, veltheta):
+        self.driver.drive(velx, veltheta)
+        self.state.lastcommandedvelx = velx
+        self.state.lastcommandedveltheta = veltheta
+
     def turnleft(self):
 
         data = {
         }
 
-        self.driver.drive(.0, self.rotationspeed)
+        self.command(.0, self.rotationspeed)
         return make_response(jsonify(data), 200)
 
     def turnright(self):
@@ -113,7 +118,7 @@ class Supervisor:
         data = {
         }
 
-        self.driver.drive(.0, -self.rotationspeed)
+        self.command(.0, -self.rotationspeed)
         return make_response(jsonify(data), 200)
 
     def forward(self):
@@ -121,7 +126,7 @@ class Supervisor:
         data = {
         }
 
-        self.driver.drive(self.forwardspeed, .0)
+        self.command(self.forwardspeed, .0)
         return make_response(jsonify(data), 200)
 
     def forwardleft(self):
@@ -129,7 +134,7 @@ class Supervisor:
         data = {
         }
 
-        self.driver.drive(self.forwardspeed, self.rotationspeed / 2)
+        self.command(self.forwardspeed, self.rotationspeed / 2)
         return make_response(jsonify(data), 200)
 
     def forwardright(self):
@@ -137,7 +142,7 @@ class Supervisor:
         data = {
         }
 
-        self.driver.drive(self.forwardspeed, -(self.rotationspeed / 2))
+        self.command(self.forwardspeed, -(self.rotationspeed / 2))
         return make_response(jsonify(data), 200)
 
     def backward(self):
@@ -145,7 +150,7 @@ class Supervisor:
         data = {
         }
 
-        self.driver.drive(-self.forwardspeed, .0)
+        self.command(-self.forwardspeed, .0)
         return make_response(jsonify(data), 200)
 
     def stop(self):
@@ -153,7 +158,7 @@ class Supervisor:
         data = {
         }
 
-        self.driver.stop()
+        self.command(.0, .0)
         return make_response(jsonify(data), 200)
 
     def relocalization(self):
