@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+
 import math
 import threading
 import rospy
@@ -6,8 +7,12 @@ import rospy
 from std_msgs.msg import Int16
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
+from tf.transformations import quaternion_from_euler
+from tf.broadcaster import TransformBroadcaster
 
 from roomba500.msg import RoombaSensorFrame, DiffMotorSpeeds
+
+from encoder import Encoder
 
 class DifferentialOdometry:
 
@@ -17,8 +22,20 @@ class DifferentialOdometry:
         self.ticksPerCm = None
         self.robotWheelSeparationInCm = None
 
+        self.lastsensortime = None
+        self.leftencoder = None
+        self.rightencoder = None
+
+        self.x = 0
+        self.y = 0
+        self.theta = 0
+        self.xvel = 0
+        self.yvel = 0
+        self.thetavel = 0
+
         self.diffmotorspeedspub = None
         self.odompub = None
+        self.transformbroadcaster = None
 
     def newShutdownCommand(self, data):
         self.syncLock.acquire()
@@ -35,8 +52,8 @@ class DifferentialOdometry:
 
         forwardSpeedMillimetersPerSecond = forwardSpeedMetersPerSecond * 100.0 * 10.0
 
-        speedLeftWheelMillimeterPerSecond = int(forwardSpeedMillimetersPerSecond - (rotationRadPerSecond * self.robotWheelSeparationInCm * 10.0))
-        speedRightWheelMillimeterPerSecond = int(forwardSpeedMillimetersPerSecond + (rotationRadPerSecond * self.robotWheelSeparationInCm * 10.0))
+        speedLeftWheelMillimeterPerSecond = int(forwardSpeedMillimetersPerSecond - (rotationRadPerSecond * (self.robotWheelSeparationInCm  / 2.0) * 10.0))
+        speedRightWheelMillimeterPerSecond = int(forwardSpeedMillimetersPerSecond + (rotationRadPerSecond * (self.robotWheelSeparationInCm / 2.0) * 10.0))
 
         rospy.loginfo("Commanding motors with left wheel speed = %f mm/s and right wheel speed = %f mm/s", speedLeftWheelMillimeterPerSecond, speedRightWheelMillimeterPerSecond)
 
@@ -50,10 +67,82 @@ class DifferentialOdometry:
     def newSensorFrame(self, data):
         self.syncLock.acquire()
 
-        wheelEncoderLeft = data.wheelEncoderLeft
-        wheelEncoderRight = data.wheelEncoderRight
+        currenttime = rospy.get_time()
 
-        self.computeAndPublishOdometry()
+        if self.leftencoder is None:
+            self.leftencoder = Encoder()
+            self.leftencoder.update(data.wheelEncoderLeft)
+            deltaleft = 0
+        else:
+            self.leftencoder.update(data.wheelEncoderLeft)
+            deltaleft = self.leftencoder.getDelta()
+
+        if self.rightencoder is None:
+            self.rightencoder = Encoder()
+            self.rightencoder.update(data.wheelEncoderRight)
+            deltaright = 0
+        else:
+            self.rightencoder.update(data.wheelEncoderRight)
+            deltaright = self.rightencoder.getDelta()
+
+        if self.lastsensortime is None:
+            self.lastsensortime = currenttime
+            deltatime = 0
+        else:
+            deltatime = currenttime - self.lastsensortime
+            self.lastsensortime = currenttime
+
+        deltaleftinm = deltaleft / self.ticksPerCm / 100.0
+        deltarightinm = deltaright / self.ticksPerCm / 100.0
+
+        deltatravel = (deltarightinm + deltaleftinm) / 2
+        deltatheta = (deltarightinm - deltaleftinm) / (self.robotWheelSeparationInCm / 100.0)
+
+        if deltaleftinm == deltarightinm:
+            # Movement in straight line
+            deltax = deltaleftinm * math.cos(self.theta)
+            deltay = deltaleftinm * math.sin(self.theta)
+        else:
+            # Some rotation involved
+            radius = deltatravel / deltatheta
+
+            # Find the instantaneous center of curvature (ICC)
+            iccx = self.x - radius * math.sin(self.theta)
+            iccy = self.y + radius * math.cos(self.theta)
+
+            deltax = math.cos(deltatheta) * (self.x - iccx) - math.sin(deltatheta) * (self.y - iccy) + iccx - self.x
+            deltay = math.sin(deltatheta) * (self.x - iccx) + math.cos(deltatheta) * (self.y - iccy) + iccy - self.y
+
+        self.x += deltax
+        self.y += deltay
+        self.theta = (self.theta + deltatheta) % (2 * math.pi)
+        self.xvel = deltatravel / deltatime if deltatime > 0 else 0.
+        self.yvel = 0
+        self.thetavel = deltatheta / deltatime if deltatime > 0 else 0.
+
+        # Publish odometry and transform
+        q = quaternion_from_euler(0, 0, self.theta)
+        self.tfPub.sendTransform(
+            (self.x, self.y, 0),
+            (q[0], q[1], q[2], q[3]),
+            currenttime,
+            'base_link',
+            'odom'
+        )
+
+        odom = Odometry()
+        odom.header.stamp = currenttime
+        odom.header.frame_id = 'odom'
+        odom.child_frame_id = 'base_link'
+        odom.pose.pose.position.x = self.x
+        odom.pose.pose.position.y = self.y
+        odom.pose.pose.orientation.x = q[0]
+        odom.pose.pose.orientation.y = q[1]
+        odom.pose.pose.orientation.z = q[2]
+        odom.pose.pose.orientation.w = q[3]
+        odom.twist.twist.linear.x = self.xvel
+        odom.twist.twist.angular.z = self.thetavel
+        self.odomPub.publish(odom)
 
         self.syncLock.release()
 
@@ -68,13 +157,15 @@ class DifferentialOdometry:
         rate = rospy.Rate(pollingRateInHertz)
 
         self.ticksPerCm = float(rospy.get_param('~ticksPerCm', '22.7157014'))
-        self.robotWheelSeparationInCm = float(rospy.get_param('~robotWheelSeparationInCm', '23.51'))
+        self.robotWheelSeparationInCm = float(rospy.get_param('~robotWheelSeparationInCm', '22.86'))  # 32.56 is calculated 22.86
 
         rospy.loginfo("Configured with ticksPerCm                = %s ", self.ticksPerCm)
         rospy.loginfo("Configured with robotWheelSeparationInCm  = %s ", self.robotWheelSeparationInCm)
 
         self.diffmotorspeedspub = rospy.Publisher('cmd_motorspeeds', DiffMotorSpeeds, queue_size=10)
         self.odompub = rospy.Publisher('odom', Odometry, queue_size=10)
+
+        self.transformbroadcaster = TransformBroadcaster()
 
         # Handling for cmd_vel and sensor frame data
         rospy.Subscriber("cmd_vel", Twist, self.newCmdVelCommand)

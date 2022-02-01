@@ -80,7 +80,7 @@ class BaseController {
             odom_trans.transform.translation.z = .0f;
             odom_trans.transform.rotation = odom_quat;
 
-            transform_broadcaster->sendTransform(odom_trans);
+            // transform_broadcaster->sendTransform(odom_trans);
 
             // Publish odometry
             nav_msgs::Odometry odom;
@@ -95,7 +95,7 @@ class BaseController {
             odom.twist.twist.linear.y = vyInMetersPerSecond;
             odom.twist.twist.angular.z = vthInRadiansPerSecond;
 
-            odomTopic->publish(odom);
+            // odomTopic->publish(odom);
         }
 
         float radians(float degrees) {
