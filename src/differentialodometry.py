@@ -71,19 +71,18 @@ class DifferentialOdometry:
 
         if self.leftencoder is None:
             self.leftencoder = Encoder()
-            self.leftencoder.update(data.wheelEncoderLeft)
-            deltaleft = 0
+            self.leftencoder.initCount(data.wheelEncoderLeft)
         else:
             self.leftencoder.update(data.wheelEncoderLeft)
-            deltaleft = self.leftencoder.getDelta()
 
         if self.rightencoder is None:
             self.rightencoder = Encoder()
-            self.rightencoder.update(data.wheelEncoderRight)
-            deltaright = 0
+            self.rightencoder.initCount(data.wheelEncoderRight)
         else:
             self.rightencoder.update(data.wheelEncoderRight)
-            deltaright = self.rightencoder.getDelta()
+
+        deltaleft = self.leftencoder.getDelta()
+        deltaright = self.rightencoder.getDelta()
 
         if self.lastsensortime is None:
             self.lastsensortime = currenttime
@@ -122,7 +121,7 @@ class DifferentialOdometry:
 
         # Publish odometry and transform
         q = quaternion_from_euler(0, 0, self.theta)
-        self.tfPub.sendTransform(
+        self.transformbroadcaster.sendTransform(
             (self.x, self.y, 0),
             (q[0], q[1], q[2], q[3]),
             currenttime,
