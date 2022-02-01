@@ -2,7 +2,7 @@
 <launch>
   <node name="roombainterface" pkg="roomba500" type="roombainterface" output="screen" respawn="false">
     <param name="rosout_disable_topics_generation" value="True" />
-    <param name="pollingRateInHertz" value="20" />
+    <param name="pollingRateInHertz" value="30" />
     <param name="ticksPerCm" value="22.836363" />
     <param name="fullRotationInSensorTicks" value="1415" />
   </node>

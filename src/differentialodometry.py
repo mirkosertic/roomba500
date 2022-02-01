@@ -147,9 +147,6 @@ class DifferentialOdometry:
 
         self.syncLock.release()
 
-    def computeAndPublishOdometry(self):
-        pass
-
     def start(self):
         rospy.init_node('differentialodometry', anonymous=True)
         pollingRateInHertz = int(rospy.get_param('~pollingRateInHertz', '20'))
@@ -186,6 +183,7 @@ class DifferentialOdometry:
 
 if __name__ == '__main__':
     try:
+        # Code adapted from https://github.com/merose/diff_drive
         odometry = DifferentialOdometry()
         odometry.start()
     except rospy.ROSInterruptException:
