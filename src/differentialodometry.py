@@ -143,7 +143,7 @@ class DifferentialOdometry:
         odom.pose.pose.orientation.w = q[3]
         odom.twist.twist.linear.x = self.xvel
         odom.twist.twist.angular.z = self.thetavel
-        self.odomPub.publish(odom)
+        self.odompub.publish(odom)
 
         self.syncLock.release()
 
