@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import math
 
 import rospy
 import threading
@@ -16,6 +17,7 @@ from nav_msgs.msg import Odometry, OccupancyGrid
 from geometry_msgs.msg import Twist, Point, Pose, PoseStamped, Quaternion, Vector3
 from visualization_msgs.msg import MarkerArray
 
+from roomba500.msg import NavigationInfo
 
 class PathManager:
 
@@ -28,6 +30,18 @@ class PathManager:
         self.mapmanager = None
         self.driver = None
         self.transformlistener = None
+        self.infotopic = None
+
+        self.kP = 3.0
+        self.kA = 8
+        self.kB = -1.5
+        self.max_linear_speed = 0.2
+        self.min_linear_speed = 0.08
+        self.max_angular_speed = 1.0
+        self.min_angular_speed = 0.45
+        self.linear_tolerance = 0.025
+
+        self.angular_tolerance = 3.0
 
     def newOdomMessage(self, data):
 
@@ -36,6 +50,7 @@ class PathManager:
         self.syncLock.acquire()
 
         self.latestOdometry = data
+        self.systemState = self.systemState.process()
 
         self.syncLock.release()
 
@@ -112,18 +127,20 @@ class PathManager:
         latestcommontime = self.transformlistener.getLatestCommonTime(targetframe, self.latestOdometry.header.frame_id)
         return self.transformlistener.transformPose(targetframe, mpose)
 
+    def publishNavigationInfo(self, distanceToTargetInMeters, angleToTargetInDegrees):
+        message = NavigationInfo()
+        message.distanceToTargetInMeters = distanceToTargetInMeters
+        message.angleToTargetInDegrees = angleToTargetInDegrees
+        self.infotopic.publish(message)
+
     def start(self):
         rospy.init_node('pathmanager', anonymous=True)
-        pollingRateInHertz = int(rospy.get_param('~pollingRateInHertz', '20'))
+        pollingRateInHertz = int(rospy.get_param('~pollingRateInHertz', '10'))
 
         debugimagelocation = rospy.get_param('~debugimagelocation', None)
 
         rospy.loginfo("Checking system state with %s hertz", pollingRateInHertz)
         rate = rospy.Rate(pollingRateInHertz)
-
-        # We consume odometry, maps and move base goals here
-        rospy.Subscriber("odom", Odometry, self.newOdomMessage)
-        rospy.Subscriber("move_base_simple/goal", PoseStamped, self.newMoveBaseSimpleGoalMessage)
 
         # This is our map manager, responsible for
         # navigation, pathfinding and visualization
@@ -138,7 +155,13 @@ class PathManager:
 
         self.transformlistener = tf.TransformListener()
 
+        self.infotopic = rospy.Publisher('navigation_info', NavigationInfo, queue_size=10)
+
         self.systemState = DoNothingState(self, None, None)
+
+        # We consume odometry, maps and move base goals here
+        rospy.Subscriber("odom", Odometry, self.newOdomMessage)
+        rospy.Subscriber("move_base_simple/goal", PoseStamped, self.newMoveBaseSimpleGoalMessage)
 
         # Check if we should init the map by calling the map_server instead of
         # waiting for a published map. This is the case if we are running AMCL instead of SLAM
@@ -157,11 +180,11 @@ class PathManager:
         # Processing the sensor polling in an endless loop until this node shuts down
         while not rospy.is_shutdown():
 
-            self.syncLock.acquire()
+            #self.syncLock.acquire()
 
-            self.systemState = self.systemState.process()
+            #self.systemState = self.systemState.process()
 
-            self.syncLock.release()
+            #self.syncLock.release()
 
             rate.sleep()
 

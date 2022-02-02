@@ -27,6 +27,8 @@ class SupervisorState:
         self.wheelEncoderLeft = 0
         self.wheelEncoderRight = 0
         self.amclmode = False
+        self.distanceToTargetInMeters = .0
+        self.angleToTargetInDegrees = .0
 
         self.mapframe = mapframe
         self.transformlistener = transformlistener
@@ -59,6 +61,8 @@ class SupervisorState:
 
     def newOdometry(self, message):
         try:
+            self.syncLock.acquire()
+
             mpose = PoseStamped()
             mpose.pose.position = message.pose.pose.position
             mpose.pose.orientation = message.pose.pose.orientation
@@ -81,6 +85,23 @@ class SupervisorState:
             # Do nothing here
             pass
 
+        self.syncLock.release()
+
+    def newCmdVel(self, message):
+        self.syncLock.acquire()
+
+        self.lastcommandedvelx = message.linear.x
+        self.lastcommandedveltheta = message.angular.z
+
+        self.syncLock.release()
+
+    def newNavigationInfo(self, message):
+        self.syncLock.acquire()
+
+        self.distanceToTargetInMeters = message.distanceToTargetInMeters
+        self.angleToTargetInDegrees = message.angleToTargetInDegrees
+
+        self.syncLock.release()
 
     def gathersystemstate(self):
         data = {
@@ -104,5 +125,7 @@ class SupervisorState:
             'lastcommandedveltheta': self.lastcommandedveltheta,
             'odomvelx': self.odomvelx,
             'odomveltheta': self.odomveltheta,
+            'distanceToTargetInMeters': self.distanceToTargetInMeters,
+            'angleToTargetInDegrees': self.angleToTargetInDegrees,
         }
         return data

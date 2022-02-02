@@ -17,7 +17,6 @@ class MoveToPositionState(BaseState):
 
         self.driveSpeed = 0.0
         self.driveAngularMoment = 0.0
-        self.lastDeltaToTargetInDegrees = None
 
         # This is the target movement point
         self.targetpositionx, self.targetpositiony = pathmanager.mapmanager.nearestNavigationPointTo(targetposition)
@@ -31,11 +30,11 @@ class MoveToPositionState(BaseState):
         deltaY = self.targetpositiony - currentPosition.y
         distance = math.sqrt(deltaX * deltaX + deltaY * deltaY)
 
-        rospy.loginfo("DeltaX = %s, DeltaY = %s, Distance = %s", deltaX, deltaY, distance)
+        rospy.logdebug("DeltaX = %s, DeltaY = %s, Distance = %s", deltaX, deltaY, distance)
 
     def setDriveSpeed(self, targetSpeed, targetAngularMoment):
         if self.driveSpeed != targetSpeed or self.driveAngularMoment != targetAngularMoment:
-            rospy.loginfo("Setting linear velocity = %s, angular velocity = %s", targetSpeed, targetAngularMoment)
+            rospy.logdebug("Setting linear velocity = %s, angular velocity = %s", targetSpeed, targetAngularMoment)
             self.pathmanager.driver.drive(targetSpeed, targetAngularMoment)
             self.driveSpeed = targetSpeed
             self.driveAngularMoment = targetAngularMoment
@@ -52,44 +51,22 @@ class MoveToPositionState(BaseState):
 
             shortestAngle = self.shortestAngle(odomyawInDegrees, degreesToTarget)
 
-            rospy.loginfo("DeltaX = %s, DeltaY = %s, Distance = %s, shortest angle = %s, Odometry angle = %s, Target Angle = %s", deltaX, deltaY, distance, shortestAngle, odomyawInDegrees, degreesToTarget)
+            rospy.logdebug("DeltaX = %s, DeltaY = %s, Distance = %s, shortest angle = %s, Odometry angle = %s, Target Angle = %s", deltaX, deltaY, distance, shortestAngle, odomyawInDegrees, degreesToTarget)
+
+            self.pathmanager.publishNavigationInfo(distance, shortestAngle)
 
             # Either we are close to the target position or we overshot
             # We are at the nearest point if either the distance is near a reasonable limit
             # or the angle to the target point is equal or more than 90 degrees
-            if (distance <= 0.01 or abs(shortestAngle) >= 90.0):
+            if (distance <= self.pathmanager.linear_tolerance or abs(shortestAngle) >= 90.0):
                 # We are near the right place
-                rospy.loginfo("Stopping, as we can't get nearer to the desired point")
+                rospy.logdebug("Stopping, as we can't get nearer to the desired point")
 
                 self.pathmanager.driver.stop()
                 return self.success()
 
-            driveSpeed = 0.25
-            rotationSpeed = .0
-            multiplier = 1.0
-
-            if (distance > 0.30):
-                # Guess what is happening here
-                rospy.loginfo("Far away, using more speed")
-                multiplier = 1
-            else:
-                if (distance > 0.15):
-                    # This is pretty unclear too
-                    rospy.loginfo("Comming closer, slowing down")
-                    multiplier = 0.5
-                else:
-                    # This is pretty unclear too
-                    rospy.loginfo("Comming more closer, slowing down")
-                    multiplier = 0.25
-
-            if shortestAngle > 1:
-                rospy.loginfo("Correcting heading by turning to the left")
-                rotationSpeed = 0.10
-            if shortestAngle < -1:
-                rospy.loginfo("Correcting heading by turning to the right")
-                rotationSpeed = -0.10
-
-            self.setDriveSpeed(driveSpeed * multiplier, rotationSpeed)
+            (vel_x, vel_theta) = self.compute_velocity((odomposition.x, odomposition.y, odomyawInDegrees * math.pi / 180), (self.targetpositionx, self.targetpositiony, degreesToTarget * math.pi / 180))
+            self.setDriveSpeed(vel_x, vel_theta)
 
         except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
             pass

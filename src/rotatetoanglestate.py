@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import math
 
 import rospy
 import tf
@@ -30,31 +31,27 @@ class RotateToAngleState(BaseState):
 
             deltaX = targetpositionx - odomposition.x
             deltaY = targetpositiony - odomposition.y
+            distance = math.sqrt(deltaX * deltaX + deltaY * deltaY)
 
             # We can now calculate the angle to the target position
             targetYawInDegrees = self.distanceToDegrees(deltaX, deltaY)
 
             shortestAngle = self.shortestAngle(odomyawInDegrees, targetYawInDegrees)
 
-            rospy.loginfo("Current odom yaw %s, target is %s, shortest angle is %s", odomyawInDegrees, targetYawInDegrees, shortestAngle)
+            rospy.logdebug("Current odom yaw %s, target is %s, shortest angle is %s", odomyawInDegrees, targetYawInDegrees, shortestAngle)
 
-            if abs(shortestAngle) < 2:
+            self.pathmanager.publishNavigationInfo(distance, shortestAngle)
+
+            if abs(shortestAngle) < self.pathmanager.angular_tolerance:
                 # We are coming closer
-                rospy.loginfo("Stopping robot, as deltaToTarget = %s degrees", shortestAngle)
+                rospy.logdebug("Stopping robot, as deltaToTarget = %s degrees", shortestAngle)
 
                 self.pathmanager.driver.stop()
+
                 return self.success()
 
-            rotationSpeed = 0.15
-            if abs(shortestAngle) > 15:
-                rotationSpeed = 0.25
-            if abs(shortestAngle) > 30:
-                rotationSpeed = 0.4
-
-            if shortestAngle > 0:
-                self.setRotationSpeed(rotationSpeed)
-            else:
-                self.setRotationSpeed(-rotationSpeed)
+            (vel_x, vel_theta) = self.compute_velocity((odomposition.x, odomposition.y, odomyawInDegrees * math.pi / 180), (targetpositionx, targetpositiony, targetYawInDegrees * math.pi / 180))
+            self.setRotationSpeed(vel_theta)
 
         except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
             pass

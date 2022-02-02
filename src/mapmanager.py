@@ -157,7 +157,6 @@ class MapManager:
             for cell in neighbours:
                 cellx, celly = cell
                 angle = toDegrees(math.atan2(celly - y, cellx - x))
-                print(angle)
                 if angle < 10 or angle > 350:
                     right = cell
                 if angle > 35 and angle < 55:

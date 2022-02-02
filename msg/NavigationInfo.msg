@@ -1,0 +1,2 @@
+float32 distanceToTargetInMeters
+float32 angleToTargetInDegrees

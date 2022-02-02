@@ -32,6 +32,7 @@ from luma.oled.device import ssd1306
 from PIL import ImageFont
 
 from roomba500.msg import RoombaSensorFrame
+from roomba500.msg import NavigationInfo
 
 class Supervisor:
 
@@ -102,8 +103,6 @@ class Supervisor:
 
     def command(self, velx, veltheta):
         self.driver.drive(velx, veltheta)
-        self.state.lastcommandedvelx = velx
-        self.state.lastcommandedveltheta = veltheta
 
     def turnleft(self):
 
@@ -284,8 +283,9 @@ class Supervisor:
         shutdownTopic = rospy.Publisher('shutdown', Int16, queue_size=10)
 
         rospy.Subscriber("sensorframe", RoombaSensorFrame, self.state.newSensorFrame)
-
         rospy.Subscriber("odom", Odometry, self.state.newOdometry)
+        rospy.Subscriber("cmd_vel", Twist, self.state.newCmdVel)
+        rospy.Subscriber("navigation_info", NavigationInfo, self.state.newNavigationInfo)
 
         rospy.loginfo('Initializing physical display')
         font0path = str(pathlib.Path(__file__).resolve().parent.joinpath('ttf', 'C&C Red Alert [INET].ttf'))

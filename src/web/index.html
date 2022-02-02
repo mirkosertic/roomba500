@@ -175,7 +175,7 @@
             <div id='lightsensorFrontRight' class='lightsensorFrontRight lightSensor' data-value="0"></div>
             <div id='lightsensorRight' class='lightsensorRight lightSensor' data-value="0"></div>
             <div class='roomba'></div>
-            <div class='commonstatus' >Battery : <span id='batteryCharge'>&nbsp;</span> mAH / <span id='batteryCapacity'>&nbsp;</span> mAH<br>Left Wheel Encoder : <span id='leftWheelEncoder'> </span> Ticks / Right Wheel Encoder : <span id='rightWheelEncoder'> </span> Ticks<br>Stopwatch: <span id='stopwatch'>0</span> ms<br>Vel X Commanded/Real : <span id='velxstatus'>1/2 </span> m/s<br>Vel Theta Commanded/Real : <span id='velthetastatus'>1/2 </span> rad/s</div>
+            <div class='commonstatus' >Battery : <span id='batteryCharge'>&nbsp;</span> mAH / <span id='batteryCapacity'>&nbsp;</span> mAH<br>Left Wheel Encoder : <span id='leftWheelEncoder'> </span> Ticks / Right Wheel Encoder : <span id='rightWheelEncoder'> </span> Ticks<br>Stopwatch: <span id='stopwatch'>0</span> ms<br>Vel X Commanded/Real : <span id='velxstatus'>1/2 </span> m/s<br>Vel Theta Commanded/Real : <span id='velthetastatus'>1/2 </span> rad/s<br>Distance to target : <span id='distancetotarget'>1/2 </span> m<br>Angle to target : <span id='angletotarget'>1/2 </span> degrees</div>
         </div>
 
         <script>
@@ -197,6 +197,8 @@
             let rightWheelEncoder = document.getElementById('rightWheelEncoder');
             let velxstatus = document.getElementById('velxstatus');
             let velthetastatus = document.getElementById('velthetastatus');
+            let distancetotarget = document.getElementById('distancetotarget');
+            let angletotarget = document.getElementById('angletotarget');
 
 
             let bumperleft = document.getElementById('bumperleft');
@@ -264,6 +266,9 @@
                     velxstatus.innerText = '' + data.lastcommandedvelx.toFixed(3) + ' / ' + data.odomvelx.toFixed(3) + ' (' + percentage(data.odomvelx, data.lastcommandedvelx) + ')';
                     velthetastatus.innerText = '' + data.lastcommandedveltheta.toFixed(3) + ' / ' + data.odomveltheta.toFixed(3) + ' (' + percentage(data.odomveltheta, data.lastcommandedveltheta) + ')';
 
+                    distancetotarget.innerText = '' + data.distanceToTargetInMeters.toFixed(2);
+                    angletotarget.innerText = '' + data.angleToTargetInDegrees.toFixed(2);
+
                     updateStopwatch()
 
                 } else {
@@ -306,6 +311,8 @@
                             lastcommandedveltheta: 1.2,
                             odomvelx: 0.19,
                             odomveltheta: 1.1,
+                            distanceToTargetInMeters: 87,
+                            angleToTargetInDegrees: 99
                         })
                     })
             }
