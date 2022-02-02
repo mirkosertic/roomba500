@@ -221,6 +221,16 @@
                 }
             }
 
+            function percentage(real, expected) {
+                if (expected == 0.0) {
+                    return '-';
+                }
+                if (real == 0.0) {
+                    return ' Err '
+                }
+                return (real / expected * 100).toFixed(1) + ' %';
+            }
+
             function updateUI(data) {
                 if (data.awake) {
                     sensorcontainer.style.visibility = 'visible';
@@ -251,8 +261,8 @@
                     leftWheelEncoder.innerText = '' + data.wheelEncoderLeft;
                     rightWheelEncoder.innerText = '' + data.wheelEncoderRight;
 
-                    velxstatus.innerText = '' + data.lastcommandedvelx.toFixed(3) + ' / ' + data.odomvelx.toFixed(3) + ' (' + (data.odomvelx / data.lastcommandedvelx * 100).toFixed(1) + '%)';
-                    velthetastatus.innerText = '' + data.lastcommandedveltheta.toFixed(3) + ' / ' + data.odomveltheta.toFixed(3) + ' (' + (data.odomveltheta / data.lastcommandedveltheta * 100).toFixed(1) + '%)';
+                    velxstatus.innerText = '' + data.lastcommandedvelx.toFixed(3) + ' / ' + data.odomvelx.toFixed(3) + ' (' + percentage(data.odomvelx, data.lastcommandedvelx) + ')';
+                    velthetastatus.innerText = '' + data.lastcommandedveltheta.toFixed(3) + ' / ' + data.odomveltheta.toFixed(3) + ' (' + percentage(data.odomveltheta, data.lastcommandedveltheta) + ')';
 
                     updateStopwatch()
 

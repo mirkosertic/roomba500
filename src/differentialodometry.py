@@ -22,16 +22,16 @@ class DifferentialOdometry:
         self.ticksPerCm = None
         self.robotWheelSeparationInCm = None
 
-        self.lastsensortime = None
         self.leftencoder = None
         self.rightencoder = None
 
-        self.x = 0
-        self.y = 0
-        self.theta = 0
-        self.xvel = 0
-        self.yvel = 0
-        self.thetavel = 0
+        self.referencex = 0
+        self.referencey = 0
+        self.referencetheta = 0
+        self.referencetime = None
+
+        self.sumdeltaleft = 0
+        self.sumdeltaright = 0
 
         self.diffmotorspeedspub = None
         self.odompub = None
@@ -65,12 +65,91 @@ class DifferentialOdometry:
         speedcommand.rightMillimetersPerSecond = speedRightWheelMillimeterPerSecond
         self.diffmotorspeedspub.publish(speedcommand)
 
+        self.publishOdometry(True)
+
         self.syncLock.release()
+
+    def publishOdometry(self, commit):
+
+        currenttime = rospy.get_time()
+
+        self.sumdeltaleft += self.leftencoder.getDelta()
+        self.sumdeltaright += self.rightencoder.getDelta()
+
+        if self.referencetime is None:
+            self.referencetime = currenttime
+            deltatime = 0
+        else:
+            deltatime = currenttime - self.referencetime
+
+        deltaleftinm = self.sumdeltaleft / self.ticksPerCm / 100.0
+        deltarightinm = self.sumdeltaright / self.ticksPerCm / 100.0
+
+        sumofdistances = deltaleftinm + deltarightinm
+        deltatravel = (sumofdistances) / 2
+        deltatheta = (deltarightinm - deltaleftinm) / (self.robotWheelSeparationInCm / 100.0)
+
+        if deltaleftinm == deltarightinm:
+            # Movement in straight line, either forward or backward
+            deltax = deltaleftinm * math.cos(self.referencetheta)
+            deltay = deltaleftinm * math.sin(self.referencetheta)
+        elif abs(sumofdistances) < 10 and ((deltaleftinm > 0 and deltarightinm < 0) or (deltaleftinm < 0 and deltarightinm > 0)):
+            # Rotation on the spot
+            deltax = .0
+            deltay = .0
+        else:
+            # Some rotation involved
+            radius = deltatravel / deltatheta
+
+            # Find the instantaneous center of curvature (ICC)
+            iccx = self.referencex - radius * math.sin(self.referencetheta)
+            iccy = self.referencey + radius * math.cos(self.referencetheta)
+
+            deltax = math.cos(deltatheta) * (self.referencex - iccx) - math.sin(deltatheta) * (self.referencey - iccy) + iccx - self.referencex
+            deltay = math.sin(deltatheta) * (self.referencex - iccx) + math.cos(deltatheta) * (self.referencey - iccy) + iccy - self.referencey
+
+        newtheta = (self.referencetheta + deltatheta) % (2 * math.pi)
+
+        xvel = deltatravel / deltatime if deltatime > 0 else 0.
+        thetavel = deltatheta / deltatime if deltatime > 0 else 0.
+
+        now = rospy.Time.now()
+
+        # Publish odometry and transform
+        q = quaternion_from_euler(0, 0, newtheta)
+        self.transformbroadcaster.sendTransform(
+            (self.referencex + deltax, self.referencey + deltay, 0),
+            (q[0], q[1], q[2], q[3]),
+            now,
+            self.baselinkframe,
+            self.odomframe
+        )
+
+        odom = Odometry()
+        odom.header.stamp = now
+        odom.header.frame_id = self.odomframe
+        odom.child_frame_id = self.baselinkframe
+        odom.pose.pose.position.x = self.referencex + deltax
+        odom.pose.pose.position.y = self.referencey + deltay
+        odom.pose.pose.orientation.x = q[0]
+        odom.pose.pose.orientation.y = q[1]
+        odom.pose.pose.orientation.z = q[2]
+        odom.pose.pose.orientation.w = q[3]
+        odom.twist.twist.linear.x = xvel
+        odom.twist.twist.angular.z = thetavel
+
+        if commit is True:
+            self.referencex += deltax
+            self.referencey += deltay
+            self.referencetheta = newtheta
+            self.sumdeltaleft = 0
+            self.sumdeltaright = 0
+            self.referencetime = currenttime
+
+        self.odompub.publish(odom)
 
     def newSensorFrame(self, data):
         self.syncLock.acquire()
-
-        currenttime = rospy.get_time()
 
         if self.leftencoder is None:
             self.leftencoder = Encoder()
@@ -84,74 +163,10 @@ class DifferentialOdometry:
         else:
             self.rightencoder.update(data.wheelEncoderRight)
 
-        deltaleft = self.leftencoder.getDelta()
-        deltaright = self.rightencoder.getDelta()
-
-        if self.lastsensortime is None:
-            self.lastsensortime = currenttime
-            deltatime = 0
+        if data.bumperLeft or data.bumperRight or data.wheeldropLeft or data.wheeldropRight:
+            self.publishOdometry(True)
         else:
-            deltatime = currenttime - self.lastsensortime
-            self.lastsensortime = currenttime
-
-        deltaleftinm = deltaleft / self.ticksPerCm / 100.0
-        deltarightinm = deltaright / self.ticksPerCm / 100.0
-
-        sumofdistances = deltaleftinm + deltarightinm
-        deltatravel = (sumofdistances) / 2
-        deltatheta = (deltarightinm - deltaleftinm) / (self.robotWheelSeparationInCm / 100.0)
-
-        if deltaleftinm == deltarightinm:
-            # Movement in straight line, either forward or backward
-            deltax = deltaleftinm * math.cos(self.theta)
-            deltay = deltaleftinm * math.sin(self.theta)
-        elif abs(sumofdistances) < 10 and ((deltaleftinm > 0 and deltarightinm < 0) or (deltaleftinm < 0 and deltarightinm > 0)):
-            # Rotation on the spot
-            deltax = .0
-            deltay = .0
-        else:
-            # Some rotation involved
-            radius = deltatravel / deltatheta
-
-            # Find the instantaneous center of curvature (ICC)
-            iccx = self.x - radius * math.sin(self.theta)
-            iccy = self.y + radius * math.cos(self.theta)
-
-            deltax = math.cos(deltatheta) * (self.x - iccx) - math.sin(deltatheta) * (self.y - iccy) + iccx - self.x
-            deltay = math.sin(deltatheta) * (self.x - iccx) + math.cos(deltatheta) * (self.y - iccy) + iccy - self.y
-
-        self.x += deltax
-        self.y += deltay
-        self.theta = (self.theta + deltatheta) % (2 * math.pi)
-        self.xvel = deltatravel / deltatime if deltatime > 0 else 0.
-        self.yvel = 0
-        self.thetavel = deltatheta / deltatime if deltatime > 0 else 0.
-
-        now = rospy.Time.now()
-
-        # Publish odometry and transform
-        q = quaternion_from_euler(0, 0, self.theta)
-        self.transformbroadcaster.sendTransform(
-            (self.x, self.y, 0),
-            (q[0], q[1], q[2], q[3]),
-            now,
-            self.baselinkframe,
-            self.odomframe
-        )
-
-        odom = Odometry()
-        odom.header.stamp = now
-        odom.header.frame_id = self.odomframe
-        odom.child_frame_id = self.baselinkframe
-        odom.pose.pose.position.x = self.x
-        odom.pose.pose.position.y = self.y
-        odom.pose.pose.orientation.x = q[0]
-        odom.pose.pose.orientation.y = q[1]
-        odom.pose.pose.orientation.z = q[2]
-        odom.pose.pose.orientation.w = q[3]
-        odom.twist.twist.linear.x = self.xvel
-        odom.twist.twist.angular.z = self.thetavel
-        self.odompub.publish(odom)
+            self.publishOdometry(False)
 
         self.syncLock.release()
 
