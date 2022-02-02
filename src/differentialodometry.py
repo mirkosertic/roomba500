@@ -178,7 +178,7 @@ class DifferentialOdometry:
         rate = rospy.Rate(pollingRateInHertz)
 
         self.ticksPerCm = float(rospy.get_param('~ticksPerCm', '22.7157014'))
-        self.robotWheelSeparationInCm = float(rospy.get_param('~robotWheelSeparationInCm', '22.86'))  # 32.56 is calculated 22.86
+        self.robotWheelSeparationInCm = float(rospy.get_param('~robotWheelSeparationInCm', '22.86'))  # 32.56 is calculated 22.86 seems to fit well
 
         rospy.loginfo("Configured with ticksPerCm                = %s ", self.ticksPerCm)
         rospy.loginfo("Configured with robotWheelSeparationInCm  = %s ", self.robotWheelSeparationInCm)
@@ -195,7 +195,7 @@ class DifferentialOdometry:
         # Handling for administrative shutdowns
         rospy.Subscriber("shutdown", Int16, self.newShutdownCommand)
 
-        rospy.loginfo('Listening for cmd_vel commands...')
+        rospy.loginfo('Listening for cmd_vel commands and sensor data to create odometry...')
 
         # Processing the sensor polling in an endless loop until this node shuts down
         while not rospy.is_shutdown():

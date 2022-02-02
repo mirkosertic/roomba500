@@ -6,33 +6,23 @@
 #include <termios.h>
 #include <stdexcept>
 #include <sys/ioctl.h>
-#include "robotpose.cpp"
 #include "sensorframe.cpp"
 
 class Roomba500 {
 
     private:
         int fd;
-        bool commandQueued;
-        int queuedLeftWheelAccel;
-        int queuedRightWheelAccel;
 
     public:
-        int fullRotationInSensorTicks;
-        float ticksPerCm;
-        float robotWheelDistanceInCm;
         bool lastBumperRight;
         bool lastBumperLeft;
         bool lastRightWheelDropped;
         bool lastLeftWheelDropped;
-        RobotPose* lastKnownReferencePose;
-        int leftWheelDistance;
-        int rightWheelDistance;
         char mainbrushPWM;
         char sidebrushPWM;
         char vacuumPWM;
 
-    Roomba500(std::string device, int baudrate, int fullRotationInSensorTicks, float ticksPerCm, float robotWheelDistanceInCm) {
+    Roomba500(std::string device, int baudrate) {
         // Open and initialize serial interface
         // Code taken from https://www.cmrr.umn.edu/~strupp/serial.html
         //this->fd = open(device.c_str(), O_RDWR | O_NOCTTY | O_NDELAY);
@@ -70,22 +60,13 @@ class Roomba500 {
         // Configure interface
         tcsetattr(fd, TCSANOW, &options);
 
-        this->fullRotationInSensorTicks = fullRotationInSensorTicks;
-        this->ticksPerCm = ticksPerCm;
-        this->robotWheelDistanceInCm = robotWheelDistanceInCm;
         this->lastBumperRight = false;
         this->lastBumperLeft = false;
         this->lastRightWheelDropped = false;
         this->lastLeftWheelDropped = false;
-        this->lastKnownReferencePose = (RobotPose*) 0;
-        this->leftWheelDistance = 0;
-        this->rightWheelDistance = 0;
         this->mainbrushPWM = 0;
         this->sidebrushPWM = 0;
         this->vacuumPWM = 0;
-        this->commandQueued = false;
-        this->queuedLeftWheelAccel = 0;
-        this->queuedRightWheelAccel = 0;
     }
 
     void safeMode() {
@@ -186,40 +167,6 @@ class Roomba500 {
         sensorFrame.oimode = readData(); // packet 35
 
         return sensorFrame;
-    }
-
-    void resetQueue() {
-        commandQueued = false;
-    }
-
-    void enqueueCommand(int aQueuedLeftWheelAccel, int aQueuedRightWheelAccel) {
-        ROS_INFO("Enqueueing cmd_vel command left = %d, right = %d", aQueuedLeftWheelAccel, queuedRightWheelAccel);
-        commandQueued = true;
-        queuedLeftWheelAccel = aQueuedLeftWheelAccel;
-        queuedRightWheelAccel = aQueuedRightWheelAccel;
-    }
-
-    void dequeueCommand() {
-        if (commandQueued) {
-            ROS_INFO("Dequeueing cmd_vel command left = %d, right = %d", queuedLeftWheelAccel, queuedRightWheelAccel);
-            commandQueued = false;
-            drive(queuedLeftWheelAccel, queuedRightWheelAccel);
-        }
-    }
-
-    int overflowSafeWheelRotation(int rotationDelta) {
-        if (rotationDelta < -16384) {
-            ROS_INFO("Forward rotation with overflow : %d", rotationDelta);
-            // Rotation forward with overflow
-            return rotationDelta + 65536;
-        }
-        if (rotationDelta > 16384) {
-            ROS_INFO("Backward rotation with overflow : %d", rotationDelta);
-            // Rotation backward with overflow
-            return rotationDelta - 65536;
-        }
-
-        return rotationDelta;
     }
 
     ~Roomba500() {
