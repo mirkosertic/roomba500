@@ -135,11 +135,11 @@ class PathManager:
 
     def start(self):
         rospy.init_node('pathmanager', anonymous=True)
-        pollingRateInHertz = int(rospy.get_param('~pollingRateInHertz', '10'))
+        pollingRateInHertz = int(rospy.get_param('~pollingRateInHertz', '1'))
 
         debugimagelocation = rospy.get_param('~debugimagelocation', None)
 
-        rospy.loginfo("Checking system state with %s hertz", pollingRateInHertz)
+        rospy.loginfo("Publishing system state with %s hertz", pollingRateInHertz)
         rate = rospy.Rate(pollingRateInHertz)
 
         # This is our map manager, responsible for
@@ -180,11 +180,11 @@ class PathManager:
         # Processing the sensor polling in an endless loop until this node shuts down
         while not rospy.is_shutdown():
 
-            #self.syncLock.acquire()
+            self.syncLock.acquire()
 
-            #self.systemState = self.systemState.process()
+            self.mapmanager.publishState()
 
-            #self.syncLock.release()
+            self.syncLock.release()
 
             rate.sleep()
 

@@ -265,9 +265,7 @@ class MapManager:
 
         self.latestMap = message
 
-        self.writeDebugOutput()
-
-    def writeDebugOutput(self):
+    def publishState(self):
 
         if self.latestMap is None:
             return
