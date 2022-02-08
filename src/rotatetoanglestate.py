@@ -38,13 +38,13 @@ class RotateToAngleState(BaseState):
 
             shortestAngle = self.shortestAngle(odomyawInDegrees, targetYawInDegrees)
 
-            rospy.logdebug("Current odom yaw %s, target is %s, shortest angle is %s", odomyawInDegrees, targetYawInDegrees, shortestAngle)
+            rospy.loginfo("Current odom yaw %s, target is %s, shortest angle is %s", odomyawInDegrees, targetYawInDegrees, shortestAngle)
 
             self.pathmanager.publishNavigationInfo(distance, shortestAngle)
 
             if abs(shortestAngle) < self.pathmanager.angular_tolerance:
                 # We are coming closer
-                rospy.logdebug("Stopping robot, as deltaToTarget = %s degrees", shortestAngle)
+                rospy.loginfo("Stopping robot, as deltaToTarget = %s degrees", shortestAngle)
 
                 self.pathmanager.driver.stop()
 

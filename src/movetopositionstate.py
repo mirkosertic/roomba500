@@ -30,11 +30,9 @@ class MoveToPositionState(BaseState):
         deltaY = self.targetpositiony - currentPosition.y
         distance = math.sqrt(deltaX * deltaX + deltaY * deltaY)
 
-        rospy.logdebug("DeltaX = %s, DeltaY = %s, Distance = %s", deltaX, deltaY, distance)
-
     def setDriveSpeed(self, targetSpeed, targetAngularMoment):
         if self.driveSpeed != targetSpeed or self.driveAngularMoment != targetAngularMoment:
-            rospy.logdebug("Setting linear velocity = %s, angular velocity = %s", targetSpeed, targetAngularMoment)
+            rospy.loginfo("Setting linear velocity = %s, angular velocity = %s", targetSpeed, targetAngularMoment)
             self.pathmanager.driver.drive(targetSpeed, targetAngularMoment)
             self.driveSpeed = targetSpeed
             self.driveAngularMoment = targetAngularMoment
@@ -51,7 +49,7 @@ class MoveToPositionState(BaseState):
 
             shortestAngle = self.shortestAngle(odomyawInDegrees, degreesToTarget)
 
-            rospy.logdebug("DeltaX = %s, DeltaY = %s, Distance = %s, shortest angle = %s, Odometry angle = %s, Target Angle = %s", deltaX, deltaY, distance, shortestAngle, odomyawInDegrees, degreesToTarget)
+            rospy.loginfo("DeltaX = %s, DeltaY = %s, Distance = %s, shortest angle = %s, Odometry angle = %s, Target Angle = %s", deltaX, deltaY, distance, shortestAngle, odomyawInDegrees, degreesToTarget)
 
             self.pathmanager.publishNavigationInfo(distance, shortestAngle)
 
@@ -60,7 +58,7 @@ class MoveToPositionState(BaseState):
             # or the angle to the target point is equal or more than 90 degrees
             if (distance <= self.pathmanager.linear_tolerance or abs(shortestAngle) >= 90.0):
                 # We are near the right place
-                rospy.logdebug("Stopping, as we can't get nearer to the desired point")
+                rospy.loginfo("Stopping, as we can't get nearer to the desired point")
 
                 self.pathmanager.driver.stop()
                 return self.success()

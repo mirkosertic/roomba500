@@ -50,7 +50,6 @@ class PathManager:
         self.syncLock.acquire()
 
         self.latestOdometry = data
-        self.systemState = self.systemState.process()
 
         self.syncLock.release()
 
@@ -135,11 +134,11 @@ class PathManager:
 
     def start(self):
         rospy.init_node('pathmanager', anonymous=True)
-        pollingRateInHertz = int(rospy.get_param('~pollingRateInHertz', '1'))
+        pollingRateInHertz = int(rospy.get_param('~pollingRateInHertz', '5'))
 
         debugimagelocation = rospy.get_param('~debugimagelocation', None)
 
-        rospy.loginfo("Publishing system state with %s hertz", pollingRateInHertz)
+        rospy.loginfo("Checking system state with %s hertz", pollingRateInHertz)
         rate = rospy.Rate(pollingRateInHertz)
 
         # This is our map manager, responsible for
@@ -181,6 +180,8 @@ class PathManager:
         while not rospy.is_shutdown():
 
             self.syncLock.acquire()
+
+            self.systemState = self.systemState.process()
 
             self.mapmanager.publishState()
 
