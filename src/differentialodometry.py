@@ -172,7 +172,7 @@ class DifferentialOdometry:
 
     def start(self):
         rospy.init_node('differentialodometry', anonymous=True)
-        pollingRateInHertz = int(rospy.get_param('~pollingRateInHertz', '1'))
+        pollingRateInHertz = int(rospy.get_param('~pollingRateInHertz', '20'))
 
         rospy.loginfo("Checking system state with %s hertz", pollingRateInHertz)
         rate = rospy.Rate(pollingRateInHertz)

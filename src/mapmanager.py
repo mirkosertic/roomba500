@@ -349,4 +349,5 @@ class MapManager:
 
         if self.debugImageLocation is not None:
 
-            cv2.imwrite(self.debugImageLocation, image)
+            # cv2.imwrite(self.debugImageLocation, image)
+            pass

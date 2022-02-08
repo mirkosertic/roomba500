@@ -4,6 +4,8 @@ import math
 import rospy
 import threading
 import tf
+import logging
+import traceback
 
 from donothingstate import DoNothingState
 from rotatetoanglestate import RotateToAngleState
@@ -37,8 +39,8 @@ class PathManager:
         self.kB = -1.5
         self.max_linear_speed = 0.2
         self.min_linear_speed = 0.08
-        self.max_angular_speed = 1.0
-        self.min_angular_speed = 0.45
+        self.max_angular_speed = 0.8
+        self.min_angular_speed = 0.3
         self.linear_tolerance = 0.025
 
         self.angular_tolerance = 3.0
@@ -55,53 +57,61 @@ class PathManager:
 
     def newMoveBaseSimpleGoalMessage(self, data):
 
-        rospy.loginfo("Received move_base_simple/goal message : %s", data)
+        try:
+            rospy.loginfo("Received move_base_simple/goal message : %s", data)
 
-        self.syncLock.acquire()
+            self.syncLock.acquire()
 
-        self.systemState.abort()
+            self.systemState.abort()
 
-        odometryInTargetposeFrame = self.latestOdometryTransformedToFrame(data.header.frame_id)
+            odometryInTargetposeFrame = self.latestOdometryTransformedToFrame(data.header.frame_id)
 
-        currentposition = self.mapmanager.nearestNavigationPointTo(odometryInTargetposeFrame.pose.position)
-        targetposition = self.mapmanager.nearestNavigationPointTo(data.pose.position)
+            currentposition = self.mapmanager.nearestNavigationPointTo(odometryInTargetposeFrame.pose.position)
+            targetposition = self.mapmanager.nearestNavigationPointTo(data.pose.position)
 
-        path = self.mapmanager.findPath(currentposition, targetposition)
-        if path is not None and len(path) > 0:
+            rospy.loginfo("Trying to find new path...")
+            path = self.mapmanager.findPath(currentposition, targetposition)
+            if path is not None and len(path) > 0:
+                rospy.loginfo("There is a viable path...")
 
-            # Draw some debug information
-            points = []
-            points.append(currentposition)
-            for pos in path:
-                points.append(pos)
+                # Draw some debug information
+                points = []
+                points.append(currentposition)
+                for pos in path:
+                    points.append(pos)
 
-            self.mapmanager.highlightPath(points)
+                self.mapmanager.highlightPath(points)
 
-            rospy.loginfo("Path to target is : %s", path)
+                rospy.loginfo("Path to target is : %s", path)
 
-            #
-            # Calculate the next waypoint
-            #
-            def goToPositionState(pathmanager, path, position):
-                if position >= len(path):
-                    rospy.loginfo("Reached end of path")
-                    return DoNothingState(self, None, None)
+                #
+                # Calculate the next waypoint
+                #
+                def goToPositionState(pathmanager, path, position):
+                    if position >= len(path):
+                        rospy.loginfo("Reached end of path")
+                        return DoNothingState(self, None, None)
 
-                nextstate = lambda prevstate: goToPositionState(pathmanager, path, position + 1)
-                afterotationstate = lambda prevstate: MoveToPositionState(pathmanager, Point(x, y, 0), data.header.frame_id, nextstate, self.errorLambda)
+                    nextstate = lambda prevstate: goToPositionState(pathmanager, path, position + 1)
+                    afterotationstate = lambda prevstate: MoveToPositionState(pathmanager, Point(x, y, 0), data.header.frame_id, nextstate, self.errorLambda)
 
-                (x, y) = path[position]
-                rospy.loginfo("Going to next waypoint #%s, (%s, %s)", position, x, y)
-                return RotateToAngleState(pathmanager, Point(x, y, 0), data.header.frame_id, afterotationstate, self.errorLambda)
+                    (x, y) = path[position]
+                    rospy.loginfo("Going to next waypoint #%s, (%s, %s)", position, x, y)
+                    return RotateToAngleState(pathmanager, Point(x, y, 0), data.header.frame_id, afterotationstate, self.errorLambda)
 
-            nextstate = lambda prevstate: goToPositionState(self, path, 0)
+                nextstate = lambda prevstate: goToPositionState(self, path, 0)
 
-            # First we orientate in the right direction
-            # This is done by the RotateToAngleState
-            (x, y) = path[0]
-            self.systemState = RotateToAngleState(self, Point(x, y, 0), data.header.frame_id, nextstate, self.errorLambda)
-        else:
-            rospy.loginfo("Cannot follow path, as there is no path or path is too short : %s", str(path))
+                # First we orientate in the right direction
+                # This is done by the RotateToAngleState
+                (x, y) = path[0]
+                self.systemState = RotateToAngleState(self, Point(x, y, 0), data.header.frame_id, nextstate, self.errorLambda)
+            else:
+                rospy.loginfo("Cannot follow path, as there is no path or path is too short : %s", str(path))
+
+        except Exception as e:
+            rospy.logerr('Error saving map : %s', e)
+            logging.error(traceback.format_exc())
+            pass
 
         self.syncLock.release()
 
