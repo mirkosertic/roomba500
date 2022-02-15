@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-import math
 
+import cv2
 import rospy
 import threading
 import tf
@@ -11,13 +11,14 @@ from donothingstate import DoNothingState
 from rotatetoanglestate import RotateToAngleState
 from movetopositionstate import MoveToPositionState
 from driver import Driver
-from mapmanager import MapManager
+from map import NavigationMap, GridCellStatus
 
-from std_msgs.msg import Int16
+from std_msgs.msg import Int16, ColorRGBA
 from nav_msgs.srv import GetMap
 from nav_msgs.msg import Odometry, OccupancyGrid
 from geometry_msgs.msg import Twist, Point, Pose, PoseStamped, Quaternion, Vector3
-from visualization_msgs.msg import MarkerArray
+from visualization_msgs.msg import Marker, MarkerArray
+from tf.transformations import quaternion_from_euler
 
 from roomba500.msg import NavigationInfo
 
@@ -29,10 +30,11 @@ class PathManager:
         self.latestOdometry = None
         self.doNothingLambda = lambda previousState: DoNothingState(self, None, None)
         self.errorLambda = lambda previousState: DoNothingState(self, None, None)
-        self.mapmanager = None
+        self.map = None
         self.driver = None
         self.transformlistener = None
         self.infotopic = None
+        self.markerstopic = None
 
         self.kP = 3.0
         self.kA = 8
@@ -66,21 +68,23 @@ class PathManager:
 
             odometryInTargetposeFrame = self.latestOdometryTransformedToFrame(data.header.frame_id)
 
-            currentposition = self.mapmanager.nearestNavigationPointTo(odometryInTargetposeFrame.pose.position)
-            targetposition = self.mapmanager.nearestNavigationPointTo(data.pose.position)
+            currentposition = self.map.nearestCellCovering(odometryInTargetposeFrame.pose.position)
+            if currentposition is None:
+                rospy.loginfo("Cannot find cell for current position on map. No path finding possible")
+                return
+
+            targetposition = self.map.nearestCellCovering(data.pose.position)
+            if targetposition is None:
+                rospy.loginfo("Cannot find cell for target position on map. No path finding possible")
+                return
 
             rospy.loginfo("Trying to find new path...")
-            path = self.mapmanager.findPath(currentposition, targetposition)
+            path = self.map.findPath(currentposition, targetposition)
             if path is not None and len(path) > 0:
                 rospy.loginfo("There is a viable path...")
 
                 # Draw some debug information
-                points = []
-                points.append(currentposition)
-                for pos in path:
-                    points.append(pos)
-
-                self.mapmanager.highlightPath(points)
+                self.highlightPath(path)
 
                 rospy.loginfo("Path to target is : %s", path)
 
@@ -95,15 +99,19 @@ class PathManager:
                     nextstate = lambda prevstate: goToPositionState(pathmanager, path, position + 1)
                     afterotationstate = lambda prevstate: MoveToPositionState(pathmanager, Point(x, y, 0), data.header.frame_id, nextstate, self.errorLambda)
 
-                    (x, y) = path[position]
+                    x = path[position].centerx
+                    y = path[position].centery
                     rospy.loginfo("Going to next waypoint #%s, (%s, %s)", position, x, y)
                     return RotateToAngleState(pathmanager, Point(x, y, 0), data.header.frame_id, afterotationstate, self.errorLambda)
 
-                nextstate = lambda prevstate: goToPositionState(self, path, 0)
+                # We ignore path index 0 as this is the start position
+                nextstate = lambda prevstate: goToPositionState(self, path, 1)
 
                 # First we orientate in the right direction
                 # This is done by the RotateToAngleState
-                (x, y) = path[0]
+                x = path[1].centerx
+                y = path[1].centery
+
                 self.systemState = RotateToAngleState(self, Point(x, y, 0), data.header.frame_id, nextstate, self.errorLambda)
             else:
                 rospy.loginfo("Cannot follow path, as there is no path or path is too short : %s", str(path))
@@ -142,6 +150,108 @@ class PathManager:
         message.angleToTargetInDegrees = angleToTargetInDegrees
         self.infotopic.publish(message)
 
+    def highlightPath(self, path):
+
+        markers = MarkerArray()
+        quat = quaternion_from_euler(0, 0, 0)
+
+        marker = Marker()
+        marker.header.frame_id = 'map'
+        marker.header.stamp = rospy.Time.now()
+        marker.id = 3
+        marker.type = 4  # Line-strip
+        marker.action = 0
+        marker.scale.x = 0.05
+        marker.pose.position.x = 0
+        marker.pose.position.y = 0
+        marker.pose.position.z = 0.0
+        marker.pose.orientation.x = quat[0]
+        marker.pose.orientation.y = quat[1]
+        marker.pose.orientation.z = quat[2]
+        marker.pose.orientation.w = quat[3]
+        marker.points = []
+        marker.colors = []
+
+        for index, cell in enumerate(path):
+            marker.points.append(Point(cell.centerx, cell.centery, 0.05))
+            marker.colors.append(ColorRGBA(0, 0, 1, 1))
+
+            p = Marker()
+            p.header.frame_id = 'map'
+            p.header.stamp = rospy.Time.now()
+            p.id = 100 + index
+            p.type = 2  # sphere
+            p.action = 0
+            p.scale.x = 0.15
+            p.scale.y = 0.15
+            p.scale.z = 0.15
+            p.pose.position.x = cell.centerx
+            p.pose.position.y = cell.centery
+            p.pose.position.z = 0.0
+            p.pose.orientation.x = quat[0]
+            p.pose.orientation.y = quat[1]
+            p.pose.orientation.z = quat[2]
+            p.pose.orientation.w = quat[3]
+            p.points = []
+            p.colors = []
+            p.color.a = 1
+            p.color.r = 0
+            p.color.g = 0
+            p.color.b = 1
+
+            markers.markers.append(p)
+
+
+        marker.color.a = 1
+        marker.color.r = 0
+        marker.color.g = 0
+        marker.color.b = 1
+
+        markers.markers.append(marker)
+
+        self.markerstopic.publish(markers)
+
+    def publishMapState(self, debugImageLocation):
+        markers = MarkerArray()
+
+        for cell in self.map.cells:
+
+            if cell.status == GridCellStatus.OCCUPIED or cell.status == GridCellStatus.FREE:
+                quat = quaternion_from_euler(0, 0, 0)
+                marker = Marker()
+                marker.header.frame_id = 'map'
+                marker.header.stamp = rospy.Time.now()
+                marker.id = int(cell.centerx * 100000000 + cell.centery * 100)
+                marker.type = 1
+                marker.action = 0
+                marker.scale.x = self.map.scanwidthinmeters
+                marker.scale.y = self.map.scanwidthinmeters
+                marker.scale.z = self.map.scanwidthinmeters
+                marker.pose.position.x = cell.centerx
+                marker.pose.position.y = cell.centery
+                marker.pose.position.z = 0.0
+                marker.pose.orientation.x = quat[0]
+                marker.pose.orientation.y = quat[1]
+                marker.pose.orientation.z = quat[2]
+                marker.pose.orientation.w = quat[3]
+                marker.color.a = 0.25
+
+                if cell.status == GridCellStatus.FREE:
+                    marker.color.r = 0
+                    marker.color.g = 1
+                    marker.color.b = 0
+                elif cell.status == GridCellStatus.OCCUPIED:
+                    marker.color.r = 1
+                    marker.color.g = 0
+                    marker.color.b = 0
+
+                markers.markers.append(marker)
+
+        self.markerstopic.publish(markers)
+
+        image = self.map.toDebugImage()
+        cv2.imwrite(debugImageLocation, image)
+
     def start(self):
         rospy.init_node('pathmanager', anonymous=True)
         pollingRateInHertz = int(rospy.get_param('~pollingRateInHertz', '5'))
@@ -151,10 +261,11 @@ class PathManager:
         rospy.loginfo("Checking system state with %s hertz", pollingRateInHertz)
         rate = rospy.Rate(pollingRateInHertz)
 
-        # This is our map manager, responsible for
-        # navigation, pathfinding and visualization
-        self.mapmanager = MapManager(rospy.Publisher('visualization_marker', MarkerArray, queue_size=10, latch=True), debugimagelocation)
-        rospy.Subscriber("map", OccupancyGrid, self.mapmanager.newMapData)
+        self.markerstopic = rospy.Publisher('visualization_marker', MarkerArray, queue_size=10, latch=True)
+
+        # This is our map responsible for navigation and pathfinding
+        self.map = NavigationMap()
+        rospy.Subscriber("map", OccupancyGrid, self.map.initOrUpdateFromOccupancyGrid)
 
         # And the driver will publish twist commands
         self.driver = Driver(rospy.Publisher('cmd_vel', Twist, queue_size=10))
@@ -184,7 +295,7 @@ class PathManager:
             response = service()
             rospy.loginfo('Ready to rumble!')
 
-            self.mapmanager.newMapData(response.map)
+            self.map.initOrUpdateFromOccupancyGrid(response.map)
 
         # Processing the sensor polling in an endless loop until this node shuts down
         while not rospy.is_shutdown():
@@ -193,7 +304,7 @@ class PathManager:
 
             self.systemState = self.systemState.process()
 
-            self.mapmanager.publishState()
+            self.publishMapState(debugimagelocation)
 
             self.syncLock.release()
 

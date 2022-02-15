@@ -19,7 +19,9 @@ class MoveToPositionState(BaseState):
         self.driveAngularMoment = 0.0
 
         # This is the target movement point
-        self.targetpositionx, self.targetpositiony = pathmanager.mapmanager.nearestNavigationPointTo(targetposition)
+        nearestcell = self.pathmanager.map.nearestCellCovering(targetposition)
+        self.targetpositionx = nearestcell.centerx
+        self.targetpositiony = nearestcell.centery
 
         # Now, we need to get the current position
         odometryInTargetposeFrame = self.pathmanager.latestOdometryTransformedToFrame(targetframeid)

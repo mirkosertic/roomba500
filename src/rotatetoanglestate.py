@@ -27,7 +27,9 @@ class RotateToAngleState(BaseState):
             odomposition, odomyawInDegrees = self.currentOdometryPositionAndOrientation(self.targetFrameId)
 
             # This is the target movement point
-            targetpositionx, targetpositiony = self.pathmanager.mapmanager.nearestNavigationPointTo(self.targetPosition)
+            nearestcell = self.pathmanager.map.nearestCellCovering(self.targetPosition)
+            targetpositionx = nearestcell.centerx
+            targetpositiony = nearestcell.centery
 
             deltaX = targetpositionx - odomposition.x
             deltaY = targetpositiony - odomposition.y
