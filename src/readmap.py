@@ -60,7 +60,8 @@ class ReadMap:
         else:
             target = self.navigationmap.nearestCellCovering(message.pose.position)
             if target is not None:
-                path = self.navigationmap.findPath(self.currentposition, target)
+                #path = self.navigationmap.findPath(self.currentposition, target)
+                path = self.navigationmap.startCoverageBoustrophedon(target)
 
                 m1 = Marker()
                 m1.header.frame_id = 'map'
