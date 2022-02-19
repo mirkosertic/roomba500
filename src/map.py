@@ -24,9 +24,13 @@ class BoustrophedonSpan:
     def __init__(self, start):
         self.cells = []
         self.cells.append(start)
+        self.neighbors = []
 
     def append(self, cell):
         self.cells.append(cell)
+
+    def appendNeighbors(self, list):
+        self.neighbors.extend(list)
 
 class MapGridCell:
 
@@ -95,7 +99,7 @@ class MapGridCell:
 class NavigationMap:
 
     def __init__(self):
-        self.gridcellwidthinmeters = 0.34
+        self.gridcellwidthinmeters = 0.20
         self.scanwidthinmeters = 0.34
         self.occupancythreshold = 0.65
         self.cells = []
@@ -220,10 +224,9 @@ class NavigationMap:
         def isFreeCell(cell):
             return cell is not None and cell.status == GridCellStatus.FREE
 
-        spanstocover = []
-
         def scanVertical(cell):
             # Search the top cell
+            foundspans = []
             start = current
             while start.top is not None:
                 start = start.top
@@ -233,7 +236,7 @@ class NavigationMap:
                 if isFreeCell(start):
                     if currentspan is None:
                         currentspan = BoustrophedonSpan(start)
-                        spanstocover.append(currentspan)
+                        foundspans.append(currentspan)
                     else:
                         currentspan.append(start)
                 else:
@@ -241,19 +244,37 @@ class NavigationMap:
 
                 start = start.bottom
 
-            pass
+            return foundspans
+
+        spanstocover = []
 
         # Scan to the right
         current = src
+        initialspans = None
+        prevspans = None
+
         while current.right is not None:
-            scanVertical(current)
+            foundspans = scanVertical(current)
+            spanstocover.extend(foundspans)
+            if initialspans is None:
+                initialspans = foundspans
+
+            # TODO: Register neighbors in a bidirectional way
+
+            prevspans = foundspans
             current = current.right
 
         # Scan to the left
+        prevspans = initialspans
         current = src.left
         while current is not None and current.left is not None:
-            scanVertical(current)
+            foundspans = scanVertical(current)
+
+            # TODO: Register neighbors in a bidirectional way
+
+            spanstocover.extend(foundspans)
             current = current.left
+            prevspans = foundspans
 
 
         path = []
@@ -279,8 +300,10 @@ class NavigationMap:
 
             # Find the next possible span
             current = path[len(path) - 1]
+
             currentspan = None
             nearestdistance = .0
+            nearestpath = None
             for span in spanstocover:
                 possiblepath = self.findPath(current, span.cells[0])
                 if possiblepath is None:
@@ -291,6 +314,7 @@ class NavigationMap:
                     if currentspan is None or d < nearestdistance:
                         currentspan = span
                         nearestdistance = d
+                        nearestpath = possiblepath
 
                 if possiblepath is not None:
                     possiblepath = self.findPath(current, span.cells[len(span.cells) - 1])
@@ -299,20 +323,25 @@ class NavigationMap:
                         if currentspan is None or d < nearestdistance:
                             currentspan = span
                             nearestdistance = d
+                            nearestpath = possiblepath
 
             if currentspan is None:
                 if len(spanstocover) == 0:
                     rospy.loginfo("Path seems to be complete")
-                    return path
+                    return self.compress(path)
 
                 rospy.loginfo("Cannot find nearest span")
-                return path
+                return self.compress(path)
 
             distanceTop = current.distanceTo(currentspan.cells[0])
             distanceBottom = current.distanceTo(currentspan.cells[len(currentspan.cells) - 1])
             downmovement = distanceTop < distanceBottom
 
-        return path
+            for index, cell in enumerate(nearestpath):
+                if index > 0 and index < len(nearestpath) - 1:
+                    path.append(cell)
+
+        pass
 
     def startCoverageBSAAt(self, src):
         # Coverage implementation based on Backtracking spiral algorithm
@@ -377,11 +406,31 @@ class NavigationMap:
 
             if not isFreeCell(nextCell):
                 rospy.loginfo("Stuck at cell!")
-                return path
+                return self.compress(path)
 
             currentCell = nextCell
 
-        return path
+        pass
+
+    def compress(self, path):
+        result = []
+        for i, cell in enumerate(path):
+            if i == 0 or i == len(path) - 1:
+                # We have to keep the first and the last point of the path
+                result.append(cell)
+            else:
+                # We check the trajectory from the previous point to the current
+                prevCell = path[i - 1]
+                currCell = cell
+                nextCell = path[i + 1]
+
+                tprev = math.atan2(currCell.centery - prevCell.centery, currCell.centerx - prevCell.centerx)
+                tnext = math.atan2(nextCell.centery - currCell.centery, nextCell.centerx - currCell.centerx)
+
+                if abs(tnext - tprev) > math.pi / 8:  # Change greater than 22.5 degrees
+                    result.append(cell)
+
+        return result
 
     def findPath(self, src, target):
 
@@ -393,26 +442,6 @@ class NavigationMap:
         cost_so_far = {}
         came_from[src] = None
         cost_so_far[src] = 0
-
-        def compress(path):
-            result = []
-            for i, cell in enumerate(path):
-                if i == 0 or i == len(path) - 1:
-                    # We have to keep the first and the last point of the path
-                    result.append(cell)
-                else:
-                    # We check the trajectory from the previous point to the current
-                    prevCell = path[i - 1]
-                    currCell = cell
-                    nextCell = path[i + 1]
-
-                    tprev = math.atan2(currCell.centery - prevCell.centery, currCell.centerx - prevCell.centerx)
-                    tnext = math.atan2(nextCell.centery - currCell.centery, nextCell.centerx - currCell.centerx)
-
-                    if abs(tnext - tprev) > math.pi / 8:  # Change greater than 22.5 degrees
-                        result.append(cell)
-
-            return result
 
         def heuristicscore(src, target):
             dx = target.centerx - src.centerx
@@ -458,7 +487,7 @@ class NavigationMap:
                 completePath.append(src)
                 completePath.reverse()
 
-                return compress(completePath)
+                return self.compress(completePath)
 
             for nextCell in adjecentcellsfor(currentcell):
                 new_cost = cost_so_far[currentcell] + heuristicscore(currentcell, nextCell)
