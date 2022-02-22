@@ -21,6 +21,7 @@ from visualization_msgs.msg import Marker, MarkerArray
 from tf.transformations import quaternion_from_euler
 
 from roomba500.msg import NavigationInfo
+from roomba500.srv import Clean, CleanResponse, Cancel, CancelResponse
 
 class PathManager:
 
@@ -97,6 +98,7 @@ class PathManager:
                         return DoNothingState(self, None, None)
 
                     nextstate = lambda prevstate: goToPositionState(pathmanager, path, position + 1)
+
                     afterotationstate = lambda prevstate: MoveToPositionState(pathmanager, Point(x, y, 0), data.header.frame_id, nextstate, self.errorLambda)
 
                     x = path[position].centerx
@@ -125,13 +127,41 @@ class PathManager:
 
     def newShutdownCommand(self, data):
 
-        rospy.logdebug("Received shutdown command")
+        rospy.loginfo("Received shutdown command")
 
         self.syncLock.acquire()
 
         rospy.signal_shutdown('Shutdown requested')
 
         self.syncLock.release()
+
+    def clean(self, req):
+        rospy.loginfo("Received clean command")
+
+        self.syncLock.acquire()
+
+        odometryInTargetposeFrame = self.latestOdometryTransformedToFrame("map")
+        currentposition = self.map.nearestCellCovering(odometryInTargetposeFrame.pose.position)
+        if currentposition is not None:
+            rospy.loginfo("Calculating full coverage path...")
+            path = self.map.startCoverageBoustrophedon(currentposition)
+            rospy.loginfo("Calculation finished")
+            self.highlightPath(path)
+
+        self.syncLock.release()
+
+        return CleanResponse(0)
+
+    def cancel(self, req):
+        rospy.loginfo("Received cancel command")
+
+        self.syncLock.acquire()
+
+        self.systemState = DoNothingState(self, None, None)
+
+        self.syncLock.release()
+
+        return CleanResponse(0)
 
     def latestOdometryTransformedToFrame(self, targetframe):
 
@@ -296,6 +326,10 @@ class PathManager:
             rospy.loginfo('Ready to rumble!')
 
             self.map.initOrUpdateFromOccupancyGrid(response.map)
+
+        # Register services
+        rospy.Service("clean", Clean, self.clean)
+        rospy.Service("cancel", Cancel, self.cancel)
 
         # Processing the sensor polling in an endless loop until this node shuts down
         while not rospy.is_shutdown():

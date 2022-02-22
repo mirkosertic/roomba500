@@ -23,15 +23,6 @@ class MoveToPositionState(BaseState):
         self.targetpositionx = nearestcell.centerx
         self.targetpositiony = nearestcell.centery
 
-        # Now, we need to get the current position
-        odometryInTargetposeFrame = self.pathmanager.latestOdometryTransformedToFrame(targetframeid)
-        currentPosition = odometryInTargetposeFrame.pose.position
-
-        # We calculate the distance to the target position
-        deltaX = self.targetpositionx - currentPosition.x
-        deltaY = self.targetpositiony - currentPosition.y
-        distance = math.sqrt(deltaX * deltaX + deltaY * deltaY)
-
     def setDriveSpeed(self, targetSpeed, targetAngularMoment):
         if self.driveSpeed != targetSpeed or self.driveAngularMoment != targetAngularMoment:
             rospy.loginfo("Setting linear velocity = %s, angular velocity = %s", targetSpeed, targetAngularMoment)

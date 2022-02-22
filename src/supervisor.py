@@ -31,8 +31,8 @@ from luma.emulator.device import pygame
 from luma.oled.device import ssd1306
 from PIL import ImageFont
 
-from roomba500.msg import RoombaSensorFrame
-from roomba500.msg import NavigationInfo
+from roomba500.msg import RoombaSensorFrame, NavigationInfo
+from roomba500.srv import Clean, CleanResponse
 
 class Supervisor:
 
@@ -180,6 +180,36 @@ class Supervisor:
 
         return make_response(jsonify(data), 200)
 
+    def clean(self):
+
+        data = {
+        }
+
+        servicename = 'clean'
+        rospy.loginfo('Waiting for service %s', servicename)
+        rospy.wait_for_service(servicename)
+        rospy.loginfo('Invoking service')
+        service = rospy.ServiceProxy(servicename, Clean)
+        response = service()
+        rospy.loginfo('Service called!')
+
+        return make_response(jsonify(data), 200)
+
+    def cancel(self):
+
+        data = {
+        }
+
+        servicename = 'cancel'
+        rospy.loginfo('Waiting for service %s', servicename)
+        rospy.wait_for_service(servicename)
+        rospy.loginfo('Invoking service')
+        service = rospy.ServiceProxy(servicename, Clean)
+        response = service()
+        rospy.loginfo('Service called!')
+
+        return make_response(jsonify(data), 200)
+
     def updateDisplay(self):
         device = self.displaydevice
         state = self.state.gathersystemstate()
@@ -276,6 +306,8 @@ class Supervisor:
         self.app.add_url_rule('/actions/stop', view_func=self.stop)
         self.app.add_url_rule('/actions/backward', view_func=self.backward)
         self.app.add_url_rule('/actions/relocalization', view_func=self.relocalization)
+        self.app.add_url_rule('/actions/clean', view_func=self.clean)
+        self.app.add_url_rule('/actions/cancel', view_func=self.cancel)
 
         wsThread = threading.Thread(target=self.startWebServer)
         wsThread.start()

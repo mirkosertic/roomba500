@@ -52,7 +52,7 @@ class RotateToAngleState(BaseState):
 
                 return self.success()
 
-            (vel_x, vel_theta) = self.compute_velocity((odomposition.x, odomposition.y, odomyawInDegrees * math.pi / 180), (targetpositionx, targetpositiony, targetYawInDegrees * math.pi / 180))
+            (vel_x, vel_theta) = self.compute_velocity((odomposition.x, odomposition.y, odomyawInDegrees * math.pi / 180), (odomposition.x, odomposition.y, targetYawInDegrees * math.pi / 180))
             self.setRotationSpeed(vel_theta)
 
         except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
