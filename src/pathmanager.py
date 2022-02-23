@@ -83,38 +83,7 @@ class PathManager:
             path = self.map.findPath(currentposition, targetposition)
             if path is not None and len(path) > 0:
                 rospy.loginfo("There is a viable path...")
-
-                # Draw some debug information
-                self.highlightPath(path)
-
-                rospy.loginfo("Path to target is : %s", path)
-
-                #
-                # Calculate the next waypoint
-                #
-                def goToPositionState(pathmanager, path, position):
-                    if position >= len(path):
-                        rospy.loginfo("Reached end of path")
-                        return DoNothingState(self, None, None)
-
-                    nextstate = lambda prevstate: goToPositionState(pathmanager, path, position + 1)
-
-                    afterotationstate = lambda prevstate: MoveToPositionState(pathmanager, Point(x, y, 0), data.header.frame_id, nextstate, self.errorLambda)
-
-                    x = path[position].centerx
-                    y = path[position].centery
-                    rospy.loginfo("Going to next waypoint #%s, (%s, %s)", position, x, y)
-                    return RotateToAngleState(pathmanager, Point(x, y, 0), data.header.frame_id, afterotationstate, self.errorLambda)
-
-                # We ignore path index 0 as this is the start position
-                nextstate = lambda prevstate: goToPositionState(self, path, 1)
-
-                # First we orientate in the right direction
-                # This is done by the RotateToAngleState
-                x = path[1].centerx
-                y = path[1].centery
-
-                self.systemState = RotateToAngleState(self, Point(x, y, 0), data.header.frame_id, nextstate, self.errorLambda)
+                self.followPath(path, data.header.frame_id)
             else:
                 rospy.loginfo("Cannot follow path, as there is no path or path is too short : %s", str(path))
 
@@ -124,6 +93,40 @@ class PathManager:
             pass
 
         self.syncLock.release()
+
+    def followPath(self, path, frameid):
+
+        # Draw some debug information
+        self.highlightPath(path)
+
+        rospy.loginfo("Path to target is : %s", path)
+
+        #
+        # Calculate the next waypoint
+        #
+        def goToPositionState(pathmanager, path, position):
+            if position >= len(path):
+                rospy.loginfo("Reached end of path")
+                return DoNothingState(self, None, None)
+
+            nextstate = lambda prevstate: goToPositionState(pathmanager, path, position + 1)
+
+            afterotationstate = lambda prevstate: MoveToPositionState(pathmanager, Point(x, y, 0), frameid, nextstate, self.errorLambda)
+
+            x = path[position].centerx
+            y = path[position].centery
+            rospy.loginfo("Going to next waypoint #%s, (%s, %s)", position, x, y)
+            return RotateToAngleState(pathmanager, Point(x, y, 0), frameid, afterotationstate, self.errorLambda)
+
+        # We ignore path index 0 as this is the start position
+        nextstate = lambda prevstate: goToPositionState(self, path, 1)
+
+        # First we orientate in the right direction
+        # This is done by the RotateToAngleState
+        x = path[1].centerx
+        y = path[1].centery
+
+        self.systemState = RotateToAngleState(self, Point(x, y, 0), frameid, nextstate, self.errorLambda)
 
     def newShutdownCommand(self, data):
 
@@ -140,13 +143,14 @@ class PathManager:
 
         self.syncLock.acquire()
 
-        odometryInTargetposeFrame = self.latestOdometryTransformedToFrame("map")
+        odometryInTargetposeFrame = self.latestOdometryTransformedToFrame('map')
         currentposition = self.map.nearestCellCovering(odometryInTargetposeFrame.pose.position)
         if currentposition is not None:
             rospy.loginfo("Calculating full coverage path...")
             path = self.map.startCoverageBoustrophedon(currentposition)
             rospy.loginfo("Calculation finished")
-            self.highlightPath(path)
+            if path is not None:
+                self.followPath(path, 'map')
 
         self.syncLock.release()
 

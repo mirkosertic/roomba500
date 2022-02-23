@@ -14,3 +14,4 @@ class DoNothingState(BaseState):
 
     def process(self):
         self.pathmanager.publishNavigationInfo(.0, .0)
+        return self

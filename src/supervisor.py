@@ -219,6 +219,7 @@ class Supervisor:
             if state['awake']:
                 device.contrast(255)
                 draw.text((3, 11), 'Bat: ' + str(state['batteryCharge']) + '/' + str(state['batteryCapacity']) + ' mAH', fill='white', font=self.font8)
+                draw.text((3, 22), 'Dist: ' + "{:.2f}".format(state['distanceToTargetInMeters']) + ' m / ' + "{:.2f}".format(state['angleToTargetInDegrees']) + ' deg', fill='white', font=self.font8)
             else:
                 device.contrast(128)
                 draw.text((3, 11), 'Sleeping...', fill='white', font=self.font8)
