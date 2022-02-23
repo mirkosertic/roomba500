@@ -11,3 +11,6 @@ class DoNothingState(BaseState):
 
         rospy.loginfo("Current State : DoNothingState")
         pathmanager.driver.stop()
+
+    def process(self):
+        self.pathmanager.publishNavigationInfo(.0, .0)
