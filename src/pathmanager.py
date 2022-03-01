@@ -23,6 +23,7 @@ from tf.transformations import quaternion_from_euler
 from roomba500.msg import NavigationInfo
 from roomba500.srv import Clean, CleanResponse, Cancel, CancelResponse
 
+
 class PathManager:
 
     def __init__(self):
@@ -349,6 +350,7 @@ class PathManager:
             rate.sleep()
 
         rospy.loginfo('Pathmanager terminated.')
+
 
 if __name__ == '__main__':
     try:

@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 
 import threading
+import os
 
 import tf
 
 from geometry_msgs.msg import PoseStamped
 from tf.transformations import euler_from_quaternion
 
+
 class SupervisorState:
 
-    def __init__(self, transformlistener, mapframe):
+    def __init__(self, transformlistener, mapframe, roomsdirectory):
         self.syncLock = threading.Lock()
         self.robotnode = None
         self.latestbatterycharge = None
@@ -40,6 +42,8 @@ class SupervisorState:
         self.lastcommandedveltheta = .0
         self.odomvelx = .0
         self.odomveltheta = .0
+
+        self.roomsdirectory = roomsdirectory
 
     def newSensorFrame(self, message):
         self.syncLock.acquire()
@@ -104,6 +108,9 @@ class SupervisorState:
         self.syncLock.release()
 
     def gathersystemstate(self):
+
+        knownrooms = next(os.walk(self.roomsdirectory))[1]
+
         data = {
             'awake': self.robotnode is not None,
             'batteryCapacity': self.latestbatterycapacity,
@@ -127,5 +134,6 @@ class SupervisorState:
             'odomveltheta': self.odomveltheta,
             'distanceToTargetInMeters': self.distanceToTargetInMeters,
             'angleToTargetInDegrees': self.angleToTargetInDegrees,
+            'rooms': knownrooms
         }
         return data

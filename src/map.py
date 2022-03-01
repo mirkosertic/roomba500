@@ -8,16 +8,19 @@ import numpy as np
 
 from priorityqueue import PriorityQueue
 
+
 class GridCellStatus(enum.Enum):
     UNKNOWN = 1
     OCCUPIED = 2
     FREE = 3
+
 
 class GridMovementDirection(enum.Enum):
     RIGHT = 1
     TOP = 2
     LEFT = 3
     BOTTOM = 4
+
 
 class BoustrophedonSpan:
 
@@ -31,6 +34,7 @@ class BoustrophedonSpan:
 
     def appendNeighbors(self, list):
         self.neighbors.extend(list)
+
 
 class MapGridCell:
 
@@ -95,6 +99,7 @@ class MapGridCell:
             return
 
         self.status = GridCellStatus.FREE
+
 
 class NavigationMap:
 
@@ -276,7 +281,6 @@ class NavigationMap:
             current = current.left
             prevspans = foundspans
 
-
         path = []
 
         currentspan = None
@@ -289,7 +293,7 @@ class NavigationMap:
 
         while len(spanstocover) > 0:
 
-            rospy.loginfo("Spans to cover %s",len(spanstocover))
+            rospy.loginfo("Spans to cover %s", len(spanstocover))
 
             if downmovement:
                 path.extend(currentspan.cells)
@@ -384,7 +388,6 @@ class NavigationMap:
                     if isFreeCell(currentCell.bottom):
                         currentDirection = GridMovementDirection.BOTTOM
 
-
             elif currentDirection == GridMovementDirection.BOTTOM:
                 if isFreeCell(currentCell.left) and not isFreeCell(currentCell.topleft):
                     currentDirection = GridMovementDirection.LEFT
@@ -453,7 +456,7 @@ class NavigationMap:
             cells = []
 
             def freeCell(cell):
-                return cell is not None and  cell.status == GridCellStatus.FREE
+                return cell is not None and cell.status == GridCellStatus.FREE
 
             if freeCell(src.top):
                 cells.append(src.top)

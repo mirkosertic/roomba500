@@ -6,6 +6,7 @@ import tf
 
 from basestate import BaseState
 
+
 class MoveToPositionState(BaseState):
 
     def __init__(self, pathmanager, targetposition, targetframeid, successLambda, errorLambda):

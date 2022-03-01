@@ -14,6 +14,7 @@ from tf.transformations import quaternion_from_euler
 
 from map import GridCellStatus, NavigationMap
 
+
 class ReadMap:
 
     def __init__(self):
@@ -158,7 +159,6 @@ class ReadMap:
                         p.color.b = 1
 
                         markers.markers.append(p)
-
 
                     marker.color.a = 1
                     marker.color.r = 0

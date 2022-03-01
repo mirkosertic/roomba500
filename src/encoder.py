@@ -6,6 +6,11 @@ class Encoder:
         self.setRange(-32768, 32767)
         self.initCount(0)
         self.isReversed = False
+        self.range = None
+        self.lowThresh = None
+        self.highThresh = None
+        self.delta = None
+        self.last = None
 
     def setRange(self, low, high):
         self.range = high - low + 1

@@ -10,6 +10,7 @@ import socket
 import fcntl
 import struct
 import time
+import shutil
 
 import tf
 import roslaunch
@@ -34,6 +35,7 @@ from PIL import ImageFont
 from roomba500.msg import RoombaSensorFrame, NavigationInfo
 from roomba500.srv import Clean, CleanResponse
 
+
 class Supervisor:
 
     def __init__(self):
@@ -42,7 +44,7 @@ class Supervisor:
         self.wsport = None
         self.wsinterface = None
         self.nodelaunchfile = None
-        self.mapname = 'map01'
+        self.roomname = 'map01'
 
         self.state = None
 
@@ -57,6 +59,8 @@ class Supervisor:
         self.forwardspeed = .2
         self.rotationspeed = .6 # 0.4 is bare minimum
 
+        self.roomsdirectory = None
+
     def startWebServer(self):
         rospy.loginfo('Starting supervisor at %s:%s', self.wsinterface, self.wsport)
         self.app.run(host=self.wsinterface, port=self.wsport)
@@ -64,15 +68,20 @@ class Supervisor:
     def deliverStart(self):
         return make_response(render_template('index.html'), 200)
 
-    def wakeup(self):
+    def startnewroom(self):
         self.state.syncLock.acquire()
+
+        self.roomname = str(round(time.time() * 1000))
+
+        mapfile = str(pathlib.Path(self.roomsdirectory).joinpath(self.roomname))
+        os.mkdir(mapfile)
 
         self.driver.stop()
 
         data = {
         }
 
-        rospy.loginfo('Request to wakeup')
+        rospy.loginfo('Request to wakeup in new room %s', self.roomname)
         self.processwakeup = True
 
         self.state.syncLock.release()
@@ -210,6 +219,37 @@ class Supervisor:
 
         return make_response(jsonify(data), 200)
 
+    def deleteroom(self, room):
+
+        rospy.loginfo('Deleting room %s', room)
+
+        self.state.syncLock.acquire()
+
+        directory = str(pathlib.Path(self.roomsdirectory).joinpath(room))
+        shutil.rmtree(directory)
+
+        data = {
+        }
+
+        self.state.syncLock.release()
+        return make_response(jsonify(data), 200)
+
+    def startroom(self, room):
+
+        rospy.loginfo('Starting room %s', room)
+        self.state.syncLock.acquire()
+
+        self.driver.stop()
+
+        data = {
+        }
+
+        self.processwakeup = True
+        self.roomname = room
+
+        self.state.syncLock.release()
+        return make_response(jsonify(data), 200)
+
     def updateDisplay(self):
         device = self.displaydevice
         state = self.state.gathersystemstate()
@@ -243,10 +283,11 @@ class Supervisor:
 
     def savestateformap(self):
         try:
-            filename = str(pathlib.Path(__file__).parent.resolve().parent.joinpath('maps', self.mapname))
-            rospy.loginfo('Saving map %s to file %s...', self.mapname, filename)
+            mapfile = str(pathlib.Path(self.roomsdirectory).joinpath(self.roomname, 'map'))
 
-            node = roslaunch.core.Node('map_server', 'map_saver', args='-f ' + filename)
+            rospy.loginfo('Saving map %s to file %s...', self.roomname, mapfile)
+
+            node = roslaunch.core.Node('map_server', 'map_saver', args='-f ' + mapfile)
             launch = roslaunch.scriptapi.ROSLaunch()
             launch.start()
             rospy.loginfo('Launching save process and waiting to finish')
@@ -254,7 +295,7 @@ class Supervisor:
             time.sleep(5)
             process.stop()
 
-            latestposfilename = str(pathlib.Path(__file__).parent.resolve().parent.joinpath('maps', self.mapname + '.position'))
+            latestposfilename = str(pathlib.Path(self.roomsdirectory).joinpath(self.roomname, 'latest.position'))
             rospy.loginfo('Saving latest position to %s', latestposfilename)
             handle = open(latestposfilename, 'w')
             handle.write('{:.6f}'.format(self.state.latestpositiononmap.x) + '\n')
@@ -285,8 +326,11 @@ class Supervisor:
         rospy.loginfo('Checking system state with %s hertz', pollingRateInHertz)
         rate = rospy.Rate(pollingRateInHertz)
 
+        self.roomsdirectory = str(pathlib.Path(__file__).parent.resolve().parent.joinpath('rooms'))
+        rospy.loginfo('Using %s as the rooms directory', self.roomsdirectory)
+
         self.mapframe = rospy.get_param('~mapframe', 'map')
-        self.state = SupervisorState(tf.TransformListener(), self.mapframe)
+        self.state = SupervisorState(tf.TransformListener(), self.mapframe, self.roomsdirectory)
 
         self.driver = Driver(rospy.Publisher('cmd_vel', Twist, queue_size=10))
 
@@ -297,7 +341,7 @@ class Supervisor:
 
         self.app.add_url_rule('/systemstate.json', view_func=self.systemstate)
 
-        self.app.add_url_rule('/actions/wakeup', view_func=self.wakeup)
+        self.app.add_url_rule('/actions/startnewroom', view_func=self.startnewroom)
         self.app.add_url_rule('/actions/shutdown', view_func=self.shutdown)
         self.app.add_url_rule('/actions/turnleft', view_func=self.turnleft)
         self.app.add_url_rule('/actions/turnright', view_func=self.turnright)
@@ -309,6 +353,8 @@ class Supervisor:
         self.app.add_url_rule('/actions/relocalization', view_func=self.relocalization)
         self.app.add_url_rule('/actions/clean', view_func=self.clean)
         self.app.add_url_rule('/actions/cancel', view_func=self.cancel)
+        self.app.add_url_rule('/actions/room/<room>/delete', view_func=self.deleteroom)
+        self.app.add_url_rule('/actions/room/<room>/start', view_func=self.startroom)
 
         wsThread = threading.Thread(target=self.startWebServer)
         wsThread.start()
@@ -348,7 +394,8 @@ class Supervisor:
                 try:
                     rospy.loginfo('Starting new node with launch file %s', self.nodelaunchfile)
 
-                    latestposfilename = str(pathlib.Path(__file__).parent.resolve().parent.joinpath('maps', self.mapname + '.position'))
+                    latestposfilename = str(pathlib.Path(self.roomsdirectory).joinpath(self.roomname, 'latest.position'))
+
                     arguments = []
                     if os.path.exists(latestposfilename):
                         rospy.loginfo('Loading latest position from %s', latestposfilename)
@@ -360,20 +407,29 @@ class Supervisor:
 
                         rospy.loginfo('Latest position is x=%s, y=%s, yaw=%s', x, y, yaw)
 
+                        mapfile = str(pathlib.Path(self.roomsdirectory).joinpath(self.roomname, 'map.yaml'))
+                        rospy.loginfo('Using map file %s', mapfile)
+
                         arguments.append('initialx:=' + str(x))
                         arguments.append('initialy:=' + str(y))
                         arguments.append('initialyaw:=' + str(yaw))
                         arguments.append('loadmap:=true')
                         arguments.append('createmap:=false')
-                        arguments.append('mapfile:=' + str(pathlib.Path(__file__).parent.resolve().parent.joinpath('maps', self.mapname + '.yaml')))
+                        arguments.append('mapfile:=' + mapfile)
 
                         self.state.amclmode = True
                     else:
-                        rospy.loginfo('Using a new map which will be stored as %s', self.mapname)
+                        rospy.loginfo('Using a new map which will be stored as %s', self.roomname)
                         arguments.append('loadmap:=false')
                         arguments.append('createmap:=true')
 
                         self.state.amclmode = False
+
+                    roombalog = str(pathlib.Path(self.roomsdirectory).joinpath(self.roomname, 'roombalog.txt'))
+                    arguments.append('roombalog:=' + roombalog)
+
+                    debugimage = str(pathlib.Path(self.roomsdirectory).joinpath(self.roomname, 'debug.png'))
+                    arguments.append('debugimagelocation:=' + debugimage)
 
                     rospy.loginfo('Launching with arguments %s', str(arguments))
                     uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
@@ -406,9 +462,8 @@ class Supervisor:
 
                 self.processshutdown = False
                 self.state.robotnode = None
-                self.latestbatterycapacity = None
-                self.latestbatterycharge = None
-
+                self.state.latestbatterycapacity = None
+                self.state.latestbatterycharge = None
 
             self.state.syncLock.release()
             rate.sleep()
@@ -419,6 +474,7 @@ class Supervisor:
         rospy.loginfo('Suicide to stop all services')
 
         os.kill(os.getpid(), signal.SIGKILL)
+
 
 if __name__ == '__main__':
     try:

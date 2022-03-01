@@ -71,7 +71,7 @@
                 visibility: hidden;
                 grid-template-columns: auto auto auto auto auto auto;
                 grid-template-rows: auto 1rem auto auto;
-                gap: 0px 0px;
+                gap: 0 0;
                 grid-template-areas:
     ". bumperLeft . . bumperRight ."
     "lightFrontLeft . lightCenterLeft lightCenterRight . lightFrontRight"
@@ -156,14 +156,38 @@
                 align-self: center;
             }
 
+            #roomcontainer {
+                padding-left: 0.1rem;
+                padding-top: 0.1rem;
+                padding-bottom: 1rem;
+            }
 
+            #roomcontainer {
+                display: block;
+            }
+
+            #roomlist span {
+                display: block;
+                padding-top: 0.1rem;
+                padding-bottom: 0.1rem;
+            }
+
+            #roomlist .caption {
+                padding-right: 1rem;
+            }
         </style>
     </head>
     <body>
         <h1>Roomba Remote</h1>
 
+        <div id='roomcontainer'>
+            <h2>Start robot in room:</h2>
+            <div id='roomlist'>
+            </div>
+        </div>
+
         <div class='controlcontainer'>
-            <input class='wakeupbutton' id='wakeupbutton' type='submit' value='Wakeup'/>
+            <input class='wakeupbutton' id='wakeupbutton' type='submit' value='Start in new Room'/>
             <input class='shutdownbutton' id='shutdownbutton' type='submit' value='Shutdown'/>
             <input class='leftbutton' id='leftbutton' type='submit' value='Turn Left'/>
             <input class='stopbutton' id='stopbutton' type='submit' value='Stop'/>
@@ -191,6 +215,9 @@
         </div>
 
         <script>
+            let roomcontainer = document.getElementById('roomcontainer');
+            let roomlist = document.getElementById('roomlist');
+
             let sensorcontainer = document.getElementById('sensorcontainer');
 
             let wakeupButton = document.getElementById('wakeupbutton');
@@ -215,7 +242,6 @@
             let distancetotarget = document.getElementById('distancetotarget');
             let angletotarget = document.getElementById('angletotarget');
 
-
             let bumperleft = document.getElementById('bumperleft');
             let bumperright = document.getElementById('bumperright');
             let lightsensorLeft = document.getElementById('lightsensorLeft');
@@ -233,23 +259,33 @@
 
             function updateStopwatch() {
                 if (uistate.starttime > 0) {
-                    delta = Date.now() - uistate.starttime;
+                    let delta = Date.now() - uistate.starttime;
                     stopwatch.innerText = '' + delta;
                 }
             }
 
             function percentage(real, expected) {
-                if (expected == 0.0) {
+                if (expected === 0.0) {
                     return '-';
                 }
-                if (real == 0.0) {
+                if (real === 0.0) {
                     return ' Err '
                 }
                 return (real / expected * 100).toFixed(1) + ' %';
             }
 
+            function loadRoom(roomName) {
+                fetch('/actions/room/' + roomName + '/start').then(response => fetchState());
+            }
+
+            function deleteRoom(roomName) {
+                fetch('/actions/room/' + roomName + '/delete').then(response => fetchState());
+            }
+
             function updateUI(data) {
+                roomlist.textContent = '';
                 if (data.awake) {
+                    roomcontainer.style.display = 'none';
                     sensorcontainer.style.visibility = 'visible';
 
                     batteryCharge.innerText = '' + data.batteryCharge;
@@ -289,6 +325,27 @@
                     updateStopwatch()
 
                 } else {
+                    for (let r of data.rooms) {
+                        let l = document.createElement("span");
+
+                        let cap = document.createElement("a");
+                        cap.classList.add('caption');
+                        cap.innerText = r;
+                        cap.onclick = function(event) {
+                            loadRoom(r);
+                        };
+                        l.append(cap);
+
+                        let action = document.createElement("a");
+                        action.classList.add('delete');
+                        action.innerText = 'Delete';
+                        action.onclick = function(event) {
+                            deleteRoom(r);
+                        };
+                        l.append(action);
+
+                        roomlist.appendChild(l);
+                    }
                     sensorcontainer.style.visibility = 'hidden';
 
                     wakeupButton.disabled = false;
@@ -312,7 +369,7 @@
                     .then(data => updateUI(data))
                     .catch(function(error) {
                         updateUI({
-                            awake: true,
+                            awake: false,
                             batteryCharge: '100',
                             batteryCapacity: '200',
                             bumperLeft: false,
@@ -331,13 +388,14 @@
                             odomvelx: 0.19,
                             odomveltheta: 1.1,
                             distanceToTargetInMeters: 87,
-                            angleToTargetInDegrees: 99
+                            angleToTargetInDegrees: 99,
+                            rooms: ['room01', 'room02']
                         })
                     })
             }
 
             function wakeup() {
-                fetch('/actions/wakeup').then(response => fetchState());
+                fetch('/actions/startnewroom').then(response => fetchState());
             }
 
             function shutdown() {

@@ -6,9 +6,13 @@
   <arg name="initialx" default="0"/>
   <arg name="initialy" default="0"/>
   <arg name="initialyaw" default="0"/>
+  <arg name="roombalog" default="unknown"/>
+  <arg name="debugimagelocation" default="unknown"/>
 
   <include file="$(find roomba500)/launch/hardware.launch"/>
-  <include file="$(find roomba500)/launch/roombalogger.launch"/>
+  <include file="$(find roomba500)/launch/roombalogger.launch">
+      <arg name="roombalog" value="$(arg roombalog)"/>
+  </include>
 
   <group if="$(arg createmap)">
       <include file="$(find roomba500)/launch/gmapping.launch"/>
@@ -16,6 +20,7 @@
       <include file="$(find roomba500)/launch/pathmanager.launch">
         <arg name="initfrommapserver" value="true"/>
         <arg name="servicename" value="dynamic_map"/>
+        <arg name="debugimagelocation" value="$(arg debugimagelocation)"/>
       </include>
   </group>
 
@@ -33,6 +38,7 @@
       <include file="$(find roomba500)/launch/pathmanager.launch">
         <arg name="initfrommapserver" value="true"/>
         <arg name="servicename" value="static_map"/>
+        <arg name="debugimagelocation" value="$(arg debugimagelocation)"/>
       </include>
   </group>
 </launch>

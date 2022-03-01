@@ -3,6 +3,7 @@
 import math
 from tf.transformations import euler_from_quaternion
 
+
 class BaseState:
 
     def __init__(self, pathmanager, successLambda, errorLambda):
@@ -99,7 +100,7 @@ class BaseState:
             ratio = self.pathmanager.min_linear_speed / abs(desired_xvel)
             desired_xvel *= ratio
             desired_thetavel *= ratio
-        elif desired_xvel==0 and abs(desired_thetavel) < self.pathmanager.min_angular_speed:
+        elif desired_xvel == 0 and abs(desired_thetavel) < self.pathmanager.min_angular_speed:
             ratio = self.pathmanager.min_angular_speed / abs(desired_thetavel)
             desired_xvel *= ratio
             desired_thetavel *= ratio

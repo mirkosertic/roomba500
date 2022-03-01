@@ -12,6 +12,7 @@ from nav_msgs.msg import Odometry
 from roomba500.msg import RoombaSensorFrame
 from std_msgs.msg import Int16
 
+
 class RoombaLogger:
 
     def __init__(self):
@@ -95,7 +96,8 @@ class RoombaLogger:
         rospy.loginfo('Checking system state with %s hertz', pollingRateInHertz)
         rate = rospy.Rate(pollingRateInHertz)
 
-        odometrylogfilename = str(pathlib.Path(__file__).parent.resolve().parent.joinpath('maps', 'roombalog.txt'))
+        odometrylogfilename = rospy.get_param('~roombalog', str(pathlib.Path(__file__).parent.resolve().parent.joinpath('maps', 'roombalog.txt')))
+
         rospy.loginfo('Writing odometry debug to %s', odometrylogfilename)
         self.odometrylogfile = open(odometrylogfilename, 'w')
         self.writeLogHeader()
@@ -115,6 +117,7 @@ class RoombaLogger:
         self.odometrylogfile.close()
 
         rospy.loginfo('RoombaLogger terminated.')
+
 
 if __name__ == '__main__':
     try:

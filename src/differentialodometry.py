@@ -14,6 +14,7 @@ from roomba500.msg import RoombaSensorFrame, DiffMotorSpeeds
 
 from encoder import Encoder
 
+
 class DifferentialOdometry:
 
     def __init__(self):
@@ -55,7 +56,7 @@ class DifferentialOdometry:
 
         forwardSpeedMillimetersPerSecond = forwardSpeedMetersPerSecond * 100.0 * 10.0
 
-        speedLeftWheelMillimeterPerSecond = int(forwardSpeedMillimetersPerSecond - (rotationRadPerSecond * (self.robotWheelSeparationInCm  / 2.0) * 10.0))
+        speedLeftWheelMillimeterPerSecond = int(forwardSpeedMillimetersPerSecond - (rotationRadPerSecond * (self.robotWheelSeparationInCm / 2.0) * 10.0))
         speedRightWheelMillimeterPerSecond = int(forwardSpeedMillimetersPerSecond + (rotationRadPerSecond * (self.robotWheelSeparationInCm / 2.0) * 10.0))
 
         rospy.loginfo("Commanding motors with left wheel speed = %f mm/s and right wheel speed = %f mm/s", speedLeftWheelMillimeterPerSecond, speedRightWheelMillimeterPerSecond)
@@ -203,6 +204,7 @@ class DifferentialOdometry:
             rate.sleep()
 
         rospy.loginfo('DifferentialOdometry terminated.')
+
 
 if __name__ == '__main__':
     try:

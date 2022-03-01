@@ -6,6 +6,7 @@ import tf
 
 from basestate import BaseState
 
+
 class RotateToAngleState(BaseState):
 
     def __init__(self, pathmanager, targetposition, targetframeid, successLambda, errorLambda):

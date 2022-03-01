@@ -4,6 +4,7 @@ import rospy
 
 from geometry_msgs.msg import Twist
 
+
 class Driver:
 
     def __init__(self, cmdvelPublisher):
