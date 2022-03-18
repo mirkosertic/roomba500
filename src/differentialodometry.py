@@ -152,22 +152,23 @@ class DifferentialOdometry:
     def newSensorFrame(self, data):
         self.syncLock.acquire()
 
-        if self.leftencoder is None:
-            self.leftencoder = Encoder()
-            self.leftencoder.initCount(data.wheelEncoderLeft)
-        else:
-            self.leftencoder.update(data.wheelEncoderLeft)
+        if data.wheelEncoderLeft is not None and data.wheelEncoderRight is not None:
+            if self.leftencoder is None:
+                self.leftencoder = Encoder()
+                self.leftencoder.initCount(data.wheelEncoderLeft)
+            else:
+                self.leftencoder.update(data.wheelEncoderLeft)
 
-        if self.rightencoder is None:
-            self.rightencoder = Encoder()
-            self.rightencoder.initCount(data.wheelEncoderRight)
-        else:
-            self.rightencoder.update(data.wheelEncoderRight)
+            if self.rightencoder is None:
+                self.rightencoder = Encoder()
+                self.rightencoder.initCount(data.wheelEncoderRight)
+            else:
+                self.rightencoder.update(data.wheelEncoderRight)
 
-        if data.bumperLeft or data.bumperRight or data.wheeldropLeft or data.wheeldropRight:
-            self.publishOdometry(True)
-        else:
-            self.publishOdometry(False)
+            if data.bumperLeft or data.bumperRight or data.wheeldropLeft or data.wheeldropRight:
+                self.publishOdometry(True)
+            else:
+                self.publishOdometry(False)
 
         self.syncLock.release()
 
