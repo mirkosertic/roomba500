@@ -3,14 +3,14 @@
 class Encoder:
 
     def __init__(self):
-        self.setRange(-32768, 32767)
-        self.initCount(0)
         self.isReversed = False
         self.range = None
         self.lowThresh = None
         self.highThresh = None
         self.delta = None
         self.last = None
+        self.setRange(-32768, 32767)
+        self.initCount(0)
 
     def setRange(self, low, high):
         self.range = high - low + 1
