@@ -41,6 +41,9 @@ class DifferentialOdometry:
         self.odomframe = 'odom'
         self.baselinkframe = 'base_link'
 
+        self.targetvelx = .0
+        self.targetvelz = .0
+
     def newShutdownCommand(self, data):
         self.syncLock.acquire()
         rospy.signal_shutdown('Shutdown requested')
@@ -68,14 +71,21 @@ class DifferentialOdometry:
 
         self.publishOdometry(True)
 
+        self.targetvelx = data.linear.x
+        self.targetvelz = data.angular.z
+
         self.syncLock.release()
 
     def publishOdometry(self, commit):
 
         currenttime = rospy.get_time()
 
-        self.sumdeltaleft += self.leftencoder.getDelta()
-        self.sumdeltaright += self.rightencoder.getDelta()
+        deltaleft = self.leftencoder.getDelta()
+        deltaright = self.rightencoder.getDelta()
+        moved = deltaleft != 0 and deltaright != 0
+
+        self.sumdeltaleft += deltaleft
+        self.sumdeltaright += deltaright
 
         if self.referencetime is None:
             self.referencetime = currenttime
@@ -111,8 +121,9 @@ class DifferentialOdometry:
 
         newtheta = (self.referencetheta + deltatheta) % (2 * math.pi)
 
-        xvel = deltatravel / deltatime if deltatime > 0 else 0.
-        thetavel = deltatheta / deltatime if deltatime > 0 else 0.
+        # There can only be velocity if the wheel encoder changed its values!
+        xvel = deltatravel / deltatime if deltatime > 0 and moved else 0.
+        thetavel = deltatheta / deltatime if deltatime > 0 and moved else 0.
 
         now = rospy.Time.now()
 
@@ -139,7 +150,7 @@ class DifferentialOdometry:
         odom.twist.twist.linear.x = xvel
         odom.twist.twist.angular.z = thetavel
 
-        if commit is True:
+        if commit is True or not moved:
             self.referencex += deltax
             self.referencey += deltay
             self.referencetheta = newtheta

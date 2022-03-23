@@ -80,7 +80,7 @@ class RoombaLogger:
 
         timestamp = round(time.time() * 1000)
 
-        self.odometrylogfile.write(self.latestevent + self.separator + str(timestamp) + self.separator + self.formatNumber(self.positionx) + self.separator + self.formatNumber(self.positiony) + self.separator + self.formatNumber(self.rotation) + self.separator + self.formatNumber(self.velocityx) + self.separator + self.formatNumber(self.velocityx) + self.separator + self.formatNumber(self.velocityangular) + self.separator + self.formatNumber(self.wheelcoderleft) + self.separator + self.formatNumber(self.wheelcoderright) + '\n')
+        self.odometrylogfile.write(self.latestevent + self.separator + str(timestamp) + self.separator + self.formatNumber(self.positionx) + self.separator + self.formatNumber(self.positiony) + self.separator + self.formatNumber(self.rotation) + self.separator + self.formatNumber(self.velocityx) + self.separator + self.formatNumber(self.velocityy) + self.separator + self.formatNumber(self.velocityangular) + self.separator + self.formatNumber(self.wheelcoderleft) + self.separator + self.formatNumber(self.wheelcoderright) + '\n')
         self.odometrylogfile.flush()
 
         self.latestevent = ''
