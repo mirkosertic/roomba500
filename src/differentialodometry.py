@@ -69,7 +69,7 @@ class DifferentialOdometry:
         speedcommand.rightMillimetersPerSecond = speedRightWheelMillimeterPerSecond
         self.diffmotorspeedspub.publish(speedcommand)
 
-        self.publishOdometry(True, rospy.get_time())
+        self.publishOdometry(True,  rospy.Time.now())
 
         self.targetvelx = data.linear.x
         self.targetvelz = data.angular.z
