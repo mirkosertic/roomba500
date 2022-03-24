@@ -67,13 +67,14 @@ class SupervisorState:
         try:
             self.syncLock.acquire()
 
+            latestcommontime = self.transformlistener.getLatestCommonTime(self.mapframe, message.header.frame_id)
+
             mpose = PoseStamped()
             mpose.pose.position = message.pose.pose.position
             mpose.pose.orientation = message.pose.pose.orientation
             mpose.header.frame_id = message.header.frame_id
-            mpose.header.stamp = message.header.stamp
+            mpose.header.stamp = latestcommontime
 
-            latestcommontime = self.transformlistener.getLatestCommonTime(self.mapframe, message.header.frame_id)
             odometryInTargetposeFrame = self.transformlistener.transformPose(self.mapframe, mpose)
 
             odomQuat = odometryInTargetposeFrame.pose.orientation

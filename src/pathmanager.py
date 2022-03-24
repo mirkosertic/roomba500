@@ -170,13 +170,14 @@ class PathManager:
 
     def latestOdometryTransformedToFrame(self, targetframe):
 
+        latestcommontime = self.transformlistener.getLatestCommonTime(targetframe, self.latestOdometry.header.frame_id)
+
         mpose = PoseStamped()
         mpose.pose.position = self.latestOdometry.pose.pose.position
         mpose.pose.orientation = self.latestOdometry.pose.pose.orientation
         mpose.header.frame_id = self.latestOdometry.header.frame_id
-        mpose.header.stamp = self.latestOdometry.header.stamp
+        mpose.header.stamp = latestcommontime
 
-        latestcommontime = self.transformlistener.getLatestCommonTime(targetframe, self.latestOdometry.header.frame_id)
         return self.transformlistener.transformPose(targetframe, mpose)
 
     def publishNavigationInfo(self, distanceToTargetInMeters, angleToTargetInDegrees):
