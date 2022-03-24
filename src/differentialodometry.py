@@ -127,14 +127,12 @@ class DifferentialOdometry:
         #    self.targetvelz = deltatheta / deltatime
         #    rospy.loginfo("Estimated velocity is linear-x = %s m/s and angular-z = %s rad/s", self.targetvelx, self.targetvelz)
 
-        now = rospy.Time.now()
-
         # Publish odometry and transform
         q = quaternion_from_euler(0, 0, newtheta)
         self.transformbroadcaster.sendTransform(
             (self.referencex + deltax, self.referencey + deltay, 0),
             (q[0], q[1], q[2], q[3]),
-            now,
+            currenttime,
             self.baselinkframe,
             self.odomframe
         )
