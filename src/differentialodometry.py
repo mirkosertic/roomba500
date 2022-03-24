@@ -69,7 +69,7 @@ class DifferentialOdometry:
         speedcommand.rightMillimetersPerSecond = speedRightWheelMillimeterPerSecond
         self.diffmotorspeedspub.publish(speedcommand)
 
-        self.publishOdometry(True,  rospy.Time.now())
+        self.publishOdometry(True, rospy.get_time())
 
         self.targetvelx = data.linear.x
         self.targetvelz = data.angular.z
@@ -127,12 +127,14 @@ class DifferentialOdometry:
         #    self.targetvelz = deltatheta / deltatime
         #    rospy.loginfo("Estimated velocity is linear-x = %s m/s and angular-z = %s rad/s", self.targetvelx, self.targetvelz)
 
+        now = rospy.Time.now()
+
         # Publish odometry and transform
         q = quaternion_from_euler(0, 0, newtheta)
         self.transformbroadcaster.sendTransform(
             (self.referencex + deltax, self.referencey + deltay, 0),
             (q[0], q[1], q[2], q[3]),
-            currenttime,
+            now,
             self.baselinkframe,
             self.odomframe
         )
@@ -176,9 +178,9 @@ class DifferentialOdometry:
             self.rightencoder.update(data.wheelEncoderRight)
 
         if data.bumperLeft or data.bumperRight or data.wheeldropLeft or data.wheeldropRight:
-            self.publishOdometry(True, data.stamp)
+            self.publishOdometry(True)
         else:
-            self.publishOdometry(False, data.stamp)
+            self.publishOdometry(False)
 
         self.syncLock.release()
 
@@ -224,3 +226,4 @@ if __name__ == '__main__':
         odometry.start()
     except rospy.ROSInterruptException:
         pass
+
