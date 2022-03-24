@@ -1,3 +1,4 @@
+time stamp
 int16 batteryCharge
 int16 batteryCapacity
 bool bumperLeft

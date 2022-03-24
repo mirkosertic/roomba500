@@ -211,6 +211,7 @@ class BaseController {
 
                 // Publish telemetry data such as battery charge etc.
                 ::roomba500::RoombaSensorFrame sensorFrameData = ::roomba500::RoombaSensorFrame();
+                sensorFrameData.stamp = ros::Time::now();
                 sensorFrameData.batteryCharge = newSensorFrame.batteryCharge;
                 sensorFrameData.batteryCapacity = newSensorFrame.batteryCapacity;
                 sensorFrameData.bumperLeft = newSensorFrame.isBumperLeft();
