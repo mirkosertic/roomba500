@@ -82,7 +82,6 @@ class DifferentialOdometry:
 
         deltaleft = self.leftencoder.getDelta()
         deltaright = self.rightencoder.getDelta()
-        moved = deltaleft != 0 and deltaright != 0
 
         self.sumdeltaleft += deltaleft
         self.sumdeltaright += deltaright
@@ -121,9 +120,14 @@ class DifferentialOdometry:
 
         newtheta = (self.referencetheta + deltatheta) % (2 * math.pi)
 
-        # There can only be velocity if the wheel encoder changed its values!
-        xvel = deltatravel / deltatime if deltatime > 0 and moved else 0.
-        thetavel = deltatheta / deltatime if deltatime > 0 and moved else 0.
+        # Update velocity after some time
+        #
+        # TODO: Disabled due to odometry corruption.
+        #
+        #if deltatime > 0.1 and deltaleft  != 0 and deltaright != 0:
+        #    self.targetvelx = deltatravel / deltatime
+        #    self.targetvelz = deltatheta / deltatime
+        #    rospy.loginfo("Estimated velocity is linear-x = %s m/s and angular-z = %s rad/s", self.targetvelx, self.targetvelz)
 
         now = rospy.Time.now()
 
@@ -147,10 +151,10 @@ class DifferentialOdometry:
         odom.pose.pose.orientation.y = q[1]
         odom.pose.pose.orientation.z = q[2]
         odom.pose.pose.orientation.w = q[3]
-        odom.twist.twist.linear.x = xvel
-        odom.twist.twist.angular.z = thetavel
+        odom.twist.twist.linear.x = self.targetvelx
+        odom.twist.twist.angular.z = self.targetvelz
 
-        if commit is True or not moved:
+        if commit is True:
             self.referencex += deltax
             self.referencey += deltay
             self.referencetheta = newtheta
