@@ -76,7 +76,9 @@ class DifferentialOdometry:
 
         self.syncLock.release()
 
-    def publishOdometry(self, commit, currenttime):
+    def publishOdometry(self, commit):
+
+        currenttime = rospy.get_time()
 
         deltaleft = self.leftencoder.getDelta()
         deltaright = self.rightencoder.getDelta()
@@ -140,7 +142,7 @@ class DifferentialOdometry:
         )
 
         odom = Odometry()
-        odom.header.stamp = currenttime
+        odom.header.stamp = now
         odom.header.frame_id = self.odomframe
         odom.child_frame_id = self.baselinkframe
         odom.pose.pose.position.x = self.referencex + deltax
