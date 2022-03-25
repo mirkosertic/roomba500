@@ -287,7 +287,8 @@ class PathManager:
 
     def start(self):
         rospy.init_node('pathmanager', anonymous=True)
-        pollingRateInHertz = int(rospy.get_param('~pollingRateInHertz', '5'))
+        pollingRateInHertz = int(rospy.get_param('~pollingRateInHertz', '10'))
+        statePublishIntervalInSeconds = int(rospy.get_param('~statePublishIntervalInSeconds', '2'))
 
         debugimagelocation = rospy.get_param('~debugimagelocation', None)
 
@@ -297,7 +298,11 @@ class PathManager:
         self.markerstopic = rospy.Publisher('visualization_marker', MarkerArray, queue_size=10, latch=True)
 
         # This is our map responsible for navigation and pathfinding
-        self.map = NavigationMap()
+        gridcellwidthinmeters = float(rospy.get_param('~gridcellwidthinmeters', '0.18'))
+        scanwidthinmeters = float(rospy.get_param('~scanwidthinmeters', '0.36'))
+        occupancythreshold = float(rospy.get_param('~occupancythreshold', ' 0.65'))
+        self.map = NavigationMap(gridcellwidthinmeters, scanwidthinmeters, occupancythreshold)
+
         rospy.Subscriber("map", OccupancyGrid, self.map.initOrUpdateFromOccupancyGrid)
 
         # And the driver will publish twist commands
@@ -335,19 +340,25 @@ class PathManager:
         rospy.Service("cancel", Cancel, self.cancel)
 
         # Processing the sensor polling in an endless loop until this node shuts down
+        cyclecounter = 0
         while not rospy.is_shutdown():
 
             self.syncLock.acquire()
 
             self.systemState = self.systemState.process()
 
-            self.publishMapState()
+            # Publish debug state
+            cyclecounter = cyclecounter + 1
+            if cyclecounter > pollingRateInHertz * statePublishIntervalInSeconds:
+                self.publishMapState()
+                cyclecounter = 0
 
             self.syncLock.release()
 
             rate.sleep()
 
 
+        # We only write the debug image on exit as this is a very expensive operation on tiny devices such as a RPI.
         rospy.loginfo('Writing debug image...')
         image = self.map.toDebugImage()
         cv2.imwrite(debugimagelocation, image)
