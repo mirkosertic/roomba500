@@ -166,7 +166,7 @@ class PathManager:
 
         self.syncLock.release()
 
-        return CleanResponse(0)
+        return CancelResponse(0)
 
     def latestOdometryTransformedToFrame(self, targetframe):
 
@@ -247,7 +247,7 @@ class PathManager:
 
         self.markerstopic.publish(markers)
 
-    def publishMapState(self, debugImageLocation):
+    def publishMapState(self):
         markers = MarkerArray()
 
         for cell in self.map.cells:
@@ -284,9 +284,6 @@ class PathManager:
                 markers.markers.append(marker)
 
         self.markerstopic.publish(markers)
-
-        image = self.map.toDebugImage()
-        cv2.imwrite(debugImageLocation, image)
 
     def start(self):
         rospy.init_node('pathmanager', anonymous=True)
@@ -344,11 +341,16 @@ class PathManager:
 
             self.systemState = self.systemState.process()
 
-            self.publishMapState(debugimagelocation)
+            self.publishMapState()
 
             self.syncLock.release()
 
             rate.sleep()
+
+
+        rospy.loginfo('Writing debug image...')
+        image = self.map.toDebugImage()
+        cv2.imwrite(debugimagelocation, image)
 
         rospy.loginfo('Pathmanager terminated.')
 
