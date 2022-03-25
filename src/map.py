@@ -104,8 +104,8 @@ class MapGridCell:
 class NavigationMap:
 
     def __init__(self):
-        self.gridcellwidthinmeters = 0.4
-        self.scanwidthinmeters = 0.4
+        self.gridcellwidthinmeters = 0.18
+        self.scanwidthinmeters = 0.36
         self.occupancythreshold = 0.65
         self.cells = []
         self.currentmap =  None
