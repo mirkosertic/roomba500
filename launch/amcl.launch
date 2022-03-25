@@ -10,7 +10,7 @@
     <param name="initial_pose_y" value="$(arg initialy)" />
     <param name="initial_pose_a" value="$(arg initialyaw)" />
     <param name="transform_tolerance" value="0.5" />
-    <param name="update_min_d" value="-1"/>
-    <param name="update_min_a" value="-1"/>
+    <!--<param name="update_min_d" value="-1"/>
+    <param name="update_min_a" value="-1"/>-->
   </node>
 </launch>
