@@ -90,7 +90,7 @@ class Roomba500 {
     }
 
     void updateMotorControl() {
-        unsigned char data[] = {144, (unsigned char) (mainbrushPWM & 0xff), (unsigned char) (sidebrushPWM & 0xff), (unsigned char) (vacuumPWM & 0xff)};
+        unsigned char data[] = {128, 131, 144, (unsigned char) (mainbrushPWM & 0xff), (unsigned char) (sidebrushPWM & 0xff), (unsigned char) (vacuumPWM & 0xff)};
         int written = write(fd, &data, sizeof(data));
         if (written != sizeof(data)) {
             throw std::invalid_argument("error updating motor control");
@@ -99,7 +99,7 @@ class Roomba500 {
     }
 
     void playNote(unsigned char note, unsigned char duration) {
-        unsigned char data[] = {140, 0, 1, note, duration, 141, 0};
+        unsigned char data[] = {128, 131, 140, 0, 1, note, duration, 141, 0};
         int written = write(fd, &data, sizeof(data));
         if (written != sizeof(data)) {
             throw std::invalid_argument("error playing note");
@@ -123,7 +123,7 @@ class Roomba500 {
             speedRightUnsigned = speedRight;
         }
 
-        unsigned char data[] = {145, (unsigned char)((speedRightUnsigned >> 8) & 0xff), (unsigned char)(speedRightUnsigned & 0xff),
+        unsigned char data[] = {128, 131, 145, (unsigned char)((speedRightUnsigned >> 8) & 0xff), (unsigned char)(speedRightUnsigned & 0xff),
                                      (unsigned char)((speedLeftUnsigned >> 8) & 0xff), (unsigned char)(speedLeftUnsigned & 0xff)};
         int written = write(fd, data, sizeof(data));
         if (written != sizeof(data)) {
@@ -142,7 +142,7 @@ class Roomba500 {
 
         tcflush(fd, TCIFLUSH);
 
-        unsigned char data[] = {149, 12, 43, 44, 25, 26, 7, 46, 47, 48, 49, 50, 51, 35};
+        unsigned char data[] = {128, 131, 149, 12, 43, 44, 25, 26, 7, 46, 47, 48, 49, 50, 51, 35};
         int written = write(fd, &data, sizeof(data));
         if (written != sizeof(data)) {
             throw std::invalid_argument("sending read sensors command");
