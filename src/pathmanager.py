@@ -287,7 +287,7 @@ class PathManager:
 
     def start(self):
         rospy.init_node('pathmanager', anonymous=True)
-        pollingRateInHertz = int(rospy.get_param('~pollingRateInHertz', '10'))
+        pollingRateInHertz = int(rospy.get_param('~pollingRateInHertz', '5'))
         statePublishIntervalInSeconds = int(rospy.get_param('~statePublishIntervalInSeconds', '2'))
 
         debugimagelocation = rospy.get_param('~debugimagelocation', None)
