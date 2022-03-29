@@ -153,7 +153,6 @@ class Roomba500 {
         ioctl(fd, FIONREAD, &bytesAvailable);
 
         SensorFrame sensorFrame = SensorFrame();
-        sensorFrame.stamp = ros::Time::now();
         sensorFrame.leftWheel = readData() << 8 | readData(); // packet 43
         sensorFrame.rightWheel = readData() << 8 | readData(); // packet 44
         sensorFrame.batteryCharge = readData() << 8 | readData(); // packet 25
