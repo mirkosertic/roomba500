@@ -434,8 +434,16 @@ class Supervisor:
                     rospy.loginfo('Launching with arguments %s', str(arguments))
                     uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
                     roslaunch.configure_logging(uuid)
+
+                    self.state.ready = False
+
                     self.state.robotnode = roslaunch.parent.ROSLaunchParent(uuid, [(self.nodelaunchfile, arguments)])
                     self.state.robotnode.start()
+
+                    # If the pathmanager is ready, we are ready to go!
+                    rospy.wait_for_service('cancel')
+
+                    self.state.ready = True
 
                 except Exception as e:
                     self.state.robotnode = None
@@ -461,6 +469,7 @@ class Supervisor:
                     rospy.logerr('Error shutting down node : %s', e)
 
                 self.processshutdown = False
+                self.state.ready = False
                 self.state.robotnode = None
                 self.state.latestbatterycapacity = None
                 self.state.latestbatterycharge = None

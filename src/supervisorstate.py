@@ -14,6 +14,7 @@ class SupervisorState:
     def __init__(self, transformlistener, mapframe, roomsdirectory):
         self.syncLock = threading.Lock()
         self.robotnode = None
+        self.ready = False
         self.latestbatterycharge = None
         self.latestbatterycapacity = None
         self.bumperleft = False
@@ -113,7 +114,7 @@ class SupervisorState:
         knownrooms = next(os.walk(self.roomsdirectory))[1]
 
         data = {
-            'awake': self.robotnode is not None,
+            'awake': self.robotnode is not None and self.ready,
             'batteryCapacity': self.latestbatterycapacity,
             'batteryCharge': self.latestbatterycharge,
             'bumperLeft': self.bumperleft,
