@@ -89,7 +89,7 @@ class DifferentialOdometry:
         deltaright = self.rightencoder.getDelta()
 
         if abs(deltaleft) > self.encodererrorthreshold or abs(deltaright) > self.encodererrorthreshold:
-            rospy.logerror("Got large delta in wheel encoders with left = %s and right = %s. I will assume an error and skip this frame.", deltaleft, deltaright)
+            rospy.logwarn("Got large delta in wheel encoders with left = %s and right = %s. I will assume an error and skip this frame.", deltaleft, deltaright)
             return
 
         self.sumdeltaleft += deltaleft
