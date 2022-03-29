@@ -206,7 +206,7 @@ class DifferentialOdometry:
         pollingRateInHertz = int(rospy.get_param('~pollingRateInHertz', '20'))
 
         self.encodererrorthreshold = int(rospy.get_param('~encodererrorthreshold', '500'))
-        self.angularvelocitythreshold = float(rospy.get_param('~angularvelocitythreshold', '0.01'))
+        self.angularvelocitythreshold = float(rospy.get_param('~angularvelocitythreshold', '0.05'))
 
         rospy.loginfo("Checking system state with %s hertz", pollingRateInHertz)
         rate = rospy.Rate(pollingRateInHertz)
