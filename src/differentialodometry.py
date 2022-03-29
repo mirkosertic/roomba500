@@ -131,11 +131,16 @@ class DifferentialOdometry:
         #    self.targetvelz = deltatheta / deltatime
         #    rospy.loginfo("Estimated velocity is linear-x = %s m/s and angular-z = %s rad/s", self.targetvelx, self.targetvelz)
 
+        velx = deltatravel / deltatime if deltatime > 0 else .0
+        velz = deltatheta / deltatime if deltatime > 0 else .0
+
         if not self.moving:
             newtheta = self.referencetheta
             deltax = .0
             deltay = .0
             commit = True
+            velx = .0
+            velz = .0
 
         # Publish odometry and transform
         q = quaternion_from_euler(0, 0, newtheta)
@@ -159,6 +164,9 @@ class DifferentialOdometry:
         odom.pose.pose.orientation.w = q[3]
         odom.twist.twist.linear.x = self.targetvelx
         odom.twist.twist.angular.z = self.targetvelz
+
+        odom.twist.twist.linear.x = velx
+        odom.twist.twist.angular.z = velz
 
         if commit is True:
             self.referencex += deltax
