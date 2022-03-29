@@ -163,9 +163,6 @@ class DifferentialOdometry:
         odom.pose.pose.orientation.y = q[1]
         odom.pose.pose.orientation.z = q[2]
         odom.pose.pose.orientation.w = q[3]
-        odom.twist.twist.linear.x = self.targetvelx
-        odom.twist.twist.angular.z = self.targetvelz
-
         odom.twist.twist.linear.x = velx
         odom.twist.twist.angular.z = velz
 
