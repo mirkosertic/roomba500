@@ -74,7 +74,7 @@ class DifferentialOdometry:
 
         self.targetvelx = data.linear.x
         self.targetvelz = data.angular.z
-        self.moving = data.linear.x != .0 and data.angular.z != .0
+        self.moving = data.linear.x != .0 or data.angular.z != .0
 
         self.syncLock.release()
 
