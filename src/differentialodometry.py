@@ -45,6 +45,9 @@ class DifferentialOdometry:
         self.targetvelz = .0
         self.moving = False
 
+        self.encodererrorthreshold = 0
+        self.angularvelocitythreshold = .0
+
     def newShutdownCommand(self, data):
         self.syncLock.acquire()
         rospy.signal_shutdown('Shutdown requested')
@@ -85,7 +88,7 @@ class DifferentialOdometry:
         deltaleft = self.leftencoder.getDelta()
         deltaright = self.rightencoder.getDelta()
 
-        if abs(deltaleft) > 500 or abs(deltaright) > 500:
+        if abs(deltaleft) > self.encodererrorthreshold or abs(deltaright) > self.encodererrorthreshold:
             rospy.logerror("Got large delta in wheel encoders with left = %s and right = %s. I will assume an error and skip this frame.", deltaleft, deltaright)
             return
 
@@ -126,17 +129,10 @@ class DifferentialOdometry:
 
         newtheta = (self.referencetheta + deltatheta) % (2 * math.pi)
 
-        # Update velocity after some time
-        #
-        # TODO: Disabled due to odometry corruption.
-        #
-        #if deltatime > 0.1 and deltaleft  != 0 and deltaright != 0:
-        #    self.targetvelx = deltatravel / deltatime
-        #    self.targetvelz = deltatheta / deltatime
-        #    rospy.loginfo("Estimated velocity is linear-x = %s m/s and angular-z = %s rad/s", self.targetvelx, self.targetvelz)
-
         velx = deltatravel / deltatime if deltatime > 0 else .0
         velz = deltatheta / deltatime if deltatime > 0 else .0
+        if abs(velz) < self.angularvelocitythreshold:
+            velz = .0
 
         if not self.moving:
             newtheta = self.referencetheta
@@ -207,6 +203,9 @@ class DifferentialOdometry:
     def start(self):
         rospy.init_node('differentialodometry', anonymous=True)
         pollingRateInHertz = int(rospy.get_param('~pollingRateInHertz', '20'))
+
+        self.encodererrorthreshold = int(rospy.get_param('~encodererrorthreshold', '500'))
+        self.angularvelocitythreshold = float(rospy.get_param('~angularvelocitythreshold', '0.01'))
 
         rospy.loginfo("Checking system state with %s hertz", pollingRateInHertz)
         rate = rospy.Rate(pollingRateInHertz)
