@@ -70,7 +70,7 @@ class DifferentialOdometry:
         speedcommand.rightMillimetersPerSecond = speedRightWheelMillimeterPerSecond
         self.diffmotorspeedspub.publish(speedcommand)
 
-        self.publishOdometry(True)
+        self.publishOdometry(True, rospy.Time.now())
 
         self.targetvelx = data.linear.x
         self.targetvelz = data.angular.z
@@ -78,9 +78,9 @@ class DifferentialOdometry:
 
         self.syncLock.release()
 
-    def publishOdometry(self, commit):
+    def publishOdometry(self, commit, eventtime):
 
-        currenttime = rospy.get_time()
+        currenttime = eventtime.to_sec()
 
         deltaleft = self.leftencoder.getDelta()
         deltaright = self.rightencoder.getDelta()
@@ -131,16 +131,10 @@ class DifferentialOdometry:
         #    self.targetvelz = deltatheta / deltatime
         #    rospy.loginfo("Estimated velocity is linear-x = %s m/s and angular-z = %s rad/s", self.targetvelx, self.targetvelz)
 
-        now = rospy.Time.now()
-
-        velx = deltatravel / deltatime if deltatime > 0.1 else 0
-        velz = deltatheta / deltatime if deltatime > 0.1 else 0
         if not self.moving:
             newtheta = self.referencetheta
             deltax = .0
             deltay = .0
-            velx = .0
-            velz = .0
             commit = True
 
         # Publish odometry and transform
@@ -148,13 +142,13 @@ class DifferentialOdometry:
         self.transformbroadcaster.sendTransform(
             (self.referencex + deltax, self.referencey + deltay, 0),
             (q[0], q[1], q[2], q[3]),
-            now,
+            eventtime,
             self.baselinkframe,
             self.odomframe
         )
 
         odom = Odometry()
-        odom.header.stamp = now
+        odom.header.stamp = eventtime
         odom.header.frame_id = self.odomframe
         odom.child_frame_id = self.baselinkframe
         odom.pose.pose.position.x = self.referencex + deltax
@@ -165,10 +159,6 @@ class DifferentialOdometry:
         odom.pose.pose.orientation.w = q[3]
         odom.twist.twist.linear.x = self.targetvelx
         odom.twist.twist.angular.z = self.targetvelz
-
-        # TEST!!!
-        odom.twist.twist.linear.x = velx
-        odom.twist.twist.angular.z = velz
 
         if commit is True:
             self.referencex += deltax
@@ -196,9 +186,9 @@ class DifferentialOdometry:
             self.rightencoder.update(data.wheelEncoderRight)
 
         if data.bumperLeft or data.bumperRight or data.wheeldropLeft or data.wheeldropRight:
-            self.publishOdometry(True)
+            self.publishOdometry(True, data.stamp)
         else:
-            self.publishOdometry(False)
+            self.publishOdometry(False, data.stamp)
 
         self.syncLock.release()
 
