@@ -43,6 +43,7 @@ class DifferentialOdometry:
 
         self.targetvelx = .0
         self.targetvelz = .0
+        self.moving = False
 
     def newShutdownCommand(self, data):
         self.syncLock.acquire()
@@ -73,6 +74,7 @@ class DifferentialOdometry:
 
         self.targetvelx = data.linear.x
         self.targetvelz = data.angular.z
+        self.moving = data.linear.x != .0 and data.angular.z != .0
 
         self.syncLock.release()
 
@@ -131,6 +133,16 @@ class DifferentialOdometry:
 
         now = rospy.Time.now()
 
+        velx = deltatravel / deltatime if deltatime > 0.1 else 0
+        velz = deltatheta / deltatime if deltatime > 0.1 else 0
+        if not self.moving:
+            newtheta = self.referencetheta
+            deltax = .0
+            deltay = .0
+            velx = .0
+            velz = .0
+            commit = True
+
         # Publish odometry and transform
         q = quaternion_from_euler(0, 0, newtheta)
         self.transformbroadcaster.sendTransform(
@@ -153,6 +165,10 @@ class DifferentialOdometry:
         odom.pose.pose.orientation.w = q[3]
         odom.twist.twist.linear.x = self.targetvelx
         odom.twist.twist.angular.z = self.targetvelz
+
+        # TEST!!!
+        odom.twist.twist.linear.x = velx
+        odom.twist.twist.angular.z = velz
 
         if commit is True:
             self.referencex += deltax
@@ -194,7 +210,7 @@ class DifferentialOdometry:
         rate = rospy.Rate(pollingRateInHertz)
 
         self.ticksPerCm = float(rospy.get_param('~ticksPerCm', '22.7157014'))
-        self.robotWheelSeparationInCm = float(rospy.get_param('~robotWheelSeparationInCm', '22.86'))  # 32.56 is calculated 22.86 seems to fit well
+        self.robotWheelSeparationInCm = float(rospy.get_param('~robotWheelSeparationInCm', '22.86'))  # 22.56 is calculated 22.86 seems to fit well
 
         rospy.loginfo("Configured with ticksPerCm                = %s ", self.ticksPerCm)
         rospy.loginfo("Configured with robotWheelSeparationInCm  = %s ", self.robotWheelSeparationInCm)
