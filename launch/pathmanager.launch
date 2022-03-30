@@ -9,5 +9,8 @@
     <param name="debugimagelocation" value="$(arg debugimagelocation)" />
     <param name="initfrommapserver" value="$(arg initfrommapserver)"/>
     <param name="servicename" value="$(arg servicename)"/>
+
+    <param name="scanwidthinmeters" value="0.36"/>
+    <param name="gridcellwidthinmeters" value="0.36"/>
   </node>
 </launch>
