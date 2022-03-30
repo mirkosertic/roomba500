@@ -43,7 +43,7 @@ class PathManager:
         self.kB = -1.5
         self.max_linear_speed = 0.2
         self.min_linear_speed = 0.08
-        self.max_angular_speed = 0.8
+        self.max_angular_speed = 0.5
         self.min_angular_speed = 0.3
         self.linear_tolerance = 0.025
 
