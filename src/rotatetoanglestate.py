@@ -26,10 +26,14 @@ class RotateToAngleState(BaseState):
 
     def process(self):
         try:
+            rospy.loginfo("Estimating current position...")
             odomposition, odomyawInDegrees = self.currentOdometryPositionAndOrientation(self.targetFrameId)
+            rospy.loginfo("Estimating done")
 
             # This is the target movement point
+            rospy.loginfo("Trying to find nearest cell...")
             nearestcell = self.pathmanager.map.nearestCellCovering(self.targetPosition)
+            rospy.loginfo("Cell found")
             targetpositionx = nearestcell.centerx
             targetpositiony = nearestcell.centery
 
