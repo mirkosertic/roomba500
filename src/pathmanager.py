@@ -89,7 +89,7 @@ class PathManager:
                 rospy.loginfo("Cannot follow path, as there is no path or path is too short : %s", str(path))
 
         except Exception as e:
-            rospy.logerr('Error saving map : %s', e)
+            rospy.logerr('Error calculating path : %s', e)
             logging.error(traceback.format_exc())
             pass
 

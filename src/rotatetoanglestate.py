@@ -2,7 +2,8 @@
 import math
 
 import rospy
-import tf
+import logging
+import traceback
 
 from basestate import BaseState
 
@@ -56,7 +57,9 @@ class RotateToAngleState(BaseState):
             (vel_x, vel_theta) = self.compute_velocity((odomposition.x, odomposition.y, odomyawInDegrees * math.pi / 180), (odomposition.x, odomposition.y, targetYawInDegrees * math.pi / 180))
             self.setRotationSpeed(vel_theta)
 
-        except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
+        except Exception as e:
+            rospy.logerr('Error calculating path : %s', e)
+            logging.error(traceback.format_exc())
             pass
 
         return self
