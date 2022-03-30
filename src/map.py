@@ -42,6 +42,14 @@ class MapGridCell:
         self.centerx = centerx
         self.centery = centery
         self.size = size
+
+        # Pre-Compute the bounding box to speed up containment test
+        halfsize = self.size / 2.0
+        self.topleftx = self.centerx - halfsize
+        self.toplefty = self.centery + halfsize
+        self.bottomrightx = self.centerx + halfsize
+        self.bottomrighty = self.centery - halfsize
+
         self.topleft = None
         self.top = None
         self.topright = None
@@ -58,13 +66,7 @@ class MapGridCell:
         return math.sqrt(dx * dx + dy * dy)
 
     def isCovering(self, position):
-        topleftx = self.centerx - self.size / 2
-        toplefty = self.centery + self.size / 2
-
-        bottomrightx = self.centerx + self.size / 2
-        bottomrighty = self.centery - self.size / 2
-
-        return position.x >= topleftx and position.x <= bottomrightx and position.y >= bottomrighty and position.y <= toplefty
+        return position.x >= self.topleftx and position.x <= self.bottomrightx and position.y >= self.bottomrighty and position.y <= self.toplefty
 
     def updateStatusFrom(self, map, scanwidthinmeters, occupancythreshold):
         topleftx = self.centerx - scanwidthinmeters / 2
