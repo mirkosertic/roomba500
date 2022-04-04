@@ -57,7 +57,7 @@ class Supervisor:
         self.font8 = None
 
         self.forwardspeed = .2
-        self.rotationspeed = .6 # 0.4 is bare minimum
+        self.rotationspeed = .6  # 0.4 is bare minimum
 
         self.roomsdirectory = None
 
@@ -320,7 +320,7 @@ class Supervisor:
         staticContentFolder = str(pathlib.Path(__file__).parent.resolve().joinpath('web'))
         rospy.loginfo('Using %s as static content folder', staticContentFolder)
 
-        self.nodelaunchfile = str(pathlib.Path(__file__).parent.resolve().parent.joinpath('launch', rospy.get_param('~launchfile', 'pathmanagersimulation.launch')))
+        self.nodelaunchfile = str(pathlib.Path(__file__).parent.resolve().parent.joinpath('launch', rospy.get_param('~launchfile', 'highlevelsimulation.launch')))
         rospy.loginfo('Using %s as the launch file for nodes', self.nodelaunchfile)
 
         rospy.loginfo('Checking system state with %s hertz', pollingRateInHertz)
@@ -371,7 +371,7 @@ class Supervisor:
         self.font8 = ImageFont.truetype(font0path, 12)
 
         if rospy.get_param('~displaytype', 'demo') == 'demo':
-            rospy.loginfo('Using emulator')
+            rospy.loginfo('Using display emulator')
             self.displaydevice = pygame()
         else:
             i2cport = int(rospy.get_param('~i2cport', '1'))
@@ -440,7 +440,7 @@ class Supervisor:
                     self.state.robotnode = roslaunch.parent.ROSLaunchParent(uuid, [(self.nodelaunchfile, arguments)])
                     self.state.robotnode.start()
 
-                    # If the pathmanager is ready, we are ready to go!
+                    # If the high level service is ready, we are ready to go!
                     rospy.wait_for_service('cancel')
 
                     self.state.ready = True
@@ -456,7 +456,7 @@ class Supervisor:
             if self.processshutdown and self.state.robotnode is not None:
 
                 # We publish the shutdown command
-                # This requests a shutdown of subscribing nodes (BaseController, PathManager)
+                # This requests a shutdown of subscribing nodes (Odometry, Highlevel etc.)
                 shutdownTopic.publish(Int16(1))
 
                 self.savestateformap()

@@ -1,0 +1,26 @@
+local_costmap:
+  global_frame: odom
+  robot_base_frame: base_link
+  update_frequency: 1.0
+  publish_frequency: 1.0
+  rolling_window: true
+  width: 2.0
+  height: 2.0
+  resolution: 0.02
+  always_send_full_costmap: true
+
+  plugins:
+    - {name: static_layer, type: "costmap_2d::StaticLayer"}
+    - {name: obstacle_layer, type: "costmap_2d::VoxelLayer"}
+    - {name: inflation_layer, type: "costmap_2d::InflationLayer"}
+
+  static_layer:
+    map_topic: /map
+    subscribe_to_updates: true
+
+  obstacle_layer:
+    observation_sources: scan
+    scan: { data_type: LaserScan, topic: /scan, marking: true, clearing: true }
+
+  inflation_layer:
+    inflation_radius: 0.18

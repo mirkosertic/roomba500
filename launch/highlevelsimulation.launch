@@ -1,0 +1,60 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="createmap" default="false"/>
+  <arg name="loadmap" default="false"/>
+  <arg name="mapfile" default="unknown"/>
+  <arg name="initialx" default="0"/>
+  <arg name="initialy" default="0"/>
+  <arg name="initialyaw" default="0"/>
+  <arg name="roombalog" default="unknown"/>
+  <arg name="debugimagelocation" default="unknown"/>
+
+  <include file="$(find turtlebot3_bringup)/launch/turtlebot3_remote.launch">
+      <arg name="model" value="waffle" />
+  </include>
+
+  <group if="$(arg createmap)">
+    <include file="$(find roomba500)/launch/slam.launch"/>
+
+    <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
+        <rosparam file="$(find roomba500)/config/costmap_common_params.yaml" command="load" ns="global_costmap" />
+        <rosparam file="$(find roomba500)/config/costmap_common_params.yaml" command="load" ns="local_costmap" />
+        <rosparam file="$(find roomba500)/config/local_costmap_params.yaml" command="load" />
+        <rosparam file="$(find roomba500)/config/global_costmap_params.yaml" command="load" />
+        <rosparam file="$(find roomba500)/config/base_local_planner_params.yaml" command="load" />
+    </node>
+
+    <include file="$(find roomba500)/launch/highlevel.launch">
+        <arg name="debugimagelocation" value="$(arg debugimagelocation)"/>
+    </include>
+
+  </group>
+
+  <group if="$(arg loadmap)">
+    <node pkg="map_server" type="map_server" name="map_server" output="screen" args="$(arg mapfile)">
+        <param name="rosout_disable_topics_generation" value="True" />
+    </node>
+
+    <include file="$(find roomba500)/launch/amcl.launch">
+        <arg name="initialx" value="$(arg initialx)"/>
+        <arg name="initialy" value="$(arg initialy)"/>
+        <arg name="initialyaw" value="$(arg initialyaw)"/>
+    </include>
+
+    <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
+        <rosparam file="$(find roomba500)/config/costmap_common_params.yaml" command="load" ns="global_costmap" />
+        <rosparam file="$(find roomba500)/config/costmap_common_params.yaml" command="load" ns="local_costmap" />
+        <rosparam file="$(find roomba500)/config/local_costmap_params.yaml" command="load" />
+        <rosparam file="$(find roomba500)/config/global_costmap_params.yaml" command="load" />
+        <rosparam file="$(find roomba500)/config/base_local_planner_params.yaml" command="load" />
+    </node>
+
+    <include file="$(find roomba500)/launch/highlevel.launch">
+        <arg name="debugimagelocation" value="$(arg debugimagelocation)"/>
+    </include>
+  </group>
+
+  <include file="$(find roomba500)/launch/roombalogger.launch">
+      <arg name="roombalog" value="$(arg roombalog)"/>
+  </include>
+</launch>

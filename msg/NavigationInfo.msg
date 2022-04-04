@@ -1,2 +1,4 @@
 float32 distanceToTargetInMeters
 float32 angleToTargetInDegrees
+int16 currentWaypoint
+int16 numWaypoints

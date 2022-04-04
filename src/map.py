@@ -32,8 +32,8 @@ class BoustrophedonSpan:
     def append(self, cell):
         self.cells.append(cell)
 
-    def appendNeighbors(self, list):
-        self.neighbors.extend(list)
+    def appendNeighbors(self, neighbors):
+        self.neighbors.extend(neighbors)
 
 
 class MapGridCell:
@@ -68,39 +68,36 @@ class MapGridCell:
     def isCovering(self, position):
         return position.x >= self.topleftx and position.x <= self.bottomrightx and position.y >= self.bottomrighty and position.y <= self.toplefty
 
-    def updateStatusFrom(self, map, scanwidthinmeters, occupancythreshold):
+    def updateStatusFrom(self, griddata, scanwidthinmeters, occupancythreshold):
         topleftx = self.centerx - scanwidthinmeters / 2
         toplefty = self.centery + scanwidthinmeters / 2
 
         bottomrightx = self.centerx + scanwidthinmeters / 2
         bottomrighty = self.centery - scanwidthinmeters / 2
 
-        topleftxoc = int((topleftx - map.info.origin.position.x) / map.info.resolution)
-        topleftyoc = int((toplefty - map.info.origin.position.y) / map.info.resolution)
+        topleftxoc = int((topleftx - griddata.info.origin.position.x) / griddata.info.resolution)
+        topleftyoc = int((toplefty - griddata.info.origin.position.y) / griddata.info.resolution)
 
-        bottomrightxoc = int((bottomrightx - map.info.origin.position.x) / map.info.resolution)
-        bottomrightyoc = int((bottomrighty - map.info.origin.position.y) / map.info.resolution)
-
-        containsUnknowns = False
+        bottomrightxoc = int((bottomrightx - griddata.info.origin.position.x) / griddata.info.resolution)
+        bottomrightyoc = int((bottomrighty - griddata.info.origin.position.y) / griddata.info.resolution)
 
         for y in range(bottomrightyoc, topleftyoc, 1):
             for x in range(topleftxoc, bottomrightxoc, 1):
                 # Clip to valid coordinates
-                if x >= 0 and x < map.info.width and y >= 0 and y < map.info.height:
-                    value = map.data[y * map.info.width + x]
-                    if value == -1:
-                        containsUnknowns = True
-                    elif value > occupancythreshold:
-                        # As soon as there is a single occupied point on the map,
-                        # the cell is occupied
-                        self.status = GridCellStatus.OCCUPIED
+                if x >= 0 and x < griddata.info.width and y >= 0 and y < griddata.info.height:
+                    value = griddata.data[y * griddata.info.width + x]
+                    if value < 0:
+                        # If one cell is unknown(-1), the status of the whole cell is unknown
+                        self.status = GridCellStatus.UNKNOWN
                         return
 
-        if containsUnknowns:
-            self.status = GridCellStatus.UNKNOWN
-            return
-
-        self.status = GridCellStatus.FREE
+        # We only check the center of the cell, as due to costmap inflation this also covers if it is reachable or not.
+        xcenter = int((self.centerx - griddata.info.origin.position.x) / griddata.info.resolution)
+        ycenter = int((self.centery - griddata.info.origin.position.y) / griddata.info.resolution)
+        if griddata.data[ycenter * griddata.info.width + xcenter] > occupancythreshold:
+            self.status = GridCellStatus.OCCUPIED
+        else:
+            self.status = GridCellStatus.FREE
 
 
 class NavigationMap:
@@ -112,48 +109,50 @@ class NavigationMap:
         self.cells = []
         self.currentmap =  None
 
-    def isNewMap(self, map):
+    def isNewMap(self, griddata):
         if self.currentmap is None:
             return True
 
-        if self.currentmap.info.width != map.info.width:
+        if self.currentmap.info.width != griddata.info.width:
             return True
 
-        if self.currentmap.info.height != map.info.height:
+        if self.currentmap.info.height != griddata.info.height:
             return True
 
-        if self.currentmap.info.resolution != map.info.resolution:
+        if self.currentmap.info.resolution != griddata.info.resolution:
             return True
 
-        if self.currentmap.info.origin.position.x != map.info.origin.position.x:
+        if self.currentmap.info.origin.position.x != griddata.info.origin.position.x:
             return True
 
-        if self.currentmap.info.origin.position.y != map.info.origin.position.y:
+        if self.currentmap.info.origin.position.y != griddata.info.origin.position.y:
             return True
 
         return False
 
-    def updateCellStatusFrom(self, map):
-        self.currentmap = map
+    def updateCellStatusFrom(self, griddata):
+        self.currentmap = griddata
         for cell in self.cells:
-            cell.updateStatusFrom(map, self.scanwidthinmeters, self.occupancythreshold)
+            cell.updateStatusFrom(griddata, self.scanwidthinmeters, self.occupancythreshold)
 
-    def initOrUpdateFromOccupancyGrid(self, map):
+    def initOrUpdateFromOccupancyGrid(self, griddata):
 
-        if not self.isNewMap(map):
-            self.updateCellStatusFrom(map)
+        rospy.loginfo("Scanning current map with grid size %s m", str(self.gridcellwidthinmeters))
+
+        if not self.isNewMap(griddata):
+            self.updateCellStatusFrom(griddata)
             return
 
         if self.currentmap is not None:
             rospy.loginfo("Changes in map position, size or resolution are currently not supported!")
             return
 
-        origin = map.info.origin
-        width = map.info.width
-        height = map.info.height
+        origin = griddata.info.origin
+        width = griddata.info.width
+        height = griddata.info.height
 
-        mapwidthinmeters = width * map.info.resolution
-        mapheightinmeters = height * map.info.resolution
+        mapwidthinmeters = width * griddata.info.resolution
+        mapheightinmeters = height * griddata.info.resolution
 
         squaresperrow = len(np.arange(0, mapwidthinmeters, self.gridcellwidthinmeters))
 
@@ -197,7 +196,7 @@ class NavigationMap:
 
             yoffset = yoffset + 1
 
-        self.updateCellStatusFrom(map)
+        self.updateCellStatusFrom(griddata)
 
     def nearestCellCovering(self, position):
         nearestCell = None
@@ -260,6 +259,7 @@ class NavigationMap:
         initialspans = None
         prevspans = None
 
+        rospy.loginfo("Scanning to the right...")
         while current.right is not None:
             foundspans = scanVertical(current)
             spanstocover.extend(foundspans)
@@ -272,6 +272,7 @@ class NavigationMap:
             current = current.right
 
         # Scan to the left
+        rospy.loginfo("Scanning to the left...")
         prevspans = initialspans
         current = src.left
         while current is not None and current.left is not None:

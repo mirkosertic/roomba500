@@ -6,11 +6,9 @@ import threading
 import tf
 import logging
 import traceback
+import actionlib
+import math
 
-from donothingstate import DoNothingState
-from rotatetoanglestate import RotateToAngleState
-from movetopositionstate import MoveToPositionState
-from driver import Driver
 from map import NavigationMap, GridCellStatus
 
 from std_msgs.msg import Int16, ColorRGBA
@@ -18,36 +16,26 @@ from nav_msgs.srv import GetMap
 from nav_msgs.msg import Odometry, OccupancyGrid
 from geometry_msgs.msg import Twist, Point, Pose, PoseStamped, Quaternion, Vector3
 from visualization_msgs.msg import Marker, MarkerArray
+from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
+from actionlib_msgs.msg import GoalStatus
 from tf.transformations import quaternion_from_euler
+from tf.transformations import euler_from_quaternion
 
 from roomba500.msg import NavigationInfo
 from roomba500.srv import Clean, CleanResponse, Cancel, CancelResponse
 
 
-class PathManager:
+class Highlevel:
 
     def __init__(self):
         self.syncLock = threading.Lock()
-        self.systemState = None
         self.latestOdometry = None
-        self.doNothingLambda = lambda previousState: DoNothingState(self, None, None)
-        self.errorLambda = lambda previousState: DoNothingState(self, None, None)
         self.map = None
-        self.driver = None
         self.transformlistener = None
         self.infotopic = None
         self.markerstopic = None
-
-        self.kP = 3.0
-        self.kA = 8
-        self.kB = -1.5
-        self.max_linear_speed = 0.2
-        self.min_linear_speed = 0.08
-        self.max_angular_speed = 0.5
-        self.min_angular_speed = 0.3
-        self.linear_tolerance = 0.025
-
-        self.angular_tolerance = 3.0
+        self.movebaseclient = None
+        self.currentpathindex = 0
 
     def newOdomMessage(self, data):
 
@@ -59,75 +47,113 @@ class PathManager:
 
         self.syncLock.release()
 
-    def newMoveBaseSimpleGoalMessage(self, data):
+    def shortestAngle(self, origin, target):
+        # Code taken from https://stackoverflow.com/questions/28036652/finding-the-shortest-distance-between-two-angles/28037434
+        diff = (target - origin + 180) % 360 - 180
+        if diff < -180:
+            return diff + 360
+        return diff
 
-        try:
-            rospy.loginfo("Received move_base_simple/goal message : %s", data)
+    def clampDegrees(self, value):
+        while value < 0:
+            value += 360
+        while value >= 360:
+            value -= 360
 
-            self.syncLock.acquire()
+        return value
 
-            self.systemState.abort()
+    def toDegrees(self, value):
+        return self.clampDegrees(math.degrees(value))
 
-            odometryInTargetposeFrame = self.latestOdometryTransformedToFrame(data.header.frame_id)
-
-            currentposition = self.map.nearestCellCovering(odometryInTargetposeFrame.pose.position)
-            if currentposition is None:
-                rospy.loginfo("Cannot find cell for current position on map. No path finding possible")
-                return
-
-            targetposition = self.map.nearestCellCovering(data.pose.position)
-            if targetposition is None:
-                rospy.loginfo("Cannot find cell for target position on map. No path finding possible")
-                return
-
-            rospy.loginfo("Trying to find new path...")
-            path = self.map.findPath(currentposition, targetposition)
-            if path is not None and len(path) > 0:
-                rospy.loginfo("There is a viable path...")
-                self.followPath(path, data.header.frame_id)
-            else:
-                rospy.loginfo("Cannot follow path, as there is no path or path is too short : %s", str(path))
-
-        except Exception as e:
-            rospy.logerr('Error calculating path : %s', e)
-            logging.error(traceback.format_exc())
-            pass
-
-        self.syncLock.release()
+    def poseAngleInDegrees(self, pose):
+        quat = pose.orientation
+        (_, _, yaw) = euler_from_quaternion([quat.x, quat.y, quat.z, quat.w])
+        return self.toDegrees(yaw)
 
     def followPath(self, path, frameid):
 
         # Draw some debug information
-        self.highlightPath(path)
+        self.highlightPath(path, frameid)
 
-        rospy.loginfo("Path to target is : %s", path)
+        rospy.loginfo("Path to target has : %s waypoints", str(len(path)))
 
-        #
-        # Calculate the next waypoint
-        #
-        def goToPositionState(pathmanager, path, position):
-            if position >= len(path):
-                rospy.loginfo("Reached end of path")
-                return DoNothingState(self, None, None)
+        self.currentpathindex = 0
 
-            nextstate = lambda prevstate: goToPositionState(pathmanager, path, position + 1)
+        def goalAtIndex(index):
+            # We calculate the target rotation for the robot. It should face to the next waypoint
+            # of the path
+            if index < len(path) - 1:
+                targetangle = math.atan2(path[index + 1].centery - path[index].centery, path[index + 1].centerx - path[index].centerx)
+                q = quaternion_from_euler(0, 0, targetangle)
+            else:
+                # Last node of the path
+                # We compute the angle backwards and add 180 degrees to it
+                targetangle = math.atan2(path[index - 1].centery - path[index].centery, path[index - 1].centerx - path[index].centerx) + math.pi
+                q = quaternion_from_euler(0, 0, targetangle)
 
-            afterotationstate = lambda prevstate: MoveToPositionState(pathmanager, Point(x, y, 0), frameid, nextstate, self.errorLambda)
+            goal = MoveBaseGoal()
+            goal.target_pose.header.frame_id = "map"
+            goal.target_pose.header.stamp = rospy.Time.now()
+            goal.target_pose.pose.position.x = path[index].centerx
+            goal.target_pose.pose.position.y = path[index].centery
+            goal.target_pose.pose.orientation.x = q[0]
+            goal.target_pose.pose.orientation.y = q[1]
+            goal.target_pose.pose.orientation.z = q[2]
+            goal.target_pose.pose.orientation.w = q[3]
 
-            x = path[position].centerx
-            y = path[position].centery
-            rospy.loginfo("Going to next waypoint #%s, (%s, %s)", position, x, y)
-            return RotateToAngleState(pathmanager, Point(x, y, 0), frameid, afterotationstate, self.errorLambda)
+            return goal
 
-        # We ignore path index 0 as this is the start position
-        nextstate = lambda prevstate: goToPositionState(self, path, 1)
+        def active_cb():
+            rospy.loginfo("Goal is now being processing by action server...")
+            pass
 
-        # First we orientate in the right direction
-        # This is done by the RotateToAngleState
-        x = path[1].centerx
-        y = path[1].centery
+        def feedback_cb(feedback):
+            rospy.logdebug("Got feedback from action server : (%s) %s", str(type(feedback)), str(feedback))
 
-        self.systemState = RotateToAngleState(self, Point(x, y, 0), frameid, nextstate, self.errorLambda)
+            pose = feedback.base_position
+            goal = goalAtIndex(self.currentpathindex)
+
+            dx = goal.target_pose.pose.position.x - pose.pose.position.x
+            dy = goal.target_pose.pose.position.y - pose.pose.position.y
+            distanceToTarget = math.sqrt(dx * dx + dy * dy)
+
+            shortestAngle = self.shortestAngle(self.poseAngleInDegrees(feedback.base_position.pose), self.poseAngleInDegrees(goal.target_pose.pose))
+
+            self.publishNavigationInfo(distanceToTarget, shortestAngle, self.currentpathindex, len(path))
+            pass
+
+        def done_cb(status, result):
+            rospy.loginfo("Goal %s marked as done with status %s", str(self.currentpathindex), str(status))
+
+            if status == GoalStatus.PREEMPTED:
+                rospy.loginfo("Goal pose %s received a cancel request after it started executing, completed execution!", str(self.currentpathindex + 1))
+
+            if status == GoalStatus.SUCCEEDED:
+                rospy.loginfo("Goal pose %s reached", str(self.currentpathindex + 1))
+
+                self.currentpathindex = self.currentpathindex + 1
+                if self.currentpathindex < len(path) - 1:
+                    rospy.loginfo("Continue with waypoint %s", str(self.currentpathindex + 1))
+                    self.movebaseclient.send_goal(goalAtIndex(self.currentpathindex), done_cb, active_cb, feedback_cb)
+                    return
+                else:
+                    rospy.loginfo("Path is completed!")
+
+            if status == GoalStatus.ABORTED:
+                rospy.loginfo("Goal pose %s was aborted by the action server!", str(self.currentpathindex + 1))
+
+            if status == GoalStatus.REJECTED:
+                rospy.loginfo("Goal pose %s has been rejected by the action server!", str(self.currentpathindex + 1))
+
+            if status == GoalStatus.RECALLED:
+                rospy.loginfo("Goal pose %s received a cancel request before it started executing, successfull cancellation!", str(self.currentpathindex + 1))
+
+            self.publishNavigationInfo(.0, .0, self.currentpathindex, len(path))
+
+            pass
+
+        # We start by navigating to the starting pose
+        self.movebaseclient.send_goal(goalAtIndex(self.currentpathindex), done_cb, active_cb, feedback_cb)
 
     def newShutdownCommand(self, data):
 
@@ -162,7 +188,7 @@ class PathManager:
 
         self.syncLock.acquire()
 
-        self.systemState = DoNothingState(self, None, None)
+        self.movebaseclient.cancel_all_goals()
 
         self.syncLock.release()
 
@@ -180,19 +206,21 @@ class PathManager:
 
         return self.transformlistener.transformPose(targetframe, mpose)
 
-    def publishNavigationInfo(self, distanceToTargetInMeters, angleToTargetInDegrees):
+    def publishNavigationInfo(self, distanceToTargetInMeters, angleToTargetInDegrees, currentWaypoint, numWaypoints):
         message = NavigationInfo()
         message.distanceToTargetInMeters = distanceToTargetInMeters
         message.angleToTargetInDegrees = angleToTargetInDegrees
+        message.currentWaypoint = currentWaypoint
+        message.numWaypoints = numWaypoints
         self.infotopic.publish(message)
 
-    def highlightPath(self, path):
+    def highlightPath(self, path, frameid):
 
         markers = MarkerArray()
         quat = quaternion_from_euler(0, 0, 0)
 
         marker = Marker()
-        marker.header.frame_id = 'map'
+        marker.header.frame_id = frameid
         marker.header.stamp = rospy.Time.now()
         marker.id = 3
         marker.type = 4  # Line-strip
@@ -236,7 +264,6 @@ class PathManager:
             p.color.b = 1
 
             markers.markers.append(p)
-
 
         marker.color.a = 1
         marker.color.r = 0
@@ -286,9 +313,8 @@ class PathManager:
         self.markerstopic.publish(markers)
 
     def start(self):
-        rospy.init_node('pathmanager', anonymous=True)
-        pollingRateInHertz = int(rospy.get_param('~pollingRateInHertz', '5'))
-        statePublishIntervalInSeconds = int(rospy.get_param('~statePublishIntervalInSeconds', '2'))
+        rospy.init_node('Highlevel', anonymous=True)
+        pollingRateInHertz = int(rospy.get_param('~pollingRateInHertz', '1'))
 
         debugimagelocation = rospy.get_param('~debugimagelocation', None)
 
@@ -299,14 +325,13 @@ class PathManager:
 
         # This is our map responsible for navigation and pathfinding
         gridcellwidthinmeters = float(rospy.get_param('~gridcellwidthinmeters', '0.18'))
-        scanwidthinmeters = float(rospy.get_param('~scanwidthinmeters', '0.36'))
-        occupancythreshold = float(rospy.get_param('~occupancythreshold', ' 0.65'))
+        scanwidthinmeters = float(rospy.get_param('~scanwidthinmeters', '0.18'))
+
+        occupancythreshold = float(rospy.get_param('~occupancythreshold', ' 0'))
         self.map = NavigationMap(gridcellwidthinmeters, scanwidthinmeters, occupancythreshold)
 
-        rospy.Subscriber("map", OccupancyGrid, self.map.initOrUpdateFromOccupancyGrid)
-
-        # And the driver will publish twist commands
-        self.driver = Driver(rospy.Publisher('cmd_vel', Twist, queue_size=10))
+        # We use the provided costmap from ROS navigation stack by default for further path finding
+        rospy.Subscriber(rospy.get_param('~costmaptopic', 'move_base/global_costmap/costmap'), OccupancyGrid, self.map.initOrUpdateFromOccupancyGrid)
 
         # Handling for administrative shutdowns
         rospy.Subscriber("shutdown", Int16, self.newShutdownCommand)
@@ -315,60 +340,45 @@ class PathManager:
 
         self.infotopic = rospy.Publisher('navigation_info', NavigationInfo, queue_size=10)
 
-        self.systemState = DoNothingState(self, None, None)
-
-        # We consume odometry, maps and move base goals here
+        # We consume odometry here
         rospy.Subscriber("odom", Odometry, self.newOdomMessage)
-        rospy.Subscriber("move_base_simple/goal", PoseStamped, self.newMoveBaseSimpleGoalMessage)
 
-        # Check if we should init the map by calling the map_server instead of
-        # waiting for a published map. This is the case if we are running AMCL instead of SLAM
-        if rospy.get_param('~initfrommapserver', False):
-            servicename = rospy.get_param('~servicename', 'static_map')
-
-            rospy.loginfo('Waiting for service %s', servicename)
-            rospy.wait_for_service(servicename)
-            rospy.loginfo('Invoking service')
-            service = rospy.ServiceProxy(servicename, GetMap)
-            response = service()
-            rospy.loginfo('Ready to rumble!')
-
-            self.map.initOrUpdateFromOccupancyGrid(response.map)
+        # We need the client for move base
+        rospy.loginfo("Connecting to move_base action server")
+        self.movebaseclient = actionlib.SimpleActionClient('move_base', MoveBaseAction)
+        if not self.movebaseclient.wait_for_server(rospy.Duration(5.0)):
+            rospy.logerr("Action server not available!")
+            rospy.signal_shutdown("Action server not available!")
+            return
 
         # Register services
         rospy.Service("clean", Clean, self.clean)
         rospy.Service("cancel", Cancel, self.cancel)
 
         # Processing the sensor polling in an endless loop until this node shuts down
-        cyclecounter = 0
+        rospy.loginfo("Highlevel Controller is ready.")
+
         while not rospy.is_shutdown():
 
             self.syncLock.acquire()
 
-            self.systemState = self.systemState.process()
-
-            # Publish debug state
-            cyclecounter = cyclecounter + 1
-            if cyclecounter > pollingRateInHertz * statePublishIntervalInSeconds:
-                self.publishMapState()
-                cyclecounter = 0
+            self.publishMapState()
 
             self.syncLock.release()
 
             rate.sleep()
-
 
         # We only write the debug image on exit as this is a very expensive operation on tiny devices such as a RPI.
         rospy.loginfo('Writing debug image...')
         image = self.map.toDebugImage()
         cv2.imwrite(debugimagelocation, image)
 
-        rospy.loginfo('Pathmanager terminated.')
+        rospy.loginfo('Highlevel Controller terminated.')
 
 
 if __name__ == '__main__':
     try:
-        manager = PathManager()
-        manager.start()
+        node = Highlevel()
+        node.start()
     except rospy.ROSInterruptException:
         pass

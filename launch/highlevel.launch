@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="debugimagelocation" default="$(find roomba500)/maps/debug-running.png"/>
+
+  <node name="highlevel" pkg="roomba500" type="highlevel.py" output="screen">
+    <param name="rosout_disable_topics_generation" value="True" />
+    <param name="debugimagelocation" value="$(arg debugimagelocation)" />
+
+    <param name="scanwidthinmeters" value="0.18"/>
+    <param name="gridcellwidthinmeters" value="0.18"/>
+  </node>
+</launch>

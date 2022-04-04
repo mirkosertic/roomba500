@@ -1,0 +1,18 @@
+global_costmap:
+  global_frame: map
+  robot_base_frame: base_link
+  update_frequency: 1.0
+  publish_frequency: 1.0
+  always_send_full_costmap: true
+  resolution: 0.02
+
+  plugins:
+    - {name: static_layer, type: "costmap_2d::StaticLayer"}
+    - {name: inflation_layer, type: "costmap_2d::InflationLayer"}
+
+  static_layer:
+    map_topic: /map
+    subscribe_to_updates: true
+
+  inflation_layer:
+    inflation_radius: 0.18

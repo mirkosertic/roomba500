@@ -1,9 +1,0 @@
-<launch>
-
-  <node pkg="slam_toolbox" type="sync_slam_toolbox_node" name="slam_toolbox" output="screen">
-    <param name="rosout_disable_topics_generation" value="True" />
-    <rosparam command="load" file="$(find roomba500)/config/slamtoolbox_online_sync.yaml" />
-    <param name="rosout_disable_topics_generation" value="True" />
-  </node>
-
-</launch>

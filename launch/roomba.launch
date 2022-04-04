@@ -15,11 +15,9 @@
   </include>
 
   <group if="$(arg createmap)">
-      <include file="$(find roomba500)/launch/gmapping.launch"/>
+      <include file="$(find roomba500)/launch/slam.launch"/>
 
-      <include file="$(find roomba500)/launch/pathmanager.launch">
-        <arg name="initfrommapserver" value="true"/>
-        <arg name="servicename" value="dynamic_map"/>
+      <include file="$(find roomba500)/launch/highlevel.launch">
         <arg name="debugimagelocation" value="$(arg debugimagelocation)"/>
       </include>
   </group>
@@ -35,9 +33,7 @@
         <arg name="initialyaw" value="$(arg initialyaw)"/>
       </include>
 
-      <include file="$(find roomba500)/launch/pathmanager.launch">
-        <arg name="initfrommapserver" value="true"/>
-        <arg name="servicename" value="static_map"/>
+      <include file="$(find roomba500)/launch/highlevel.launch">
         <arg name="debugimagelocation" value="$(arg debugimagelocation)"/>
       </include>
   </group>

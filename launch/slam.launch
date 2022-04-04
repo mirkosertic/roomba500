@@ -8,7 +8,7 @@
         <param name="xmax" value="5.0" />
         <param name="ymin" value="-5.0" />
         <param name="ymax" value="5.0" />
-        <param name="delta" value="0.05" />
+        <param name="delta" value="0.02" /> <!-- Map-Grid-Size -->
     </node>
 
 <!--    <include file="$(find hector_mapping)/launch/mapping_default.launch">
@@ -19,5 +19,11 @@
         <arg name="scan_topic" default="scan"/>
         <arg name="map_size" default="2048"/>
     </include>-->
+
+
+<!--    <node pkg="slam_toolbox" type="sync_slam_toolbox_node" name="slam_toolbox" output="screen">
+        <param name="rosout_disable_topics_generation" value="True" />
+        <rosparam command="load" file="$(find roomba500)/config/slamtoolbox_online_sync.yaml" />
+    </node> -->
 
 </launch>
