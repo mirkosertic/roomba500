@@ -5,7 +5,7 @@
             .controlcontainer {
                 display: grid;
                 grid-template-columns: 1fr 1fr 1fr;
-                grid-template-rows: 2rem 2rem 2rem 2rem 2rem 2rem 2rem 2rem;
+                grid-template-rows: 2rem 2rem 2rem 2rem 2rem 2rem 2rem 2rem 2rem;
                 gap: 0.5rem 0.5rem;
                 grid-template-areas:
     "wakeup . shutdown"
@@ -14,7 +14,8 @@
     ". backward ."
     ". relocalization ."
     ". clean ."
-    ". cancel .";
+    ". cancel ."
+    ". simulate .";
                 width: 50rem;
             }
 
@@ -64,6 +65,10 @@
 
             .cancelbutton {
                 grid-area: cancel;
+            }
+
+            .simulatebutton {
+                grid-area: simulate;
             }
 
             .sensorcontainer {
@@ -199,6 +204,7 @@
             <input class='relocalizatiobutton' id='relocalizatiobutton' type='submit' value='Relocalization'/>
             <input class='cleanbutton' id='cleanbutton' type='submit' value='Clean'/>
             <input class='cancelbutton' id='cancelbutton' type='submit' value='Cancel'/>
+            <input class='simulatebutton' id='simulatebutton' type='submit' value='Simulate obstacle'/>
         </div>
 
         <div id='sensorcontainer' class='sensorcontainer'>
@@ -211,7 +217,7 @@
             <div id='lightsensorFrontRight' class='lightsensorFrontRight lightSensor' data-value="0"></div>
             <div id='lightsensorRight' class='lightsensorRight lightSensor' data-value="0"></div>
             <div class='roomba'></div>
-            <div class='commonstatus' >Battery : <span id='batteryCharge'>&nbsp;</span> mAH / <span id='batteryCapacity'>&nbsp;</span> mAH<br>Left Wheel Encoder : <span id='leftWheelEncoder'> </span> Ticks / Right Wheel Encoder : <span id='rightWheelEncoder'> </span> Ticks<br>Stopwatch: <span id='stopwatch'>0</span> ms<br>Vel X Commanded/Real : <span id='velxstatus'>1/2 </span> m/s<br>Vel Theta Commanded/Real : <span id='velthetastatus'>1/2 </span> rad/s<br>Distance to target : <span id='distancetotarget'>1/2 </span> m<br>Angle to target : <span id='angletotarget'>1/2 </span> degrees</div>
+            <div class='commonstatus' >Battery : <span id='batteryCharge'>&nbsp;</span> mAH / <span id='batteryCapacity'>&nbsp;</span> mAH<br>Left Wheel Encoder : <span id='leftWheelEncoder'> </span> Ticks / Right Wheel Encoder : <span id='rightWheelEncoder'> </span> Ticks<br>Stopwatch: <span id='stopwatch'>0</span> ms<br>Vel X Commanded/Real : <span id='velxstatus'>1/2 </span> m/s<br>Vel Theta Commanded/Real : <span id='velthetastatus'>1/2 </span> rad/s<br>Distance to target : <span id='distancetotarget'>1/2 </span> m<br>Angle to target : <span id='angletotarget'>1/2 </span> degrees<br>Waypoint <span id='currentwaypoint'>1</span> / <span id='numWaypoints'>1</span></div>
         </div>
 
         <script>
@@ -234,6 +240,7 @@
             let relocalizatiobutton = document.getElementById('relocalizatiobutton');
             let cleanbutton = document.getElementById('cleanbutton');
             let cancelbutton = document.getElementById('cancelbutton');
+            let simulatebutton = document.getElementById('simulatebutton');
 
             let leftWheelEncoder = document.getElementById('leftWheelEncoder');
             let rightWheelEncoder = document.getElementById('rightWheelEncoder');
@@ -241,6 +248,8 @@
             let velthetastatus = document.getElementById('velthetastatus');
             let distancetotarget = document.getElementById('distancetotarget');
             let angletotarget = document.getElementById('angletotarget');
+            let currentWaypoint = document.getElementById('currentwaypoint');
+            let numWaypoints = document.getElementById('numWaypoints');
 
             let bumperleft = document.getElementById('bumperleft');
             let bumperright = document.getElementById('bumperright');
@@ -322,6 +331,9 @@
                     distancetotarget.innerText = '' + data.distanceToTargetInMeters.toFixed(2);
                     angletotarget.innerText = '' + data.angleToTargetInDegrees.toFixed(2);
 
+                    currentWaypoint.innerText = '' + data.currentWaypoint;
+                    numWaypoints.innerText = '' + data.numWaypoints;
+
                     updateStopwatch()
 
                 } else {
@@ -389,6 +401,8 @@
                             odomveltheta: 1.1,
                             distanceToTargetInMeters: 87,
                             angleToTargetInDegrees: 99,
+                            currentWaypoint: 2,
+                            numWaypoints: 8,
                             rooms: ['room01', 'room02']
                         })
                     })
@@ -450,6 +464,10 @@
                 fetch('/actions/cancel').then(response => fetchState());
             }
 
+            function simulateObstacle() {
+                fetch('/actions/simulateObstacle').then(response => fetchState());
+            }
+
             wakeupButton.addEventListener('click', wakeup);
             shutdownButton.addEventListener('click', shutdown);
 
@@ -464,6 +482,7 @@
             relocalizatiobutton.addEventListener('click', relocalization);
             cleanbutton.addEventListener('click', clean);
             cancelbutton.addEventListener('click', cancel);
+            simulatebutton.addEventListener('click', simulateObstacle);
 
             fetchState();
             setInterval(fetchState, 2000);

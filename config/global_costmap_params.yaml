@@ -8,11 +8,16 @@ global_costmap:
 
   plugins:
     - {name: static_layer, type: "costmap_2d::StaticLayer"}
+    - {name: obstacle_layer, type: "costmap_2d::VoxelLayer"}
     - {name: inflation_layer, type: "costmap_2d::InflationLayer"}
 
   static_layer:
     map_topic: /map
     subscribe_to_updates: true
+
+  obstacle_layer:
+    observation_sources: obstacles
+    obstacles: { data_type: PointCloud, topic: /obstacles, marking: true}
 
   inflation_layer:
     inflation_radius: 0.18

@@ -32,6 +32,8 @@ class SupervisorState:
         self.amclmode = False
         self.distanceToTargetInMeters = .0
         self.angleToTargetInDegrees = .0
+        self.currentWaypoint = 0
+        self.numWaypoints = 0
 
         self.mapframe = mapframe
         self.transformlistener = transformlistener
@@ -106,6 +108,8 @@ class SupervisorState:
 
         self.distanceToTargetInMeters = message.distanceToTargetInMeters
         self.angleToTargetInDegrees = message.angleToTargetInDegrees
+        self.currentWaypoint = message.currentWaypoint
+        self.numWaypoints = message.numWaypoints
 
         self.syncLock.release()
 
@@ -136,6 +140,8 @@ class SupervisorState:
             'odomveltheta': self.odomveltheta,
             'distanceToTargetInMeters': self.distanceToTargetInMeters,
             'angleToTargetInDegrees': self.angleToTargetInDegrees,
+            'currentWaypoint': self.currentWaypoint,
+            'numWaypoints': self.numWaypoints,
             'rooms': knownrooms
         }
         return data

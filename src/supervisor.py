@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-
+import math
 import os
 import signal
 import threading
@@ -16,10 +16,12 @@ import tf
 import roslaunch
 import rospy
 
+from tf.transformations import quaternion_from_euler
 from std_srvs.srv import Empty
 from std_msgs.msg import Int16
-from geometry_msgs.msg import Twist, Pose2D
+from geometry_msgs.msg import Twist, Pose2D, Point32, PoseStamped
 from nav_msgs.msg import Odometry
+from sensor_msgs.msg import PointCloud
 
 from flask import Flask, render_template, make_response, jsonify
 
@@ -60,6 +62,9 @@ class Supervisor:
         self.rotationspeed = .6  # 0.4 is bare minimum
 
         self.roomsdirectory = None
+
+        self.obstaclespub = None
+        self.transformlistener = None
 
     def startWebServer(self):
         rospy.loginfo('Starting supervisor at %s:%s', self.wsinterface, self.wsport)
@@ -250,6 +255,34 @@ class Supervisor:
         self.state.syncLock.release()
         return make_response(jsonify(data), 200)
 
+    def simulateObstacle(self):
+
+        rospy.loginfo('Simulating obstacle')
+        self.state.syncLock.acquire()
+
+        data = {
+        }
+
+        try:
+            distance = 0.5
+            dx = math.cos(self.state.latestyawonmap) * distance
+            dy = math.sin(self.state.latestyawonmap) * distance
+
+            msg = PointCloud()
+            msg.header.stamp = rospy.Time.now()
+            msg.header.frame_id = 'map'
+            msg.points.append(Point32(self.state.latestpositiononmap.x + dx, self.state.latestpositiononmap.y + dy, 0.05))
+
+            self.obstaclespub.publish(msg)
+
+        except Exception as e:
+            rospy.logerr(traceback.format_exc())
+            rospy.logerr('Error generating obstacle : %s', e)
+
+        self.state.syncLock.release()
+
+        return make_response(jsonify(data), 200)
+
     def updateDisplay(self):
         device = self.displaydevice
         state = self.state.gathersystemstate()
@@ -260,6 +293,7 @@ class Supervisor:
                 device.contrast(255)
                 draw.text((3, 11), 'Bat: ' + str(state['batteryCharge']) + '/' + str(state['batteryCapacity']) + ' mAH', fill='white', font=self.font8)
                 draw.text((3, 22), 'Dist: ' + "{:.2f}".format(state['distanceToTargetInMeters']) + ' m / ' + "{:.2f}".format(state['angleToTargetInDegrees']) + ' deg', fill='white', font=self.font8)
+                draw.text((3, 33), 'Nav: ' + str(state['currentWaypoint']) + ' / ' + str(state['numWaypoints']), fill='white', font=self.font8)
             else:
                 device.contrast(128)
                 draw.text((3, 11), 'Sleeping...', fill='white', font=self.font8)
@@ -313,7 +347,7 @@ class Supervisor:
     def start(self):
         rospy.init_node('supervisor', anonymous=True)
 
-        pollingRateInHertz = int(rospy.get_param('~pollingRateInHertz', '40'))
+        pollingRateInHertz = int(rospy.get_param('~pollingRateInHertz', '5'))
         self.wsport = int(rospy.get_param('~wsport', '8080'))
         self.wsinterface = self.bindinginterface('0.0.0.0')
 
@@ -330,9 +364,12 @@ class Supervisor:
         rospy.loginfo('Using %s as the rooms directory', self.roomsdirectory)
 
         self.mapframe = rospy.get_param('~mapframe', 'map')
-        self.state = SupervisorState(tf.TransformListener(), self.mapframe, self.roomsdirectory)
+        self.transformlistener = tf.TransformListener()
+        self.state = SupervisorState(self.transformlistener, self.mapframe, self.roomsdirectory)
 
         self.driver = Driver(rospy.Publisher('cmd_vel', Twist, queue_size=10))
+
+        self.obstaclespub = rospy.Publisher('obstacles', PointCloud, queue_size=10)
 
         self.app = Flask(__name__, static_url_path='', static_folder=staticContentFolder, template_folder=staticContentFolder)
         self.app.add_url_rule('/', view_func=self.deliverStart)
@@ -355,6 +392,7 @@ class Supervisor:
         self.app.add_url_rule('/actions/cancel', view_func=self.cancel)
         self.app.add_url_rule('/actions/room/<room>/delete', view_func=self.deleteroom)
         self.app.add_url_rule('/actions/room/<room>/start', view_func=self.startroom)
+        self.app.add_url_rule('/actions/simulateObstacle', view_func=self.simulateObstacle)
 
         wsThread = threading.Thread(target=self.startWebServer)
         wsThread.start()
