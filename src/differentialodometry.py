@@ -48,6 +48,9 @@ class DifferentialOdometry:
         self.encodererrorthreshold = 0
         self.angularvelocitythreshold = .0
 
+        self.latestSpeedLeftWheelMillimeterPerSecond = 0
+        self.latestSpeedRightWheelMillimeterPerSecond = 0
+
     def newShutdownCommand(self, data):
         self.syncLock.acquire()
         rospy.signal_shutdown('Shutdown requested')
@@ -59,25 +62,29 @@ class DifferentialOdometry:
         forwardSpeedMetersPerSecond = data.linear.x
         rotationRadPerSecond = data.angular.z
 
-        rospy.loginfo('Received new cmd_vel command with linear-x = %s m/s and angular-z = %s rad/s', forwardSpeedMetersPerSecond, rotationRadPerSecond)
-
         forwardSpeedMillimetersPerSecond = forwardSpeedMetersPerSecond * 100.0 * 10.0
 
         speedLeftWheelMillimeterPerSecond = int(forwardSpeedMillimetersPerSecond - (rotationRadPerSecond * (self.robotWheelSeparationInCm / 2.0) * 10.0))
         speedRightWheelMillimeterPerSecond = int(forwardSpeedMillimetersPerSecond + (rotationRadPerSecond * (self.robotWheelSeparationInCm / 2.0) * 10.0))
 
-        rospy.loginfo("Commanding motors with left wheel speed = %f mm/s and right wheel speed = %f mm/s", speedLeftWheelMillimeterPerSecond, speedRightWheelMillimeterPerSecond)
+        if speedLeftWheelMillimeterPerSecond != self.latestSpeedLeftWheelMillimeterPerSecond or speedRightWheelMillimeterPerSecond != self.latestSpeedRightWheelMillimeterPerSecond:
 
-        speedcommand = DiffMotorSpeeds()
-        speedcommand.leftMillimetersPerSecond = speedLeftWheelMillimeterPerSecond
-        speedcommand.rightMillimetersPerSecond = speedRightWheelMillimeterPerSecond
-        self.diffmotorspeedspub.publish(speedcommand)
+            rospy.loginfo('Received new cmd_vel command with linear-x = %s m/s and angular-z = %s rad/s', forwardSpeedMetersPerSecond, rotationRadPerSecond)
+            rospy.loginfo("Commanding motors with left wheel speed = %f mm/s and right wheel speed = %f mm/s", speedLeftWheelMillimeterPerSecond, speedRightWheelMillimeterPerSecond)
 
-        self.publishOdometry(True, rospy.Time.now())
+            speedcommand = DiffMotorSpeeds()
+            speedcommand.leftMillimetersPerSecond = speedLeftWheelMillimeterPerSecond
+            speedcommand.rightMillimetersPerSecond = speedRightWheelMillimeterPerSecond
+            self.diffmotorspeedspub.publish(speedcommand)
 
-        self.targetvelx = data.linear.x
-        self.targetvelz = data.angular.z
-        self.moving = data.linear.x != .0 or data.angular.z != .0
+            self.publishOdometry(True, rospy.Time.now())
+
+            self.targetvelx = data.linear.x
+            self.targetvelz = data.angular.z
+            self.moving = data.linear.x != .0 or data.angular.z != .0
+
+            self.latestSpeedLeftWheelMillimeterPerSecond = speedLeftWheelMillimeterPerSecond
+            self.latestSpeedRightWheelMillimeterPerSecond = speedRightWheelMillimeterPerSecond
 
         self.syncLock.release()
 
