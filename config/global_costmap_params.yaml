@@ -17,7 +17,8 @@ global_costmap:
 
   obstacle_layer:
     observation_sources: obstacles
-    obstacles: { data_type: PointCloud, topic: /obstacles, marking: true}
+    track_unknown_space: true
+    obstacles: { data_type: PointCloud, topic: /obstacles, marking: true }
 
   inflation_layer:
     inflation_radius: 0.18

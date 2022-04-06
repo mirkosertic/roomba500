@@ -3,10 +3,8 @@ local_costmap:
   robot_base_frame: base_link
   update_frequency: 1.0
   publish_frequency: 1.0
-  width: 8.0
-  height: 8.0
-  resolution: 0.02
   always_send_full_costmap: true
+  resolution: 0.02
 
   plugins:
     - {name: static_layer, type: "costmap_2d::StaticLayer"}
@@ -19,8 +17,9 @@ local_costmap:
 
   obstacle_layer:
     observation_sources: scan obstacles
+    track_unknown_space: true
     scan: { data_type: LaserScan, topic: /scan, marking: true, clearing: true }
-    obstacles: { data_type: PointCloud, topic: /obstacles, marking: true }
+    obstacles: { data_type: PointCloud, topic: /obstacles, marking: true}
 
   inflation_layer:
     inflation_radius: 0.18

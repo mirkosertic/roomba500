@@ -92,12 +92,14 @@ class MapGridCell:
                         return
 
         # We only check the center of the cell, as due to costmap inflation this also covers if it is reachable or not.
+        self.status = GridCellStatus.UNKNOWN
         xcenter = int((self.centerx - griddata.info.origin.position.x) / griddata.info.resolution)
         ycenter = int((self.centery - griddata.info.origin.position.y) / griddata.info.resolution)
-        if griddata.data[ycenter * griddata.info.width + xcenter] > occupancythreshold:
-            self.status = GridCellStatus.OCCUPIED
-        else:
-            self.status = GridCellStatus.FREE
+        if xcenter >= 0 and xcenter < griddata.info.width and ycenter >= 0 and ycenter < griddata.info.height:
+            if griddata.data[ycenter * griddata.info.width + xcenter] > occupancythreshold:
+                self.status = GridCellStatus.OCCUPIED
+            else:
+                self.status = GridCellStatus.FREE
 
 
 class NavigationMap:
@@ -136,8 +138,6 @@ class NavigationMap:
             cell.updateStatusFrom(griddata, self.scanwidthinmeters, self.occupancythreshold)
 
     def initOrUpdateFromOccupancyGrid(self, griddata):
-
-        rospy.loginfo("Scanning current map with grid size %s m", str(self.gridcellwidthinmeters))
 
         if not self.isNewMap(griddata):
             self.updateCellStatusFrom(griddata)
