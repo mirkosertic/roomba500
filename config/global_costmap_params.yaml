@@ -2,9 +2,10 @@ global_costmap:
   global_frame: map
   robot_base_frame: base_link
   update_frequency: 1.0
-  publish_frequency: 1.0
+  publish_frequency: 0.5
   always_send_full_costmap: true
-  resolution: 0.05
+  resolution: 0.02
+  transform_tolerance: 1
 
   plugins:
     - {name: static_layer, type: "costmap_2d::StaticLayer"}

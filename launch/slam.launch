@@ -8,7 +8,7 @@
         <param name="xmax" value="5.0" />
         <param name="ymin" value="-5.0" />
         <param name="ymax" value="5.0" />
-        <param name="delta" value="0.05" /> <!-- Map-Grid-Size -->
+        <param name="delta" value="0.02" /> <!-- Map-Grid-Size -->
     </node>
 
 <!--    <include file="$(find hector_mapping)/launch/mapping_default.launch">
