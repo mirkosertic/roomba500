@@ -16,7 +16,6 @@ import tf
 import roslaunch
 import rospy
 
-from tf.transformations import quaternion_from_euler
 from std_srvs.srv import Empty
 from std_msgs.msg import Int16
 from geometry_msgs.msg import Twist, Pose2D, Point32, PoseStamped

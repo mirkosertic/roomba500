@@ -5,8 +5,9 @@ import threading
 import rospy
 
 from std_msgs.msg import Int16
-from geometry_msgs.msg import Twist
+from geometry_msgs.msg import Twist, Point32
 from nav_msgs.msg import Odometry
+from sensor_msgs.msg import PointCloud
 from tf.transformations import quaternion_from_euler
 from tf.broadcaster import TransformBroadcaster
 
@@ -51,25 +52,33 @@ class DifferentialOdometry:
         self.latestSpeedLeftWheelMillimeterPerSecond = 0
         self.latestSpeedRightWheelMillimeterPerSecond = 0
 
+        self.recoverFromCollision = False
+        self.collisionX = .0
+        self.collisionY = .0
+        self.collisionTime = None
+        self.collisionRevertDistance = .0
+        self.collisionRevertVelocity = .0
+        self.collisionReleaseDelta = .0
+        self.bumperpcdistance = .0
+        self.bumperpcheight = .0
+
+        self.obstaclespub = None
+
     def newShutdownCommand(self, data):
         self.syncLock.acquire()
         rospy.signal_shutdown('Shutdown requested')
         self.syncLock.release()
 
-    def newCmdVelCommand(self, data):
-        self.syncLock.acquire()
+    def publishCmdVel(self, linearX, angularZ):
 
-        forwardSpeedMetersPerSecond = data.linear.x
-        rotationRadPerSecond = data.angular.z
+        forwardSpeedMillimetersPerSecond = linearX * 100.0 * 10.0
 
-        forwardSpeedMillimetersPerSecond = forwardSpeedMetersPerSecond * 100.0 * 10.0
-
-        speedLeftWheelMillimeterPerSecond = int(forwardSpeedMillimetersPerSecond - (rotationRadPerSecond * (self.robotWheelSeparationInCm / 2.0) * 10.0))
-        speedRightWheelMillimeterPerSecond = int(forwardSpeedMillimetersPerSecond + (rotationRadPerSecond * (self.robotWheelSeparationInCm / 2.0) * 10.0))
+        speedLeftWheelMillimeterPerSecond = int(forwardSpeedMillimetersPerSecond - (angularZ * (self.robotWheelSeparationInCm / 2.0) * 10.0))
+        speedRightWheelMillimeterPerSecond = int(forwardSpeedMillimetersPerSecond + (angularZ * (self.robotWheelSeparationInCm / 2.0) * 10.0))
 
         if speedLeftWheelMillimeterPerSecond != self.latestSpeedLeftWheelMillimeterPerSecond or speedRightWheelMillimeterPerSecond != self.latestSpeedRightWheelMillimeterPerSecond:
 
-            rospy.loginfo('Received new cmd_vel command with linear-x = %s m/s and angular-z = %s rad/s', forwardSpeedMetersPerSecond, rotationRadPerSecond)
+            rospy.loginfo('Received new cmd_vel command with linear-x = %s m/s and angular-z = %s rad/s', linearX, angularZ)
             rospy.loginfo("Commanding motors with left wheel speed = %f mm/s and right wheel speed = %f mm/s", speedLeftWheelMillimeterPerSecond, speedRightWheelMillimeterPerSecond)
 
             speedcommand = DiffMotorSpeeds()
@@ -79,12 +88,18 @@ class DifferentialOdometry:
 
             self.publishOdometry(True, rospy.Time.now())
 
-            self.targetvelx = data.linear.x
-            self.targetvelz = data.angular.z
-            self.moving = data.linear.x != .0 or data.angular.z != .0
+            self.targetvelx = linearX
+            self.targetvelz = angularZ
+            self.moving = linearX != .0 or angularZ != .0
 
             self.latestSpeedLeftWheelMillimeterPerSecond = speedLeftWheelMillimeterPerSecond
             self.latestSpeedRightWheelMillimeterPerSecond = speedRightWheelMillimeterPerSecond
+
+    def newCmdVelCommand(self, data):
+        self.syncLock.acquire()
+
+        if not self.recoverFromCollision:
+            self.publishCmdVel(data.linear.x, data.angular.z)
 
         self.syncLock.release()
 
@@ -98,7 +113,7 @@ class DifferentialOdometry:
         if abs(deltaleft) > self.encodererrorthreshold or abs(deltaright) > self.encodererrorthreshold:
             rospy.logwarn("Got large delta in wheel encoders with left = %s and right = %s. I will assume an error and skip this frame.", deltaleft, deltaright)
             self.referencetime = currenttime
-            return
+            return None
 
         self.sumdeltaleft += deltaleft
         self.sumdeltaright += deltaright
@@ -183,6 +198,8 @@ class DifferentialOdometry:
 
         self.odompub.publish(odom)
 
+        return (odom.pose.pose.position.x, odom.pose.pose.position.y, newtheta)
+
     def newSensorFrame(self, data):
         self.syncLock.acquire()
 
@@ -199,9 +216,63 @@ class DifferentialOdometry:
             self.rightencoder.update(data.wheelEncoderRight)
 
         if data.bumperLeft or data.bumperRight or data.wheeldropLeft or data.wheeldropRight:
-            self.publishOdometry(True, data.stamp)
+            # We stop the motors
+            self.publishCmdVel(.0, .0)
+            # Enable failsafe
+            if not self.recoverFromCollision:
+                rospy.loginfo("Starting low-level recovery after collision. Blocking further cmd_vel commands.")
+
+                # And commit the current position
+                newposition = self.publishOdometry(True, data.stamp)
+                if newposition is not None:
+                    # We mark the point from where we started
+                    (x, y, theta) = newposition
+                    self.recoverFromCollision = True
+                    self.collisionTime = data.stamp
+                    self.collisionX = x
+                    self.collisionY = y
+
+                    # Publish collision point cloud
+                    dx = math.cos(theta) * self.bumperpcdistance
+                    dy = math.sin(theta) * self.bumperpcdistance
+
+                    msg = PointCloud()
+                    msg.header.stamp = rospy.Time.now()
+                    msg.header.frame_id = 'odom'
+                    msg.points.append(Point32(x + dx, y + dy, self.bumperpcheight))
+                    self.obstaclespub.publish(msg)
+
+                    # And we start to drive backwards
+                    self.publishCmdVel(self.collisionRevertVelocity, .0)
+            else:
+                # we are in recovery mode, and the bumpers are pressed
+                newposition = self.publishOdometry(False, data.stamp)
         else:
-            self.publishOdometry(False, data.stamp)
+            newposition = self.publishOdometry(False, data.stamp)
+
+        if newposition is not None and self.recoverFromCollision:
+            # We are in failsafe mode
+            (currentX, currentY, _) = newposition
+            dx = self.collisionX - currentX
+            dy = self.collisionY - currentY
+            distance = math.sqrt(dx * dx + dy * dy)
+            if distance > self.collisionRevertDistance:
+                rospy.loginfo("Traveled back far enough : %s m", distance)
+                # We can stop movement here
+                self.publishCmdVel(.0, .0)
+                self.publishOdometry(True, data.stamp)
+            else:
+                rospy.loginfo("Recovery distance is : %s m", distance)
+
+            # After some time we can release the recovery flag
+            deltaTime = data.stamp - self.collisionRevertDistance
+            if deltaTime.to_sec() > self.collisionReleaseDelta:
+                rospy.loginfo("Releasing cmd_vel command block after %s seconds", deltaTime.to_sec())
+                self.recoverFromCollision = False
+                self.publishCmdVel(.0, .0)
+                self.publishOdometry(True, data.stamp)
+            else:
+                rospy.loginfo("Waiting to release command block, delta time is %s", deltaTime.to_sec())
 
         self.syncLock.release()
 
@@ -218,11 +289,24 @@ class DifferentialOdometry:
         self.ticksPerCm = float(rospy.get_param('~ticksPerCm', '22.7157014'))
         self.robotWheelSeparationInCm = float(rospy.get_param('~robotWheelSeparationInCm', '22.86'))  # 22.56 is calculated 22.86 seems to fit well
 
+        self.collisionRevertDistance = float(rospy.get_param('~collisionRevertDistance', '0.2'))
+        self.collisionRevertVelocity = float(rospy.get_param('~collisionRevertVelocity', '-0.4'))
+        self.collisionReleaseDelta = float(rospy.get_param('~collisionReleaseDelta', '1'))
+
+        self.bumperpcdistance = float(rospy.get_param('~bumperpcdistance', '0.27'))
+        self.bumperpcheight = float(rospy.get_param('~bumperpcheight', '0.05'))
+
         rospy.loginfo("Configured with ticksPerCm                = %s ", self.ticksPerCm)
         rospy.loginfo("Configured with robotWheelSeparationInCm  = %s ", self.robotWheelSeparationInCm)
+        rospy.loginfo("Configured with collisionRevertDistance   = %s ", self.collisionRevertDistance)
+        rospy.loginfo("Configured with collisionRevertVelocity   = %s ", self.collisionRevertVelocity)
+        rospy.loginfo("Configured with collisionReleaseDelta     = %s ", self.collisionReleaseDelta)
+        rospy.loginfo("Configured with bumperpcdistance          = %s ", self.bumperpcdistance)
+        rospy.loginfo("Configured with bumperpcheight            = %s ", self.bumperpcheight)
 
         self.diffmotorspeedspub = rospy.Publisher('cmd_motorspeeds', DiffMotorSpeeds, queue_size=10)
         self.odompub = rospy.Publisher('odom', Odometry, queue_size=10)
+        self.obstaclespub = rospy.Publisher('obstacles', PointCloud, queue_size=10)
 
         self.transformbroadcaster = TransformBroadcaster()
 
