@@ -216,11 +216,12 @@ class DifferentialOdometry:
             self.rightencoder.update(data.wheelEncoderRight)
 
         if data.bumperLeft or data.bumperRight or data.wheeldropLeft or data.wheeldropRight:
-            # We stop the motors
-            self.publishCmdVel(.0, .0)
             # Enable failsafe
             if not self.recoverFromCollision:
                 rospy.loginfo("Starting low-level recovery after collision. Blocking further cmd_vel commands.")
+
+                # We stop the motors
+                self.publishCmdVel(.0, .0)
 
                 # And commit the current position
                 newposition = self.publishOdometry(True, data.stamp)
@@ -259,18 +260,18 @@ class DifferentialOdometry:
             if distance > self.collisionRevertDistance:
                 rospy.loginfo("Traveled back far enough : %s m", distance)
                 # We can stop movement here
-                self.publishCmdVel(.0, .0)
                 self.publishOdometry(True, data.stamp)
+                self.publishCmdVel(.0, .0)
             else:
                 rospy.loginfo("Recovery distance is : %s m", distance)
 
             # After some time we can release the recovery flag
-            deltaTime = data.stamp - self.collisionRevertDistance
+            deltaTime = data.stamp - self.collisionTime
             if deltaTime.to_sec() > self.collisionReleaseDelta:
                 rospy.loginfo("Releasing cmd_vel command block after %s seconds", deltaTime.to_sec())
                 self.recoverFromCollision = False
-                self.publishCmdVel(.0, .0)
                 self.publishOdometry(True, data.stamp)
+                self.publishCmdVel(.0, .0)
             else:
                 rospy.loginfo("Waiting to release command block, delta time is %s", deltaTime.to_sec())
 
@@ -290,7 +291,7 @@ class DifferentialOdometry:
         self.robotWheelSeparationInCm = float(rospy.get_param('~robotWheelSeparationInCm', '22.86'))  # 22.56 is calculated 22.86 seems to fit well
 
         self.collisionRevertDistance = float(rospy.get_param('~collisionRevertDistance', '0.2'))
-        self.collisionRevertVelocity = float(rospy.get_param('~collisionRevertVelocity', '-0.4'))
+        self.collisionRevertVelocity = float(rospy.get_param('~collisionRevertVelocity', '-0.2'))
         self.collisionReleaseDelta = float(rospy.get_param('~collisionReleaseDelta', '1'))
 
         self.bumperpcdistance = float(rospy.get_param('~bumperpcdistance', '0.27'))
