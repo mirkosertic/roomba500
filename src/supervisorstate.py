@@ -70,12 +70,12 @@ class SupervisorState:
         self.lightbumperright = message.lightBumperRight
         self.wheelEncoderLeft = message.wheelEncoderLeft
         self.wheelEncoderRight = message.wheelEncoderRight
-        self.lightbumperLeftStat = message.lightbumperLeftStat
-        self.lightbumperFrontLeftStat = message.lightbumperFrontLeftStat
-        self.lightbumperCenterLeftStat = message.lightbumperCenterLeftStat
-        self.lightbumperCenterRightStat = message.lightbumperCenterRightStat
-        self.lightbumperFrontRightStat = message.lightbumperFrontRightStat
-        self.lightbumperRightStat = message.lightbumperRightStat
+        self.lightbumperLeftStat = message.lightBumperLeftStat
+        self.lightbumperFrontLeftStat = message.lightBumperFrontLeftStat
+        self.lightbumperCenterLeftStat = message.lightBumperCenterLeftStat
+        self.lightbumperCenterRightStat = message.lightBumperCenterRightStat
+        self.lightbumperFrontRightStat = message.lightBumperFrontRightStat
+        self.lightbumperRightStat = message.lightBumperRightStat
 
         self.syncLock.release()
 
