@@ -28,7 +28,7 @@ class SensorFrame {
             lightBumperFrontRight = 0;
             lightBumperRight = 0;
             oimode = 0;
-            lightBumperStat = 0
+            lightBumperStat = 0;
         }
 
         bool isBumperLeft() {
