@@ -13,6 +13,7 @@ class SensorFrame {
         int lightBumperFrontRight;
         int lightBumperRight;
         int oimode;
+        int lightBumperStat;
 
         SensorFrame() {
             leftWheel = 0;

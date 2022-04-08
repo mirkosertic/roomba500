@@ -29,6 +29,12 @@ class SupervisorState:
         self.lightbumperright = 0
         self.wheelEncoderLeft = 0
         self.wheelEncoderRight = 0
+        self.lightbumperLeftStat = False
+        self.lightbumperFrontLeftStat = False
+        self.lightbumperCenterLeftStat = False
+        self.lightbumperCenterRightStat = False
+        self.lightbumperFrontRightStat = False
+        self.lightbumperRightStat = False
         self.amclmode = False
         self.distanceToTargetInMeters = .0
         self.angleToTargetInDegrees = .0
@@ -64,6 +70,13 @@ class SupervisorState:
         self.lightbumperright = message.lightBumperRight
         self.wheelEncoderLeft = message.wheelEncoderLeft
         self.wheelEncoderRight = message.wheelEncoderRight
+        self.lightbumperLeftStat = message.lightbumperLeftStat
+        self.lightbumperFrontLeftStat = message.lightbumperFrontLeftStat
+        self.lightbumperCenterLeftStat = message.lightbumperCenterLeftStat
+        self.lightbumperCenterRightStat = message.lightbumperCenterRightStat
+        self.lightbumperFrontRightStat = message.lightbumperFrontRightStat
+        self.lightbumperRightStat = message.lightbumperRightStat
+
         self.syncLock.release()
 
     def newOdometry(self, message):
@@ -142,6 +155,12 @@ class SupervisorState:
             'angleToTargetInDegrees': self.angleToTargetInDegrees,
             'currentWaypoint': self.currentWaypoint,
             'numWaypoints': self.numWaypoints,
+            'lightbumperLeftStat': self.lightbumperLeftStat,
+            'lightbumperFrontLeftStat': self.lightbumperFrontLeftStat,
+            'lightbumperCenterLeftStat': self.lightbumperCenterLeftStat,
+            'lightbumperCenterRightStat': self.lightbumperCenterRightStat,
+            'lightbumperFrontRightStat': self.lightbumperFrontRightStat,
+            'lightbumperRightStat': self.lightbumperRightStat,
             'rooms': knownrooms
         }
         return data

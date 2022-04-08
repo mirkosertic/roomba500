@@ -6,10 +6,16 @@ bool bumperRight
 bool wheeldropLeft
 bool wheeldropRight
 int16 lightBumperLeft
+bool lightBumperLeftStat
 int16 lightBumperFrontLeft
+bool lightBumperFrontLeftStat
 int16 lightBumperCenterLeft
+bool lightBumperCenterLeftStat
 int16 lightBumperCenterRight
+bool lightBumperCenterRightStat
 int16 lightBumperFrontRight
+bool lightBumperFrontRightStat
 int16 lightBumperRight
+bool lightBumperRightStat
 int16 wheelEncoderLeft
 int16 wheelEncoderRight

@@ -142,7 +142,7 @@ class Roomba500 {
 
         tcflush(fd, TCIFLUSH);
 
-        unsigned char data[] = {131, 149, 12, 43, 44, 25, 26, 7, 46, 47, 48, 49, 50, 51, 35};
+        unsigned char data[] = {131, 149, 13, 43, 44, 25, 26, 7, 46, 47, 48, 49, 50, 51, 35, 45};
         int written = write(fd, &data, sizeof(data));
         if (written != sizeof(data)) {
             throw std::invalid_argument("sending read sensors command");
@@ -165,6 +165,7 @@ class Roomba500 {
         sensorFrame.lightBumperFrontRight = readData() << 8 | readData(); // packet 50
         sensorFrame.lightBumperRight = readData() << 8 | readData(); // packet 51
         sensorFrame.oimode = readData(); // packet 35
+        sensorFrame.lightBumperStat = readData(); // packet 45
 
         return sensorFrame;
     }
