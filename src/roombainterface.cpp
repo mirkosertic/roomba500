@@ -226,12 +226,12 @@ class BaseController {
                 sensorFrameData.lightBumperRight = newSensorFrame.lightBumperRight;
                 sensorFrameData.wheelEncoderLeft = newSensorFrame.leftWheel;
                 sensorFrameData.wheelEncoderRight = newSensorFrame.rightWheel;
-                sensorFrameData.lightBumperLeftStat = newSensorFrame.lightBumperStat & 1 > 0;
-                sensorFrameData.lightBumperFrontLeftStat = newSensorFrame.lightBumperStat & 2 > 0;
-                sensorFrameData.lightBumperCenterLeftStat = newSensorFrame.lightBumperStat & 4 > 0;
-                sensorFrameData.lightBumperCenterRightStat = newSensorFrame.lightBumperStat & 8 > 0;
-                sensorFrameData.lightBumperFrontRightStat = newSensorFrame.lightBumperStat & 16 > 0;
-                sensorFrameData.lightBumperRightStat = newSensorFrame.lightBumperStat & 32 > 0;
+                sensorFrameData.lightBumperLeftStat = newSensorFrame.lightBumperStat & 1 != 0;
+                sensorFrameData.lightBumperFrontLeftStat = newSensorFrame.lightBumperStat & 2 != 0;
+                sensorFrameData.lightBumperCenterLeftStat = newSensorFrame.lightBumperStat & 4 != 0;
+                sensorFrameData.lightBumperCenterRightStat = newSensorFrame.lightBumperStat & 8 != 0;
+                sensorFrameData.lightBumperFrontRightStat = newSensorFrame.lightBumperStat & 16 != 0;
+                sensorFrameData.lightBumperRightStat = newSensorFrame.lightBumperStat & 32 != 0;
                 sensorFrameTopic.publish(sensorFrameData);
 
                 mutex.unlock();

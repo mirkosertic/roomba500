@@ -315,12 +315,12 @@
                     bumperleft.dataset.status = '' + data.bumperLeft;
                     bumperright.dataset.status = '' + data.bumperRight;
 
-                    lightsensorLeft.dataset.value = '' + data.lightbumperLeft;
-                    lightsensorFrontLeft.dataset.value = '' + data.lightbumperFrontLeft;
-                    lightsensorCenterLeft.dataset.value = '' + data.lightbumperCenterLeft;
-                    lightsensorCenterRight.dataset.value = '' + data.lightbumperCenterRight;
-                    lightsensorFrontRight.dataset.value = '' + data.lightbumperFrontRight;
-                    lightsensorRight.dataset.value = '' + data.lightbumperRight;
+                    lightsensorLeft.dataset.value = '' + data.lightbumperLeft + ' ' + data.lightbumperLeftStat;
+                    lightsensorFrontLeft.dataset.value = '' + data.lightbumperFrontLeft + ' ' + data.lightbumperFrontLeftStat;
+                    lightsensorCenterLeft.dataset.value = '' + data.lightbumperCenterLeft + ' ' + data.lightbumperCenterLeftStat;
+                    lightsensorCenterRight.dataset.value = '' + data.lightbumperCenterRight + ' ' + data.lightbumperCenterRightStat;
+                    lightsensorFrontRight.dataset.value = '' + data.lightbumperFrontRight + ' ' + data.lightbumperFrontRightStat;
+                    lightsensorRight.dataset.value = '' + data.lightbumperRight + ' ' + data.lightbumperRightStat;
 
                     leftWheelEncoder.innerText = '' + data.wheelEncoderLeft;
                     rightWheelEncoder.innerText = '' + data.wheelEncoderRight;
