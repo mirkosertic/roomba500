@@ -1,36 +1,36 @@
 <?xml version="1.0"?>
 <launch>
-  <node name="roombainterface" pkg="roomba500" type="roombainterface" output="screen" respawn="false">
-    <param name="rosout_disable_topics_generation" value="True" />
-    <param name="pollingRateInHertz" value="30" />
-  </node>
+    <node name="roombainterface" pkg="roomba500" type="roombainterface" output="screen" respawn="false">
+        <param name="rosout_disable_topics_generation" value="True"/>
+        <param name="pollingRateInHertz" value="30"/>
+    </node>
 
-  <node name="differentialodometry" pkg="roomba500" type="differentialodometry.py" output="screen">
-    <param name="rosout_disable_topics_generation" value="True" />
-    <param name="ticksPerCm" value="22.7157014" />
-    <param name="robotWheelSeparationInCm" value="22.86" />
-  </node>
+    <node name="differentialodometry" pkg="roomba500" type="differentialodometry.py" output="screen">
+        <param name="rosout_disable_topics_generation" value="True"/>
+        <param name="ticksPerCm" value="22.7157014"/>
+        <param name="robotWheelSeparationInCm" value="22.86"/>
+    </node>
 
-  <node name="ydlidar_node"  pkg="ydlidar_ros"  type="ydlidar_node" output="screen" respawn="false" >
-    <param name="rosout_disable_topics_generation" value="True" />
-    <param name="port" type="string" value="/dev/ttyUSB0"/>
-    <param name="baudrate" type="int" value="128000"/>
-    <param name="frame_id" type="string" value="laser_frame"/>
-    <param name="resolution_fixed" type="bool"   value="true"/>
-    <param name="auto_reconnect" type="bool"   value="true"/>
-    <param name="reversion" type="bool"   value="false"/>
-    <param name="angle_min" type="double" value="-180" />
-    <param name="angle_max" type="double" value="180" />
-    <param name="range_min" type="double" value="0.1" />
-    <param name="range_max" type="double" value="10.0" />
-    <param name="ignore_array" type="string" value="" />
-    <param name="frequency" type="double" value="7"/>
-    <param name="samp_rate" type="int"    value="5"/>
-  </node>
+    <node name="ydlidar_node" pkg="ydlidar_ros" type="ydlidar_node" output="screen" respawn="false">
+        <param name="rosout_disable_topics_generation" value="True"/>
+        <param name="port" type="string" value="/dev/ttyUSB0"/>
+        <param name="baudrate" type="int" value="128000"/>
+        <param name="frame_id" type="string" value="laser_frame"/>
+        <param name="resolution_fixed" type="bool" value="true"/>
+        <param name="auto_reconnect" type="bool" value="true"/>
+        <param name="reversion" type="bool" value="false"/>
+        <param name="angle_min" type="double" value="-180"/>
+        <param name="angle_max" type="double" value="180"/>
+        <param name="range_min" type="double" value="0.1"/>
+        <param name="range_max" type="double" value="10.0"/>
+        <param name="ignore_array" type="string" value=""/>
+        <param name="frequency" type="double" value="7"/>
+        <param name="samp_rate" type="int" value="5"/>
+    </node>
 
-  <node pkg="tf" type="static_transform_publisher" name="base_link_to_laser_frame"
-    args="-0.11 0.0 0.15 0.0 0.0 0.0 /base_link /laser_frame 100">
-    <param name="rosout_disable_topics_generation" value="True" />
-  </node>
+    <node pkg="tf" type="static_transform_publisher" name="base_link_to_laser_frame"
+          args="-0.11 0.0 0.15 0.0 0.0 0.0 /base_link /laser_frame 100">
+        <param name="rosout_disable_topics_generation" value="True"/>
+    </node>
 
 </launch>

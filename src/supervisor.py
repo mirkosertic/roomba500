@@ -62,7 +62,7 @@ class Supervisor:
 
         self.roomsdirectory = None
 
-        self.obstaclespub = None
+        self.bumperspub = None
         self.transformlistener = None
 
     def startWebServer(self):
@@ -272,7 +272,7 @@ class Supervisor:
             msg.header.frame_id = 'map'
             msg.points.append(Point32(self.state.latestpositiononmap.x + dx, self.state.latestpositiononmap.y + dy, 0.05))
 
-            self.obstaclespub.publish(msg)
+            self.bumperspub.publish(msg)
 
         except Exception as e:
             rospy.logerr(traceback.format_exc())
@@ -368,7 +368,7 @@ class Supervisor:
 
         self.driver = Driver(rospy.Publisher('cmd_vel', Twist, queue_size=10))
 
-        self.obstaclespub = rospy.Publisher('obstacles', PointCloud, queue_size=10)
+        self.bumperspub = rospy.Publisher('bumpers', PointCloud, queue_size=10)
 
         self.app = Flask(__name__, static_url_path='', static_folder=staticContentFolder, template_folder=staticContentFolder)
         self.app.add_url_rule('/', view_func=self.deliverStart)
@@ -453,14 +453,10 @@ class Supervisor:
                         arguments.append('loadmap:=true')
                         arguments.append('createmap:=false')
                         arguments.append('mapfile:=' + mapfile)
-
-                        self.state.amclmode = True
                     else:
                         rospy.loginfo('Using a new map which will be stored as %s', self.roomname)
                         arguments.append('loadmap:=false')
                         arguments.append('createmap:=true')
-
-                        self.state.amclmode = False
 
                     roombalog = str(pathlib.Path(self.roomsdirectory).joinpath(self.roomname, 'roombalog.txt'))
                     arguments.append('roombalog:=' + roombalog)

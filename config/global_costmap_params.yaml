@@ -19,8 +19,9 @@ global_costmap:
   obstacle_layer:
     observation_sources: bumpers lightsensors
     track_unknown_space: true
-    bumpers: { data_type: PointCloud, topic: /bumpers, marking: true }
-    lightsensors: { data_type: PointCloud, topic: /lightsensors, marking: true, clearing: true}
+    publish_voxel_map: true
+    bumpers: { data_type: PointCloud, topic: /bumpers, marking: true, observation_persistence: 10 }
+    lightsensors: { data_type: PointCloud, topic: /lightsensors, marking: true, clearing: true }
 
   inflation_layer:
     inflation_radius: 0.18

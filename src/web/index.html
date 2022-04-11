@@ -308,9 +308,9 @@
                     forwardrightbutton.disabled = false;
                     stopbutton.disabled = false;
                     backwardbutton.disabled = false;
-                    relocalizatiobutton.disabled = !data.amclmode;
-                    cleanbutton.disabled = false;
-                    cancelbutton.disabled = false;
+                    relocalizatiobutton.disabled = !(data.hasrelocalization);
+                    cleanbutton.disabled = !(data.hasclean);
+                    cancelbutton.disabled = !(data.hascancel);
 
                     bumperleft.dataset.status = '' + data.bumperLeft;
                     bumperright.dataset.status = '' + data.bumperRight;
@@ -392,7 +392,6 @@
                             lightbumperCenterRight: 4,
                             lightbumperFrontRight: 5,
                             lightbumperRight: 6,
-                            amclmode: true,
                             wheelEncoderLeft: 18,
                             wheelEncoderRight: 19,
                             lastcommandedvelx: 0.2,

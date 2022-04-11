@@ -134,6 +134,12 @@ class Highlevel:
                 self.currentpathindex = self.currentpathindex + 1
                 if self.currentpathindex < len(path) - 1:
                     rospy.loginfo("Continue with waypoint %s", str(self.currentpathindex + 1))
+
+                    if not self.movebaseclient.wait_for_server(rospy.Duration(1.0)):
+                        rospy.logerr("Action server not available!")
+                        rospy.signal_shutdown("Action server not available!")
+                        return
+
                     self.movebaseclient.send_goal(goalAtIndex(self.currentpathindex), done_cb, active_cb, feedback_cb)
                     return
                 else:
@@ -346,10 +352,6 @@ class Highlevel:
         # We need the client for move base
         rospy.loginfo("Connecting to move_base action server")
         self.movebaseclient = actionlib.SimpleActionClient('move_base', MoveBaseAction)
-        if not self.movebaseclient.wait_for_server(rospy.Duration(5.0)):
-            rospy.logerr("Action server not available!")
-            rospy.signal_shutdown("Action server not available!")
-            return
 
         # Register services
         rospy.Service("clean", Clean, self.clean)

@@ -5,6 +5,7 @@ import os
 
 import tf
 
+import rosservice
 from geometry_msgs.msg import PoseStamped
 from tf.transformations import euler_from_quaternion
 
@@ -35,7 +36,6 @@ class SupervisorState:
         self.lightbumperCenterRightStat = False
         self.lightbumperFrontRightStat = False
         self.lightbumperRightStat = False
-        self.amclmode = False
         self.distanceToTargetInMeters = .0
         self.angleToTargetInDegrees = .0
         self.currentWaypoint = 0
@@ -126,6 +126,10 @@ class SupervisorState:
 
         self.syncLock.release()
 
+    def hasservice(self, servicename):
+        services = rosservice.get_service_list()
+        return servicename in services
+
     def gathersystemstate(self):
 
         knownrooms = next(os.walk(self.roomsdirectory))[1]
@@ -144,7 +148,6 @@ class SupervisorState:
             'lightbumperCenterRight': self.lightbumpercenterright,
             'lightbumperFrontRight': self.lightbumperfrontright,
             'lightbumperRight': self.lightbumperright,
-            'amclmode': self.amclmode,
             'wheelEncoderLeft': self.wheelEncoderLeft,
             'wheelEncoderRight': self.wheelEncoderRight,
             'lastcommandedvelx': self.lastcommandedvelx,
@@ -161,6 +164,9 @@ class SupervisorState:
             'lightbumperCenterRightStat': self.lightbumperCenterRightStat,
             'lightbumperFrontRightStat': self.lightbumperFrontRightStat,
             'lightbumperRightStat': self.lightbumperRightStat,
+            'hasrelocalization': self.hasservice('/global_localization'),
+            'hasclean': self.hasservice('/clean'),
+            'hascancel': self.hasservice('/cancel'),
             'rooms': knownrooms
         }
         return data
