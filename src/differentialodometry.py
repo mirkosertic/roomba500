@@ -62,7 +62,28 @@ class DifferentialOdometry:
         self.bumperpcdistance = .0
         self.bumperpcheight = .0
 
-        self.obstaclespub = None
+        self.lightBumperheight = .0
+
+        self.lightBumperLeftpcdistance = .0
+        self.lightBumperLeftpcangle = .0
+
+        self.lightBumperFrontLeftpcdistance = .0
+        self.lightBumperFrontLeftpcangle = .0
+
+        self.lightBumperCenterLeftpcdistance = .0
+        self.lightBumperCenterLeftpcangle = .0
+
+        self.lightBumperCenterRightpcdistance = .0
+        self.lightBumperCenterRightpcangle = .0
+
+        self.lightBumperFrontRightpcdistance = .0
+        self.lightBumperFrontRightpcangle = .0
+
+        self.lightBumperRightpcdistance = .0
+        self.lightBumperRightpcangle = .0
+
+        self.bumperspub = None
+        self.lightsensorspub = None
 
     def newShutdownCommand(self, data):
         self.syncLock.acquire()
@@ -237,11 +258,11 @@ class DifferentialOdometry:
                     dx = math.cos(theta) * self.bumperpcdistance
                     dy = math.sin(theta) * self.bumperpcdistance
 
-                    msg = PointCloud()
-                    msg.header.stamp = rospy.Time.now()
-                    msg.header.frame_id = 'odom'
-                    msg.points.append(Point32(x + dx, y + dy, self.bumperpcheight))
-                    self.obstaclespub.publish(msg)
+                    bumpersmsg = PointCloud()
+                    bumpersmsg.header.stamp = rospy.Time.now()
+                    bumpersmsg.header.frame_id = 'odom'
+                    bumpersmsg.points.append(Point32(x + dx, y + dy, self.bumperpcheight))
+                    self.bumperspub.publish(bumpersmsg)
 
                     # And we start to drive backwards
                     self.publishCmdVel(self.collisionRevertVelocity, .0)
@@ -275,6 +296,45 @@ class DifferentialOdometry:
             else:
                 rospy.loginfo("Waiting to release command block, delta time is %s", deltaTime.to_sec())
 
+        if newposition is not None:
+            (x, y, theta) = newposition
+
+            lightsensorsmsg = PointCloud()
+            lightsensorsmsg.header.stamp = rospy.Time.now()
+            lightsensorsmsg.header.frame_id = 'odom'
+            if data.lightBumperLeftStat:
+                # Publish collision point cloud
+                dx = math.cos(theta + math.radians(self.lightBumperLeftpcangle)) * self.lightBumperLeftpcdistance
+                dy = math.sin(theta + math.radians(self.lightBumperLeftpcangle)) * self.lightBumperLeftpcdistance
+                lightsensorsmsg.points.append(Point32(x + dx, y + dy, self.lightBumperheight))
+            if data.lightBumperFrontLeftStat:
+                # Publish collision point cloud
+                dx = math.cos(theta + math.radians(self.lightBumperFrontLeftpcangle)) * self.lightBumperFrontLeftpcdistance
+                dy = math.sin(theta + math.radians(self.lightBumperFrontLeftpcangle)) * self.lightBumperFrontLeftpcdistance
+                lightsensorsmsg.points.append(Point32(x + dx, y + dy, self.lightBumperheight))
+            if data.lightBumperCenterLeftStat:
+                # Publish collision point cloud
+                dx = math.cos(theta + math.radians(self.lightBumperCenterLeftpcangle)) * self.lightBumperCenterLeftpcdistance
+                dy = math.sin(theta + math.radians(self.lightBumperCenterLeftpcangle)) * self.lightBumperCenterLeftpcdistance
+                lightsensorsmsg.points.append(Point32(x + dx, y + dy, self.lightBumperheight))
+            if data.lightBumperCenterRightStat:
+                # Publish collision point cloud
+                dx = math.cos(theta + math.radians(self.lightBumperCenterRightpcangle)) * self.lightBumperCenterRightpcdistance
+                dy = math.sin(theta + math.radians(self.lightBumperCenterRightpcangle)) * self.lightBumperCenterRightpcdistance
+                lightsensorsmsg.points.append(Point32(x + dx, y + dy, self.lightBumperheight))
+            if data.lightBumperFrontRightStat:
+                # Publish collision point cloud
+                dx = math.cos(theta + math.radians(self.lightBumperFrontRightpcangle)) * self.lightBumperFrontRightpcdistance
+                dy = math.sin(theta + math.radians(self.lightBumperFrontRightpcangle)) * self.lightBumperFrontRightpcdistance
+                lightsensorsmsg.points.append(Point32(x + dx, y + dy, self.lightBumperheight))
+            if data.lightBumperRightStat:
+                # Publish collision point cloud
+                dx = math.cos(theta + math.radians(self.lightBumperRightpcangle)) * self.lightBumperRightpcdistance
+                dy = math.sin(theta + math.radians(self.lightBumperRightpcangle)) * self.lightBumperRightpcdistance
+                lightsensorsmsg.points.append(Point32(x + dx, y + dy, self.lightBumperheight))
+
+            self.lightsensorspub.publish(lightsensorsmsg)
+
         self.syncLock.release()
 
     def start(self):
@@ -295,19 +355,61 @@ class DifferentialOdometry:
         self.collisionReleaseDelta = float(rospy.get_param('~collisionReleaseDelta', '1'))
 
         self.bumperpcdistance = float(rospy.get_param('~bumperpcdistance', '0.27'))
-        self.bumperpcheight = float(rospy.get_param('~bumperpcheight', '0.05'))
+        self.bumperpcheight = float(rospy.get_param('~bumperpcheight', '0.01'))
 
-        rospy.loginfo("Configured with ticksPerCm                = %s ", self.ticksPerCm)
-        rospy.loginfo("Configured with robotWheelSeparationInCm  = %s ", self.robotWheelSeparationInCm)
-        rospy.loginfo("Configured with collisionRevertDistance   = %s ", self.collisionRevertDistance)
-        rospy.loginfo("Configured with collisionRevertVelocity   = %s ", self.collisionRevertVelocity)
-        rospy.loginfo("Configured with collisionReleaseDelta     = %s ", self.collisionReleaseDelta)
-        rospy.loginfo("Configured with bumperpcdistance          = %s ", self.bumperpcdistance)
-        rospy.loginfo("Configured with bumperpcheight            = %s ", self.bumperpcheight)
+        self.lightBumperheight = float(rospy.get_param('~lightBumperheight', '0.05'))
+
+        self.lightBumperLeftpcdistance = float(rospy.get_param('~lightBumperLeftpcdistance', '0.27'))
+        self.lightBumperLeftpcangle = float(rospy.get_param('~lightBumperLeftpcangle', '45'))
+
+        self.lightBumperFrontLeftpcdistance = float(rospy.get_param('~lightBumperFrontLeftpcdistance', '0.27'))
+        self.lightBumperFrontLeftpcangle = float(rospy.get_param('~lightBumperFrontLeftpcangle', '20'))
+
+        self.lightBumperCenterLeftpcdistance = float(rospy.get_param('~lightBumperCenterLeftpcdistance', '0.27'))
+        self.lightBumperCenterLeftpcangle = float(rospy.get_param('~lightBumperCenterLeftpcangle', '2'))
+
+        self.lightBumperCenterRightpcdistance = float(rospy.get_param('~lightBumperCenterRightpcdistance', '0.27'))
+        self.lightBumperCenterRightpcangle = float(rospy.get_param('~lightBumperCenterRightpcangle', '-2'))
+
+        self.lightBumperFrontRightpcdistance = float(rospy.get_param('~lightBumperFrontRightpcdistance', '0.27'))
+        self.lightBumperFrontRightpcangle = float(rospy.get_param('~lightBumperFrontRightpcangle', '-20'))
+
+        self.lightBumperRightpcdistance = float(rospy.get_param('~lightBumperRightpcdistance', '0.27'))
+        self.lightBumperRightpcangle = float(rospy.get_param('~lightBumperRightpcheight', '0.05'))
+
+        rospy.loginfo("Configured with ticksPerCm                       = %s ", self.ticksPerCm)
+        rospy.loginfo("Configured with robotWheelSeparationInCm         = %s ", self.robotWheelSeparationInCm)
+        rospy.loginfo("Configured with collisionRevertDistance          = %s ", self.collisionRevertDistance)
+        rospy.loginfo("Configured with collisionRevertVelocity          = %s ", self.collisionRevertVelocity)
+        rospy.loginfo("Configured with collisionReleaseDelta            = %s ", self.collisionReleaseDelta)
+
+        rospy.loginfo("Configured with bumperpcdistance                 = %s ", self.bumperpcdistance)
+        rospy.loginfo("Configured with bumperpcheight                   = %s ", self.bumperpcheight)
+
+        rospy.loginfo("Configured with lightBumperheight                = %s ", self.lightBumperheight)
+
+        rospy.loginfo("Configured with lightBumperLeftpcdistance        = %s ", self.lightBumperLeftpcdistance)
+        rospy.loginfo("Configured with lightBumperLeftpcangle           = %s ", self.lightBumperLeftpcangle)
+
+        rospy.loginfo("Configured with lightBumperFrontLeftpcdistance   = %s ", self.lightBumperFrontLeftpcdistance)
+        rospy.loginfo("Configured with lightBumperFrontLeftpcangle      = %s ", self.lightBumperFrontLeftpcangle)
+
+        rospy.loginfo("Configured with lightBumperCenterLeftpcdistance  = %s ", self.lightBumperCenterLeftpcdistance)
+        rospy.loginfo("Configured with lightBumperCenterLeftpcangle     = %s ", self.lightBumperCenterLeftpcangle)
+
+        rospy.loginfo("Configured with lightBumperCenterRightpcdistance = %s ", self.lightBumperCenterRightpcdistance)
+        rospy.loginfo("Configured with lightBumperCenterRightpcangle    = %s ", self.lightBumperCenterRightpcangle)
+
+        rospy.loginfo("Configured with lightBumperFrontRightpcdistance  = %s ", self.lightBumperFrontRightpcdistance)
+        rospy.loginfo("Configured with lightBumperFrontRightpangle      = %s ", self.lightBumperFrontRightpcangle)
+
+        rospy.loginfo("Configured with lightBumperRightpcdistance       = %s ", self.lightBumperRightpcdistance)
+        rospy.loginfo("Configured with lightBumperRightpcangle          = %s ", self.lightBumperRightpcangle)
 
         self.diffmotorspeedspub = rospy.Publisher('cmd_motorspeeds', DiffMotorSpeeds, queue_size=10)
         self.odompub = rospy.Publisher('odom', Odometry, queue_size=10)
-        self.obstaclespub = rospy.Publisher('obstacles', PointCloud, queue_size=10)
+        self.bumperspub = rospy.Publisher('bumpers', PointCloud, queue_size=10)
+        self.lightsensorspub = rospy.Publisher('lightsensors', PointCloud, queue_size=10)
 
         self.transformbroadcaster = TransformBroadcaster()
 

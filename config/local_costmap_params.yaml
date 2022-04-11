@@ -17,10 +17,11 @@ local_costmap:
     subscribe_to_updates: true
 
   obstacle_layer:
-    observation_sources: scan obstacles
+    observation_sources: scan bumpers lightsensors
     track_unknown_space: true
     scan: { data_type: LaserScan, topic: /scan, marking: true, clearing: true }
-    obstacles: { data_type: PointCloud, topic: /obstacles, marking: true}
+    bumpers: { data_type: PointCloud, topic: /bumpers, marking: true}
+    lightsensors: { data_type: PointCloud, topic: /lightsensors, marking: true, clearing: true}
 
   inflation_layer:
     inflation_radius: 0.18
