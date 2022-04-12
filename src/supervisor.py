@@ -217,7 +217,7 @@ class Supervisor:
         rospy.wait_for_service(servicename)
         rospy.loginfo('Invoking service')
         service = rospy.ServiceProxy(servicename, Clean)
-        response = service()
+        r = service()
         rospy.loginfo('Service called!')
 
         response.content_type='application/json'
@@ -233,7 +233,7 @@ class Supervisor:
         rospy.wait_for_service(servicename)
         rospy.loginfo('Invoking service')
         service = rospy.ServiceProxy(servicename, Clean)
-        response = service()
+        r = service()
         rospy.loginfo('Service called!')
 
         response.content_type='application/json'
