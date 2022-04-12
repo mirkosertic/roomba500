@@ -354,28 +354,28 @@ class DifferentialOdometry:
         self.collisionRevertVelocity = float(rospy.get_param('~collisionRevertVelocity', '-0.2'))
         self.collisionReleaseDelta = float(rospy.get_param('~collisionReleaseDelta', '1'))
 
-        self.bumperpcdistance = float(rospy.get_param('~bumperpcdistance', '0.27'))
+        self.bumperpcdistance = float(rospy.get_param('~bumperpcdistance', '0.167'))
         self.bumperpcheight = float(rospy.get_param('~bumperpcheight', '0.01'))
 
         self.lightBumperheight = float(rospy.get_param('~lightBumperheight', '0.05'))
 
-        self.lightBumperLeftpcdistance = float(rospy.get_param('~lightBumperLeftpcdistance', '0.27'))
-        self.lightBumperLeftpcangle = float(rospy.get_param('~lightBumperLeftpcangle', '45'))
+        self.lightBumperLeftpcdistance = float(rospy.get_param('~lightBumperLeftpcdistance', '0.2175'))
+        self.lightBumperLeftpcangle = float(rospy.get_param('~lightBumperLeftpcangle', '70'))
 
-        self.lightBumperFrontLeftpcdistance = float(rospy.get_param('~lightBumperFrontLeftpcdistance', '0.27'))
-        self.lightBumperFrontLeftpcangle = float(rospy.get_param('~lightBumperFrontLeftpcangle', '20'))
+        self.lightBumperFrontLeftpcdistance = float(rospy.get_param('~lightBumperFrontLeftpcdistance', '0.2775'))
+        self.lightBumperFrontLeftpcangle = float(rospy.get_param('~lightBumperFrontLeftpcangle', '35'))
 
-        self.lightBumperCenterLeftpcdistance = float(rospy.get_param('~lightBumperCenterLeftpcdistance', '0.27'))
-        self.lightBumperCenterLeftpcangle = float(rospy.get_param('~lightBumperCenterLeftpcangle', '2'))
+        self.lightBumperCenterLeftpcdistance = float(rospy.get_param('~lightBumperCenterLeftpcdistance', '0.2525'))
+        self.lightBumperCenterLeftpcangle = float(rospy.get_param('~lightBumperCenterLeftpcangle', '10'))
 
-        self.lightBumperCenterRightpcdistance = float(rospy.get_param('~lightBumperCenterRightpcdistance', '0.27'))
-        self.lightBumperCenterRightpcangle = float(rospy.get_param('~lightBumperCenterRightpcangle', '-2'))
+        self.lightBumperCenterRightpcdistance = float(rospy.get_param('~lightBumperCenterRightpcdistance', '0.2525'))
+        self.lightBumperCenterRightpcangle = float(rospy.get_param('~lightBumperCenterRightpcangle', '-10'))
 
-        self.lightBumperFrontRightpcdistance = float(rospy.get_param('~lightBumperFrontRightpcdistance', '0.27'))
-        self.lightBumperFrontRightpcangle = float(rospy.get_param('~lightBumperFrontRightpcangle', '-20'))
+        self.lightBumperFrontRightpcdistance = float(rospy.get_param('~lightBumperFrontRightpcdistance', '0.2775'))
+        self.lightBumperFrontRightpcangle = float(rospy.get_param('~lightBumperFrontRightpcangle', '-35'))
 
-        self.lightBumperRightpcdistance = float(rospy.get_param('~lightBumperRightpcdistance', '0.27'))
-        self.lightBumperRightpcangle = float(rospy.get_param('~lightBumperRightpcheight', '0.05'))
+        self.lightBumperRightpcdistance = float(rospy.get_param('~lightBumperRightpcdistance', '0.2175'))
+        self.lightBumperRightpcangle = float(rospy.get_param('~lightBumperRightpcangle', '-70'))
 
         rospy.loginfo("Configured with ticksPerCm                       = %s ", self.ticksPerCm)
         rospy.loginfo("Configured with robotWheelSeparationInCm         = %s ", self.robotWheelSeparationInCm)

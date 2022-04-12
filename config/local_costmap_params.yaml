@@ -4,7 +4,7 @@ local_costmap:
   update_frequency: 1.0
   publish_frequency: 1.0
   always_send_full_costmap: true
-  resolution: 0.02
+  resolution: 0.05
   transform_tolerance: 1
 
   plugins:
@@ -25,4 +25,4 @@ local_costmap:
     lightsensors: { data_type: PointCloud, topic: /lightsensors, marking: true, clearing: true }
 
   inflation_layer:
-    inflation_radius: 0.18
+    inflation_radius: 0.17
