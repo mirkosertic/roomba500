@@ -22,7 +22,7 @@ from geometry_msgs.msg import Twist, Pose2D, Point32, PoseStamped
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import PointCloud
 
-from flask import Flask, render_template, make_response, jsonify
+from bottle import Bottle, run, response, static_file
 
 from driver import Driver
 from supervisorstate import SupervisorState
@@ -46,6 +46,7 @@ class Supervisor:
         self.wsinterface = None
         self.nodelaunchfile = None
         self.roomname = 'map01'
+        self.staticfileswebdir = None
 
         self.state = None
 
@@ -67,10 +68,10 @@ class Supervisor:
 
     def startWebServer(self):
         rospy.loginfo('Starting supervisor at %s:%s', self.wsinterface, self.wsport)
-        self.app.run(host=self.wsinterface, port=self.wsport)
+        run(app=self.app, host=self.wsinterface, port=self.wsport, debug=True)
 
     def deliverStart(self):
-        return make_response(render_template('index.html'), 200)
+        return static_file('index.html', root=self.staticfileswebdir)
 
     def startnewroom(self):
         self.state.syncLock.acquire()
@@ -89,7 +90,9 @@ class Supervisor:
         self.processwakeup = True
 
         self.state.syncLock.release()
-        return make_response(jsonify(data), 200)
+
+        response.content_type='application/json'
+        return data
 
     def systemstate(self):
         self.state.syncLock.acquire()
@@ -98,7 +101,8 @@ class Supervisor:
 
         self.state.syncLock.release()
 
-        return make_response(jsonify(data), 200)
+        response.content_type='application/json'
+        return data
 
     def shutdown(self):
         self.state.syncLock.acquire()
@@ -112,7 +116,9 @@ class Supervisor:
         self.processshutdown = True
 
         self.state.syncLock.release()
-        return make_response(jsonify(data), 200)
+
+        response.content_type='application/json'
+        return data
 
     def command(self, velx, veltheta):
         self.driver.drive(velx, veltheta)
@@ -123,7 +129,8 @@ class Supervisor:
         }
 
         self.command(.0, self.rotationspeed)
-        return make_response(jsonify(data), 200)
+        response.content_type='application/json'
+        return data
 
     def turnright(self):
 
@@ -131,7 +138,8 @@ class Supervisor:
         }
 
         self.command(.0, -self.rotationspeed)
-        return make_response(jsonify(data), 200)
+        response.content_type='application/json'
+        return data
 
     def forward(self):
 
@@ -139,7 +147,8 @@ class Supervisor:
         }
 
         self.command(self.forwardspeed, .0)
-        return make_response(jsonify(data), 200)
+        response.content_type='application/json'
+        return data
 
     def forwardleft(self):
 
@@ -147,7 +156,8 @@ class Supervisor:
         }
 
         self.command(self.forwardspeed, self.rotationspeed / 2)
-        return make_response(jsonify(data), 200)
+        response.content_type='application/json'
+        return data
 
     def forwardright(self):
 
@@ -155,7 +165,8 @@ class Supervisor:
         }
 
         self.command(self.forwardspeed, -(self.rotationspeed / 2))
-        return make_response(jsonify(data), 200)
+        response.content_type='application/json'
+        return data
 
     def backward(self):
 
@@ -163,7 +174,8 @@ class Supervisor:
         }
 
         self.command(-self.forwardspeed, .0)
-        return make_response(jsonify(data), 200)
+        response.content_type='application/json'
+        return data
 
     def stop(self):
 
@@ -171,7 +183,8 @@ class Supervisor:
         }
 
         self.command(.0, .0)
-        return make_response(jsonify(data), 200)
+        response.content_type='application/json'
+        return data
 
     def relocalization(self):
 
@@ -191,7 +204,8 @@ class Supervisor:
             logging.error(traceback.format_exc())
             rospy.logerr('Error initiating relocalization : %s', e)
 
-        return make_response(jsonify(data), 200)
+        response.content_type='application/json'
+        return data
 
     def clean(self):
 
@@ -206,7 +220,8 @@ class Supervisor:
         response = service()
         rospy.loginfo('Service called!')
 
-        return make_response(jsonify(data), 200)
+        response.content_type='application/json'
+        return data
 
     def cancel(self):
 
@@ -221,7 +236,8 @@ class Supervisor:
         response = service()
         rospy.loginfo('Service called!')
 
-        return make_response(jsonify(data), 200)
+        response.content_type='application/json'
+        return data
 
     def deleteroom(self, room):
 
@@ -236,7 +252,9 @@ class Supervisor:
         }
 
         self.state.syncLock.release()
-        return make_response(jsonify(data), 200)
+
+        response.content_type='application/json'
+        return data
 
     def startroom(self, room):
 
@@ -252,7 +270,9 @@ class Supervisor:
         self.roomname = room
 
         self.state.syncLock.release()
-        return make_response(jsonify(data), 200)
+
+        response.content_type='application/json'
+        return data
 
     def simulateObstacle(self):
 
@@ -280,7 +300,8 @@ class Supervisor:
 
         self.state.syncLock.release()
 
-        return make_response(jsonify(data), 200)
+        response.content_type='application/json'
+        return data
 
     def updateDisplay(self):
         device = self.displaydevice
@@ -350,8 +371,8 @@ class Supervisor:
         self.wsport = int(rospy.get_param('~wsport', '8080'))
         self.wsinterface = self.bindinginterface('0.0.0.0')
 
-        staticContentFolder = str(pathlib.Path(__file__).parent.resolve().joinpath('web'))
-        rospy.loginfo('Using %s as static content folder', staticContentFolder)
+        self.staticfileswebdir = str(pathlib.Path(__file__).parent.resolve().joinpath('web'))
+        rospy.loginfo('Using %s as static content folder', self.staticfileswebdir)
 
         self.nodelaunchfile = str(pathlib.Path(__file__).parent.resolve().parent.joinpath('launch', rospy.get_param('~launchfile', 'highlevelsimulation.launch')))
         rospy.loginfo('Using %s as the launch file for nodes', self.nodelaunchfile)
@@ -370,28 +391,28 @@ class Supervisor:
 
         self.bumperspub = rospy.Publisher('bumpers', PointCloud, queue_size=10)
 
-        self.app = Flask(__name__, static_url_path='', static_folder=staticContentFolder, template_folder=staticContentFolder)
-        self.app.add_url_rule('/', view_func=self.deliverStart)
-        self.app.add_url_rule('/index.html', view_func=self.deliverStart)
-        self.app.add_url_rule('/index.htm', view_func=self.deliverStart)
+        self.app = Bottle()
+        self.app.route('/', 'GET', self.deliverStart)
+        self.app.route('/index.html', 'GET', self.deliverStart)
+        self.app.route('/index.htm', 'GET', self.deliverStart)
 
-        self.app.add_url_rule('/systemstate.json', view_func=self.systemstate)
+        self.app.route('/systemstate.json', 'GET', self.systemstate)
 
-        self.app.add_url_rule('/actions/startnewroom', view_func=self.startnewroom)
-        self.app.add_url_rule('/actions/shutdown', view_func=self.shutdown)
-        self.app.add_url_rule('/actions/turnleft', view_func=self.turnleft)
-        self.app.add_url_rule('/actions/turnright', view_func=self.turnright)
-        self.app.add_url_rule('/actions/forwardleft', view_func=self.forwardleft)
-        self.app.add_url_rule('/actions/forward', view_func=self.forward)
-        self.app.add_url_rule('/actions/forwardright', view_func=self.forwardright)
-        self.app.add_url_rule('/actions/stop', view_func=self.stop)
-        self.app.add_url_rule('/actions/backward', view_func=self.backward)
-        self.app.add_url_rule('/actions/relocalization', view_func=self.relocalization)
-        self.app.add_url_rule('/actions/clean', view_func=self.clean)
-        self.app.add_url_rule('/actions/cancel', view_func=self.cancel)
-        self.app.add_url_rule('/actions/room/<room>/delete', view_func=self.deleteroom)
-        self.app.add_url_rule('/actions/room/<room>/start', view_func=self.startroom)
-        self.app.add_url_rule('/actions/simulateObstacle', view_func=self.simulateObstacle)
+        self.app.route('/actions/startnewroom', 'GET', self.startnewroom)
+        self.app.route('/actions/shutdown', 'GET', self.shutdown)
+        self.app.route('/actions/turnleft', 'GET', self.turnleft)
+        self.app.route('/actions/turnright', 'GET', self.turnright)
+        self.app.route('/actions/forwardleft', 'GET', self.forwardleft)
+        self.app.route('/actions/forward', 'GET', self.forward)
+        self.app.route('/actions/forwardright', 'GET', self.forwardright)
+        self.app.route('/actions/stop', 'GET', self.stop)
+        self.app.route('/actions/backward', 'GET', self.backward)
+        self.app.route('/actions/relocalization', 'GET', self.relocalization)
+        self.app.route('/actions/clean', 'GET', self.clean)
+        self.app.route('/actions/cancel', 'GET', self.cancel)
+        self.app.route('/actions/room/<room>/delete', 'GET', self.deleteroom)
+        self.app.route('/actions/room/<room>/start', 'GET', self.startroom)
+        self.app.route('/actions/simulateObstacle', 'GET', self.simulateObstacle)
 
         wsThread = threading.Thread(target=self.startWebServer)
         wsThread.start()
@@ -515,6 +536,8 @@ class Supervisor:
         if self.displaydevice is not None:
             self.displaydevice.clear()
 
+        rospy.loginfo('Stopping threads and webserver')
+        self.app.close()
         rospy.loginfo('Suicide to stop all services')
 
         os.kill(os.getpid(), signal.SIGKILL)
