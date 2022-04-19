@@ -19,8 +19,9 @@ import rospy
 from std_srvs.srv import Empty
 from std_msgs.msg import Int16
 from geometry_msgs.msg import Twist, Pose2D, Point32, PoseStamped
-from nav_msgs.msg import Odometry
+from nav_msgs.msg import Odometry, OccupancyGrid
 from sensor_msgs.msg import PointCloud
+from rosgraph_msgs.msg import Log
 
 from bottle import Bottle, run, response, static_file
 
@@ -284,13 +285,13 @@ class Supervisor:
 
         try:
             distance = 0.5
-            dx = math.cos(self.state.latestyawonmap) * distance
-            dy = math.sin(self.state.latestyawonmap) * distance
+            dx = math.cos(self.state.latestodomonmap.theta) * distance
+            dy = math.sin(self.state.latestodomonmap.theta) * distance
 
             msg = PointCloud()
             msg.header.stamp = rospy.Time.now()
             msg.header.frame_id = 'map'
-            msg.points.append(Point32(self.state.latestpositiononmap.x + dx, self.state.latestpositiononmap.y + dy, 0.05))
+            msg.points.append(Point32(self.state.latestodomonmap.x + dx, self.state.latestodomonmap.y + dy, 0.05))
 
             self.bumperspub.publish(msg)
 
@@ -328,7 +329,7 @@ class Supervisor:
 
     def bindinginterface(self, default):
         try:
-            return str(self.ipforinterface('wlan0'))
+            return str(self.ipforinterface('wifi0'))
         except Exception as e:
             try:
                 return str(self.ipforinterface('eth0'))
@@ -354,7 +355,7 @@ class Supervisor:
             handle = open(latestposfilename, 'w')
             handle.write('{:.6f}'.format(self.state.latestpositiononmap.x) + '\n')
             handle.write('{:.6f}'.format(self.state.latestpositiononmap.y) + '\n')
-            handle.write('{:.6f}'.format(self.state.latestyawonmap) + '\n')
+            handle.write('{:.6f}'.format(self.state.latestpositiononmap.theta) + '\n')
             handle.flush()
             handle.close()
 
@@ -423,6 +424,9 @@ class Supervisor:
         rospy.Subscriber("odom", Odometry, self.state.newOdometry)
         rospy.Subscriber("cmd_vel", Twist, self.state.newCmdVel)
         rospy.Subscriber("navigation_info", NavigationInfo, self.state.newNavigationInfo)
+        rospy.Subscriber("map", OccupancyGrid, self.state.newMap)
+
+        rospy.Subscriber("rosout_agg", Log, self.state.newLogMessage)
 
         rospy.loginfo('Initializing physical display')
         font0path = str(pathlib.Path(__file__).resolve().parent.joinpath('ttf', 'C&C Red Alert [INET].ttf'))

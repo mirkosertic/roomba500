@@ -180,10 +180,48 @@
             #roomlist .caption {
                 padding-right: 1rem;
             }
+
+            #log {
+                display: block;
+                width: 100%;
+                font-family: monospace;
+                white-space: pre-line;
+                padding-bottom: 0.5rem;
+            }
+
+            .canvaswrapper {
+                position: relative;
+                width: 10rem;
+                height: 10rem;
+            }
+
+            .canvaswrapper canvas {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+            }
+
+            #map {
+                z-index: 10;
+            }
+
+            #interaction {
+                z-index: 20;
+            }
         </style>
+        <script src="dummy.js"></script>
     </head>
     <body>
         <h1>Roomba Remote</h1>
+
+        <div id="log"></div>
+
+        <div class="canvaswrapper">
+            <canvas id="map"></canvas>
+            <canvas id="interaction"></canvas>
+        </div>
 
         <div id='roomcontainer'>
             <h2>Start robot in room:</h2>
@@ -262,9 +300,53 @@
 
             let stopwatch = document.getElementById('stopwatch');
 
+            let log = document.getElementById('log');
+            let map = document.getElementById('map');
+            let interaction = document.getElementById('interaction');
+            interaction.width = interaction.clientWidth;
+            interaction.height = interaction.clientHeight;
+
             let uistate = {
                 starttime : undefined,
             }
+
+            interaction.addEventListener('mousedown', function(event) {
+                var rect = interaction.getBoundingClientRect();
+                var x = event.clientX - rect.left;
+                var y = event.clientY - rect.top;
+                if (!interaction.hasAttribute("data-mousedown")) {
+                    interaction.dataset.mousedown = true;
+                    interaction.dataset.mousex = Math.floor(x);
+                    interaction.dataset.mousey = Math.floor(y);
+                }
+            });
+            interaction.addEventListener("mousemove", function(event) {
+               if (interaction.hasAttribute("data-mousedown")) {
+                   var rect = interaction.getBoundingClientRect();
+                   let x = parseInt(interaction.dataset.mousex);
+                   let y = parseInt(interaction.dataset.mousey);
+
+                   var xm = event.clientX - rect.left; //x position within the element.
+                   var ym = event.clientY - rect.top;  //y position within the element.
+
+                   interaction.width = interaction.clientWidth;
+                   interaction.height = interaction.clientHeight;
+
+                   var context = interaction.getContext('2d');
+                   context.strokeStyle = 'blue';
+                   context.strokeRect(x, y, xm - x, ym - y);
+               }
+            });
+            clearSelection = function(event) {
+                interaction.removeAttribute("data-mousedown")
+                interaction.removeAttribute("data-mousex");
+                interaction.removeAttribute("data-mousey");
+
+                interaction.width = interaction.clientWidth;
+                interaction.height = interaction.clientHeight;
+            };
+            interaction.addEventListener("mouseup", clearSelection);
+            interaction.addEventListener("mouseleave", clearSelection);
 
             function updateStopwatch() {
                 if (uistate.starttime > 0) {
@@ -293,6 +375,89 @@
 
             function updateUI(data) {
                 roomlist.textContent = '';
+
+                var logtext = '';
+                for (let logmessage of data.log) {
+                    const ts = new Date();
+                    ts.setTime(Math.ceil(logmessage.stamp / 1000000));
+                    level = '[UNDEF]';
+                    switch (logmessage.level) {
+                        case 1:
+                            level = '[DEBUG]';
+                            break;
+                        case 2:
+                            level = '[INFO ]';
+                            break;
+                        case 4:
+                            level = '[WARN ]';
+                            break;
+                        case 8:
+                            level = '[ERROR]';
+                            break;
+                        case 16:
+                            level = '[FATAL]';
+                            break;
+                    }
+                    logtext += new Intl.DateTimeFormat('en-US').format(ts) + ' ' + level + ' [' + logmessage.node + '] ' + logmessage.msg + '\n';
+                }
+                log.innerText = logtext;
+
+                if (data.map) {
+                    let width = data.map.width;
+                    let height = data.map.height;
+                    map.width = width;
+                    map.height = height;
+                    var context = map.getContext('2d');
+                    var imageData = context.createImageData(width, height);
+                    for (var row = 0; row < height; row++) {
+                        for (var col = 0; col < width; col++) {
+                            // determine the index into the map data
+                            var mapI = width - col - 1 + (row * width);
+                            // determine the value
+                            var mapdata = data.map.data[mapI];
+                            var val;
+                            if (mapdata === 100) {
+                                val = 0;
+                            } else if (mapdata === 0) {
+                                val = 255;
+                            } else {
+                                val = 127;
+                            }
+
+                            // determine the index into the image data array
+                            var i = (col + (row * width)) * 4;
+                            // r
+                            imageData.data[i] = val;
+                            // g
+                            imageData.data[++i] = val;
+                            // b
+                            imageData.data[++i] = val;
+                            // a
+                            imageData.data[++i] = 255;
+                        }
+                    }
+                    context.putImageData(imageData, 0, 0);
+
+                    // Draw robot
+                    if (data.odometryOnMap) {
+                        let robotmapx = Math.floor((data.odometryOnMap.x - data.map.origin.x) / data.map.resolution);
+                        let robotmapy = Math.floor((data.odometryOnMap.y - data.map.origin.y) / data.map.resolution);
+
+                        dx = Math.floor(Math.sin(data.odometryOnMap.theta - Math.PI / 2) * 10);
+                        dy = Math.floor(Math.cos(data.odometryOnMap.theta - Math.PI / 2) * 10);
+
+                        context.fillstyle = 'red';
+                        context.lineWidth = 1;
+                        context.beginPath();
+                        context.arc(map.width - robotmapx - 1, robotmapy, 2, 0, 2 * Math.PI, false);
+                        context.fill();
+
+                        context.moveTo(map.width - robotmapx - 1, robotmapy);
+                        context.lineTo(map.width - robotmapx - 1 + dx, robotmapy + dy);
+                        context.stroke();
+                    }
+                }
+
                 if (data.awake) {
                     roomcontainer.style.display = 'none';
                     sensorcontainer.style.visibility = 'visible';
@@ -380,30 +545,7 @@
                     .then(response => response.json())
                     .then(data => updateUI(data))
                     .catch(function(error) {
-                        updateUI({
-                            awake: false,
-                            batteryCharge: '100',
-                            batteryCapacity: '200',
-                            bumperLeft: false,
-                            bumperRight: false,
-                            lightbumperLeft: 1,
-                            lightbumperFrontLeft: 2,
-                            lightbumperCenterLeft: 3,
-                            lightbumperCenterRight: 4,
-                            lightbumperFrontRight: 5,
-                            lightbumperRight: 6,
-                            wheelEncoderLeft: 18,
-                            wheelEncoderRight: 19,
-                            lastcommandedvelx: 0.2,
-                            lastcommandedveltheta: 1.2,
-                            odomvelx: 0.19,
-                            odomveltheta: 1.1,
-                            distanceToTargetInMeters: 87,
-                            angleToTargetInDegrees: 99,
-                            currentWaypoint: 2,
-                            numWaypoints: 8,
-                            rooms: ['room01', 'room02']
-                        })
+                        updateUI(dummymapdata)
                     })
             }
 

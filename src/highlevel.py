@@ -4,15 +4,12 @@ import cv2
 import rospy
 import threading
 import tf
-import logging
-import traceback
 import actionlib
 import math
 
 from map import NavigationMap, GridCellStatus
 
 from std_msgs.msg import Int16, ColorRGBA
-from nav_msgs.srv import GetMap
 from nav_msgs.msg import Odometry, OccupancyGrid
 from geometry_msgs.msg import Twist, Point, Pose, PoseStamped, Quaternion, Vector3
 from visualization_msgs.msg import Marker, MarkerArray
@@ -319,7 +316,7 @@ class Highlevel:
         self.markerstopic.publish(markers)
 
     def start(self):
-        rospy.init_node('Highlevel', anonymous=True)
+        rospy.init_node('highlevel', anonymous=True)
         pollingRateInHertz = int(rospy.get_param('~pollingRateInHertz', '1'))
 
         debugimagelocation = rospy.get_param('~debugimagelocation', None)

@@ -9,6 +9,7 @@ import rosservice
 from geometry_msgs.msg import PoseStamped
 from tf.transformations import euler_from_quaternion
 
+import collections
 
 class SupervisorState:
 
@@ -44,15 +45,38 @@ class SupervisorState:
         self.mapframe = mapframe
         self.transformlistener = transformlistener
 
-        self.latestpositiononmap = None
-        self.latestyawonmap = None
+        self.latestodomonmap = None
 
         self.lastcommandedvelx = .0
         self.lastcommandedveltheta = .0
-        self.odomvelx = .0
-        self.odomveltheta = .0
 
         self.roomsdirectory = roomsdirectory
+        self.logmessages = collections.deque(maxlen = 10)
+        self.latestmap = None
+
+    def newMap(self, message):
+
+        data = {
+            'width': message.info.width,
+            'height': message.info.height,
+            'resolution': message.info.resolution,
+            'data': message.data,
+            'origin': {
+                'x': message.info.origin.position.x,
+                'y': message.info.origin.position.y
+            }
+        }
+        self.latestmap = data
+
+    def newLogMessage(self, message):
+        data = {
+            'stamp': str(message.header.stamp),
+            'level': message.level,
+            'node': message.name,
+            'msg': message.msg
+        }
+
+        self.logmessages.append(data)
 
     def newSensorFrame(self, message):
         self.syncLock.acquire()
@@ -96,11 +120,13 @@ class SupervisorState:
             odomQuat = odometryInTargetposeFrame.pose.orientation
             (_, _, odomyaw) = euler_from_quaternion([odomQuat.x, odomQuat.y, odomQuat.z, odomQuat.w])
 
-            self.latestpositiononmap = odometryInTargetposeFrame.pose.position
-            self.latestyawonmap = odomyaw
-
-            self.odomvelx = message.twist.twist.linear.x
-            self.odomveltheta = message.twist.twist.angular.z
+            self.latestodomonmap = {
+                'x': odometryInTargetposeFrame.pose.position.x,
+                'y': odometryInTargetposeFrame.pose.position.y,
+                'theta': odomyaw,
+                'velx': message.twist.twist.linear.x,
+                'veltheta': message.twist.twist.angular.z
+            }
 
         except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException) as e:
             # Do nothing here
@@ -152,8 +178,8 @@ class SupervisorState:
             'wheelEncoderRight': self.wheelEncoderRight,
             'lastcommandedvelx': self.lastcommandedvelx,
             'lastcommandedveltheta': self.lastcommandedveltheta,
-            'odomvelx': self.odomvelx,
-            'odomveltheta': self.odomveltheta,
+            'odomvelx': self.latestodomonmap['velx'] if self.latestodomonmap is not None else .0,
+            'odomveltheta': self.latestodomonmap['veltheta'] if self.latestodomonmap is not None else .0,
             'distanceToTargetInMeters': self.distanceToTargetInMeters,
             'angleToTargetInDegrees': self.angleToTargetInDegrees,
             'currentWaypoint': self.currentWaypoint,
@@ -167,6 +193,9 @@ class SupervisorState:
             'hasrelocalization': self.hasservice('/global_localization'),
             'hasclean': self.hasservice('/clean'),
             'hascancel': self.hasservice('/cancel'),
+            'log': list(self.logmessages),
+            'map': self.latestmap,
+            'odometryOnMap': self.latestodomonmap,
             'rooms': knownrooms
         }
         return data
