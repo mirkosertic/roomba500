@@ -191,8 +191,8 @@
 
             .canvaswrapper {
                 position: relative;
-                width: 10rem;
-                height: 10rem;
+                width: 25rem;
+                height: 25rem;
             }
 
             .canvaswrapper canvas {
@@ -213,7 +213,7 @@
         </style>
         <script src="dummy.js"></script>
     </head>
-    <body>
+    <body oncontextmenu="return false;">
         <h1>Roomba Remote</h1>
 
         <div id="log"></div>
@@ -308,9 +308,11 @@
 
             let uistate = {
                 starttime : undefined,
+                latestmap : undefined,
+                latestodom : undefined
             }
 
-            interaction.addEventListener('mousedown', function(event) {
+            interaction.addEventListener("mousedown", function(event) {
                 var rect = interaction.getBoundingClientRect();
                 var x = event.clientX - rect.left;
                 var y = event.clientY - rect.top;
@@ -318,6 +320,57 @@
                     interaction.dataset.mousedown = true;
                     interaction.dataset.mousex = Math.floor(x);
                     interaction.dataset.mousey = Math.floor(y);
+                    interaction.dataset.mousebutton = event.button;
+                }
+            });
+            interaction.addEventListener("mouseup", function(event) {
+                if (interaction.hasAttribute("data-mousedown")) {
+                    var rect = interaction.getBoundingClientRect();
+                    let x = parseInt(interaction.dataset.mousex);
+                    let y = parseInt(interaction.dataset.mousey);
+
+                    var xm = event.clientX - rect.left; //x position within the element.
+                    var ym = event.clientY - rect.top;  //y position within the element.
+
+                    if (interaction.dataset.mousebutton === "2") {
+                        // Clean Zone command
+                    } else {
+
+                        let xper = (interaction.width - x) / interaction.width;
+                        let yper = y / interaction.height;
+
+                        let map = uistate.latestmap;
+
+                        console.log("XPer = " + xper + " Map = " + (map.origin.x + (map.width * map.resolution * xper)));
+                        console.log("YPer = " + yper + " Map = " + (map.origin.y + (map.height * map.resolution * yper)));
+
+                        let command = {
+                            targetx: ((map.width * xper) * map.resolution) + map.origin.x,
+                            targety: ((map.height * yper) * map.resolution) + map.origin.y,
+                            theta: Math.atan2(ym - y, x - xm)
+                        };
+
+                        console.log("Moving to " + JSON.stringify(command));
+                        console.log("Current pos " + JSON.stringify(uistate.latestodom));
+
+                        // Move to pose
+                        fetch('/actions/moveTo', {
+                            method: 'POST',
+                            cache: 'no-cache',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(command)
+                        });
+                    }
+
+                    interaction.removeAttribute("data-mousedown")
+                    interaction.removeAttribute("data-mousex");
+                    interaction.removeAttribute("data-mousey");
+                    interaction.removeAttribute("data-mousebutton");
+
+                    interaction.width = interaction.clientWidth;
+                    interaction.height = interaction.clientHeight;
                 }
             });
             interaction.addEventListener("mousemove", function(event) {
@@ -333,14 +386,22 @@
                    interaction.height = interaction.clientHeight;
 
                    var context = interaction.getContext('2d');
-                   context.strokeStyle = 'blue';
-                   context.strokeRect(x, y, xm - x, ym - y);
+                   if (interaction.dataset.mousebutton === "2") {
+                       context.strokeStyle = 'blue';
+                       context.strokeRect(x, y, xm - x, ym - y);
+                   } else {
+                       context.strokeStyle = 'red';
+                       context.moveTo(x, y);
+                       context.lineTo(xm, ym);
+                       context.stroke();
+                   }
                }
             });
             clearSelection = function(event) {
                 interaction.removeAttribute("data-mousedown")
                 interaction.removeAttribute("data-mousex");
                 interaction.removeAttribute("data-mousey");
+                interaction.removeAttribute("data-mousebutton");
 
                 interaction.width = interaction.clientWidth;
                 interaction.height = interaction.clientHeight;
@@ -379,7 +440,7 @@
                 var logtext = '';
                 for (let logmessage of data.log) {
                     const ts = new Date();
-                    ts.setTime(Math.ceil(logmessage.stamp / 1000000));
+                    ts.setTime(Math.ceil(logmessage.stamp / 1000));
                     level = '[UNDEF]';
                     switch (logmessage.level) {
                         case 1:
@@ -403,6 +464,9 @@
                 log.innerText = logtext;
 
                 if (data.map) {
+
+                    uistate.latestmap = data.map;
+
                     let width = data.map.width;
                     let height = data.map.height;
                     map.width = width;
@@ -440,13 +504,17 @@
 
                     // Draw robot
                     if (data.odometryOnMap) {
+
+                        uistate.latestodom = data.odometryOnMap;
+
                         let robotmapx = Math.floor((data.odometryOnMap.x - data.map.origin.x) / data.map.resolution);
                         let robotmapy = Math.floor((data.odometryOnMap.y - data.map.origin.y) / data.map.resolution);
 
                         dx = Math.floor(Math.sin(data.odometryOnMap.theta - Math.PI / 2) * 10);
                         dy = Math.floor(Math.cos(data.odometryOnMap.theta - Math.PI / 2) * 10);
 
-                        context.fillstyle = 'red';
+                        context.strokeStyle = 'red';
+                        context.fillStyle = 'red';
                         context.lineWidth = 1;
                         context.beginPath();
                         context.arc(map.width - robotmapx - 1, robotmapy, 2, 0, 2 * Math.PI, false);

@@ -15,6 +15,7 @@ import shutil
 import tf
 import roslaunch
 import rospy
+import actionlib
 
 from std_srvs.srv import Empty
 from std_msgs.msg import Int16
@@ -22,8 +23,11 @@ from geometry_msgs.msg import Twist, Pose2D, Point32, PoseStamped
 from nav_msgs.msg import Odometry, OccupancyGrid
 from sensor_msgs.msg import PointCloud
 from rosgraph_msgs.msg import Log
+from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 
-from bottle import Bottle, run, response, static_file
+from tf.transformations import quaternion_from_euler
+
+from bottle import Bottle, run, request, response, static_file
 
 from driver import Driver
 from supervisorstate import SupervisorState
@@ -67,12 +71,17 @@ class Supervisor:
         self.bumperspub = None
         self.transformlistener = None
 
+        self.movebaseclient = None
+
     def startWebServer(self):
         rospy.loginfo('Starting supervisor at %s:%s', self.wsinterface, self.wsport)
         run(app=self.app, host=self.wsinterface, port=self.wsport, debug=True)
 
     def deliverStart(self):
         return static_file('index.html', root=self.staticfileswebdir)
+
+    def deliverDummyJS(self):
+        return static_file('dummy.js', root=self.staticfileswebdir)
 
     def startnewroom(self):
         self.state.syncLock.acquire()
@@ -304,6 +313,33 @@ class Supervisor:
         response.content_type='application/json'
         return data
 
+    def moveToPosition(self):
+
+        rospy.loginfo("Received move to command %s", str(request.json))
+
+        if not self.movebaseclient.wait_for_server(rospy.Duration(1.0)):
+            rospy.logerr("Action server not available!")
+            rospy.signal_shutdown("Action server not available!")
+        else:
+            q = quaternion_from_euler(0, 0, request.json['theta']);
+            goal = MoveBaseGoal()
+            goal.target_pose.header.frame_id = "map"
+            goal.target_pose.header.stamp = rospy.Time.now()
+            goal.target_pose.pose.position.x = request.json['targetx']
+            goal.target_pose.pose.position.y = request.json['targety']
+            goal.target_pose.pose.orientation.x = q[0]
+            goal.target_pose.pose.orientation.y = q[1]
+            goal.target_pose.pose.orientation.z = q[2]
+            goal.target_pose.pose.orientation.w = q[3]
+
+            self.movebaseclient.send_goal(goal)
+
+        data = {
+        }
+
+        response.content_type='application/json'
+        return data
+
     def updateDisplay(self):
         device = self.displaydevice
         state = self.state.gathersystemstate()
@@ -396,6 +432,7 @@ class Supervisor:
         self.app.route('/', 'GET', self.deliverStart)
         self.app.route('/index.html', 'GET', self.deliverStart)
         self.app.route('/index.htm', 'GET', self.deliverStart)
+        self.app.route('/dummy.js', 'GET', self.deliverDummyJS)
 
         self.app.route('/systemstate.json', 'GET', self.systemstate)
 
@@ -414,6 +451,7 @@ class Supervisor:
         self.app.route('/actions/room/<room>/delete', 'GET', self.deleteroom)
         self.app.route('/actions/room/<room>/start', 'GET', self.startroom)
         self.app.route('/actions/simulateObstacle', 'GET', self.simulateObstacle)
+        self.app.route('/actions/moveTo', 'POST', self.moveToPosition)
 
         wsThread = threading.Thread(target=self.startWebServer)
         wsThread.start()
@@ -427,6 +465,10 @@ class Supervisor:
         rospy.Subscriber("map", OccupancyGrid, self.state.newMap)
 
         rospy.Subscriber("rosout_agg", Log, self.state.newLogMessage)
+
+        # We need the client for move base
+        rospy.loginfo("Connecting to move_base action server")
+        self.movebaseclient = actionlib.SimpleActionClient('move_base', MoveBaseAction)
 
         rospy.loginfo('Initializing physical display')
         font0path = str(pathlib.Path(__file__).resolve().parent.joinpath('ttf', 'C&C Red Alert [INET].ttf'))
