@@ -160,24 +160,6 @@ class Supervisor:
         response.content_type='application/json'
         return data
 
-    def forwardleft(self):
-
-        data = {
-        }
-
-        self.command(self.forwardspeed, self.rotationspeed / 2)
-        response.content_type='application/json'
-        return data
-
-    def forwardright(self):
-
-        data = {
-        }
-
-        self.command(self.forwardspeed, -(self.rotationspeed / 2))
-        response.content_type='application/json'
-        return data
-
     def backward(self):
 
         data = {
@@ -294,13 +276,13 @@ class Supervisor:
 
         try:
             distance = 0.5
-            dx = math.cos(self.state.latestodomonmap.theta) * distance
-            dy = math.sin(self.state.latestodomonmap.theta) * distance
+            dx = math.cos(self.state.latestodomonmap["theta"]) * distance
+            dy = math.sin(self.state.latestodomonmap["theta"]) * distance
 
             msg = PointCloud()
             msg.header.stamp = rospy.Time.now()
             msg.header.frame_id = 'map'
-            msg.points.append(Point32(self.state.latestodomonmap.x + dx, self.state.latestodomonmap.y + dy, 0.05))
+            msg.points.append(Point32(self.state.latestodomonmap["x"] + dx, self.state.latestodomonmap["y"] + dy, 0.05))
 
             self.bumperspub.publish(msg)
 
@@ -389,9 +371,9 @@ class Supervisor:
             latestposfilename = str(pathlib.Path(self.roomsdirectory).joinpath(self.roomname, 'latest.position'))
             rospy.loginfo('Saving latest position to %s', latestposfilename)
             handle = open(latestposfilename, 'w')
-            handle.write('{:.6f}'.format(self.state.latestpositiononmap.x) + '\n')
-            handle.write('{:.6f}'.format(self.state.latestpositiononmap.y) + '\n')
-            handle.write('{:.6f}'.format(self.state.latestpositiononmap.theta) + '\n')
+            handle.write('{:.6f}'.format(self.state.latestodomonmap["x"]) + '\n')
+            handle.write('{:.6f}'.format(self.state.latestodomonmap["y"]) + '\n')
+            handle.write('{:.6f}'.format(self.state.latestodomonmap["theta"]) + '\n')
             handle.flush()
             handle.close()
 
@@ -440,9 +422,7 @@ class Supervisor:
         self.app.route('/actions/shutdown', 'GET', self.shutdown)
         self.app.route('/actions/turnleft', 'GET', self.turnleft)
         self.app.route('/actions/turnright', 'GET', self.turnright)
-        self.app.route('/actions/forwardleft', 'GET', self.forwardleft)
         self.app.route('/actions/forward', 'GET', self.forward)
-        self.app.route('/actions/forwardright', 'GET', self.forwardright)
         self.app.route('/actions/stop', 'GET', self.stop)
         self.app.route('/actions/backward', 'GET', self.backward)
         self.app.route('/actions/relocalization', 'GET', self.relocalization)
