@@ -177,7 +177,7 @@ class Highlevel:
         currentposition = self.map.nearestCellCovering(odometryInTargetposeFrame.pose.position)
         if currentposition is not None:
             rospy.loginfo("Calculating full coverage path...")
-            path = self.map.startCoverageBoustrophedon(currentposition)
+            path = self.map.startCoverageBoustrophedon(currentposition, req.cleanArea)
             rospy.loginfo("Calculation finished")
             if path is not None:
                 self.followPath(path, 'map')

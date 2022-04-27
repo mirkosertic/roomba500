@@ -224,11 +224,14 @@ class NavigationMap:
 
         return length
 
-    def startCoverageBoustrophedon(self, src):
+    def startCoverageBoustrophedon(self, src, cleanarea):
         # Boustrophedon cell decomposition
 
+        def isCellInCleanArea(cell):
+            return cell.centerx >= cleanarea.mapTopLeftX and cell.centerx <= cleanarea.mapBottomRightX and cell.centery >= cleanarea.mapBottomRightY and cell.centery <= cleanarea.mapTopLeftY
+
         def isFreeCell(cell):
-            return cell is not None and cell.status == GridCellStatus.FREE
+            return cell is not None and cell.status == GridCellStatus.FREE and isCellInCleanArea(cell)
 
         def scanVertical(cell):
             # Search the top cell

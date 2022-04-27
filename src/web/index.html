@@ -203,8 +203,16 @@
                 z-index: 10;
             }
 
-            #interaction {
+            #costmap {
                 z-index: 20;
+            }
+
+            #path {
+                z-index: 30;
+            }
+
+            #interaction {
+                z-index: 40;
             }
 
             .logarea {
@@ -276,6 +284,8 @@
             <div class="contentarea">
                 <div id="canvasstack" class="canvasstack">
                     <canvas id="map"></canvas>
+                    <canvas id="costmap"></canvas>
+                    <canvas id="path"></canvas>
                     <canvas id="interaction"></canvas>
                 </div>
                 <div id="remotecontrol" class="remotecontrol">
@@ -309,6 +319,8 @@
     <script>
         const log = document.getElementById("log");
         const map = document.getElementById("map");
+        const costmap = document.getElementById("costmap");
+        const path = document.getElementById("path");
         const interaction = document.getElementById("interaction");
         const cavasstack = document.getElementById("canvasstack");
         const remotecontrol = document.getElementById("remotecontrol");
@@ -319,7 +331,8 @@
         const uistate = {
             starttime : undefined,
             latestmap : undefined,
-            latestodom : undefined
+            latestodom : undefined,
+            robotpath: []
         }
 
         function updateStopwatch() {
@@ -346,23 +359,23 @@
         }
 
         function turnleft() {
-            uistate.starttime = Date.now()
+            uistate.starttime = Date.now();
             fetch('/actions/turnleft').then(response => fetchState());
         }
 
         function turnright() {
-            uistate.starttime = Date.now()
+            uistate.starttime = Date.now();
             fetch('/actions/turnright').then(response => fetchState());
         }
 
         function stop() {
             fetch('/actions/stop').then(response => fetchState());
-            updateStopwatch()
-            uistate.starttime = undefined
+            updateStopwatch();
+            uistate.starttime = undefined;
         }
 
         function forward() {
-            uistate.starttime = Date.now()
+            uistate.starttime = Date.now();
             fetch('/actions/forward').then(response => fetchState());
         }
 
@@ -373,10 +386,6 @@
 
         function relocalization() {
             fetch('/actions/relocalization').then(response => fetchState());
-        }
-
-        function clean() {
-            fetch('/actions/clean').then(response => fetchState());
         }
 
         function cancel() {
@@ -419,7 +428,37 @@
                 var ym = event.clientY - rect.top;  //y position within the element.
 
                 if (interaction.dataset.mousebutton === "2") {
+
                     // Clean Zone command
+                    let xpertop = (interaction.width - x) / interaction.width;
+                    let ypertop = y / interaction.height;
+
+                    let xperbottom = (interaction.width - xm) / interaction.width;
+                    let yperbottom = ym / interaction.height;
+
+                    let map = uistate.latestmap;
+
+                    topX = ((map.width * xpertop) * map.resolution) + map.origin.x;
+                    topY = ((map.width * ypertop) * map.resolution) + map.origin.y;
+                    bottomX =  ((map.width * xperbottom) * map.resolution) + map.origin.x;
+                    bottomY =  ((map.width * yperbottom) * map.resolution) + map.origin.y;
+
+                    let command = {
+                        topX: Math.min(topX, bottomX),
+                        topY: Math.max(topY, bottomY),
+                        bottomX: Math.max(topX, bottomX),
+                        bottomY: Math.min(topY, bottomY)
+                    };
+
+                    fetch('/actions/clean', {
+                        method: 'POST',
+                        cache: 'no-cache',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(command)
+                    });
+
                 } else {
 
                     let xper = (interaction.width - x) / interaction.width;
@@ -476,7 +515,7 @@
                     context.strokeStyle = '#2980b9';
                     context.strokeRect(x, y, xm - x, ym - y);
                 } else {
-                    context.strokeStyle = '#8e44ad';
+                    context.strokeStyle = '#ffffff';
                     context.lineWidth = 4;
                     context.moveTo(x, y);
                     context.lineTo(xm, ym);
@@ -496,9 +535,44 @@
         interaction.addEventListener("mouseup", clearSelection);
         interaction.addEventListener("mouseleave", clearSelection);
 
-        function updateUI(data) {
+        function mapToCanvas(grid, canvaselement, convFunc) {
+
+            let width = grid.width;
+            let height = grid.height;
+            canvaselement.width = width;
+            canvaselement.height = height;
+
+            var context = canvaselement.getContext('2d');
+
+            context.imageSmoothingEnabled = false;
+            var imageData = context.createImageData(width, height);
+            for (var row = 0; row < height; row++) {
+                for (var col = 0; col < width; col++) {
+                    // determine the index into the map data
+                    var mapI = width - col - 1 + (row * width);
+                    // determine the value
+                    var mapdata = grid.data[mapI];
+
+                    const [valr, valg, valb, alpha] = convFunc(mapdata);
+
+                    // determine the index into the image data array
+                    var i = (col + (row * width)) * 4;
+                    // r
+                    imageData.data[i] = valr;
+                    // g
+                    imageData.data[++i] = valg;
+                    // b
+                    imageData.data[++i] = valb;
+                    // a
+                    imageData.data[++i] = alpha;
+                }
+            }
+            context.putImageData(imageData, 0, 0);
+        }
+
+        function updateLog(logdata) {
             var logtext = '';
-            for (let logmessage of data.log) {
+            for (let logmessage of logdata) {
                 const ts = new Date();
                 ts.setTime(Math.ceil(logmessage.stamp / 1000));
                 level = '[UNDEF]';
@@ -522,6 +596,12 @@
                 logtext += new Intl.DateTimeFormat('en-US').format(ts) + ' ' + level + ' [' + logmessage.node + '] ' + logmessage.msg + '\n';
             }
             log.innerText = logtext;
+        }
+
+        function updateUI(data) {
+
+            updateLog(data.log);
+
             if (data.awake) {
 
                 remotecontrol.style.display = "flex";
@@ -535,55 +615,55 @@
 
                     uistate.latestmap = data.map;
 
-                    let width = data.map.width;
-                    let height = data.map.height;
-                    map.width = width;
-                    map.height = height;
+                    document.getElementById("canvasstack").style.aspectRatio = data.map.width / data.map.height;
 
-                    document.getElementById("canvasstack").style.aspectRatio = width / height;
-
-                    var context = map.getContext('2d');
-                    context.imageSmoothingEnabled = false;
-                    var imageData = context.createImageData(width, height);
-                    for (var row = 0; row < height; row++) {
-                        for (var col = 0; col < width; col++) {
-                            // determine the index into the map data
-                            var mapI = width - col - 1 + (row * width);
-                            // determine the value
-                            var mapdata = data.map.data[mapI];
-                            var valr;
-                            var valg;
-                            var valb;
-                            var alpha = 255;
-                            if (mapdata === 100) {
-                                valr = 0;
-                                valg = 0;
-                                valb = 0;
-                            } else if (mapdata === 0) {
-                                // #d3d3d3
-                                valr = 0xd3;
-                                valg = 0xd3;
-                                valb = 0xd3;
-                            } else {
-                                valr = 0;
-                                valg = 0;
-                                valb = 0;
-                                alpha = 0;
-                            }
-
-                            // determine the index into the image data array
-                            var i = (col + (row * width)) * 4;
-                            // r
-                            imageData.data[i] = valr;
-                            // g
-                            imageData.data[++i] = valg;
-                            // b
-                            imageData.data[++i] = valb;
-                            // a
-                            imageData.data[++i] = alpha;
+                    mapToCanvas(data.map, map, function(value) {
+                        var valr = 0;
+                        var valg = 0;
+                        var valb = 0;
+                        var alpha = 255;
+                        if (value === 100) {
+                            valr = 0;
+                            valg = 0;
+                            valb = 0;
+                        } else if (value === 0) {
+                            // 82BDFF
+                            valr = 0x82;
+                            valg = 0xbd;
+                            valb = 0xff;
+                        } else {
+                            alpha = 0;
                         }
+                        return [valr, valg, valb, alpha];
+                    });
+
+                    if (data.costmap) {
+                        mapToCanvas(data.costmap, costmap, function(value) {
+                            var valr = 0;
+                            var valg = 0;
+                            var valb = 0;
+                            var alpha = 0;
+                            if (value === 100) {
+                                // cost_lethal
+                                valr = 255;
+                                valg = 0;
+                                valb = 0;
+                                alpha = 64;
+                            } else if (value === 99) {
+                                // cost_instribed
+                                valr = 255;
+                                valb = 0;
+                                alpha = 64;
+                            } else if (value < 99 && value >= 1) {
+                                // not a collision, but costs calculated
+                                valr = value;
+                                valg = value;
+                                valb = value;
+                                alpha = 64;
+                            }
+                            return [valr, valg, valb, alpha];
+                        });
                     }
-                    context.putImageData(imageData, 0, 0);
 
                     // Draw robot
                     if (data.odometryOnMap) {
@@ -591,23 +671,48 @@
                         let robotmapx = Math.floor((data.odometryOnMap.x - data.map.origin.x) / data.map.resolution);
                         let robotmapy = Math.floor((data.odometryOnMap.y - data.map.origin.y) / data.map.resolution);
 
-                        dx = Math.floor(Math.sin(data.odometryOnMap.theta - Math.PI / 2) * 10);
-                        dy = Math.floor(Math.cos(data.odometryOnMap.theta - Math.PI / 2) * 10);
+                        uistate.robotpath.push({
+                            x: map.width - robotmapx - 1,
+                            y: robotmapy
+                        });
 
-                        context.strokeStyle = '#8e44ad';
-                        context.fillStyle = '#8e44ad';
-                        context.lineWidth = 1;
+                        path.width = map.width * 5;
+                        path.height = map.height * 5;
+
+                        dx = Math.floor(Math.sin(data.odometryOnMap.theta - Math.PI / 2) * 5);
+                        dy = Math.floor(Math.cos(data.odometryOnMap.theta - Math.PI / 2) * 5);
+
+                        var context = path.getContext('2d');
+                        context.beginPath();
+                        context.lineWidth = 5;
+                        context.strokeStyle = '#ffffff';
+                        context.fillStyle = '#ffffff';
+                        for (var i = 0; i < uistate.robotpath.length; i++) {
+                            var pos = uistate.robotpath[i];
+                            if (i === 0) {
+                                context.moveTo(pos.x * 5, pos.y * 5);
+                            } else {
+                                context.lineTo(pos.x * 5, pos.y * 5);
+                            }
+                        }
+                        context.stroke();
+
+                        context.strokeStyle = '#000000';
+                        context.fillStyle = '#ffffff';
+                        context.lineWidth = 3;
                         context.beginPath();
                         context.translate(0.5, 0.5);
-                        context.arc(map.width - robotmapx - 1, robotmapy, 2, 0, 2 * Math.PI, false);
+                        context.arc((map.width - robotmapx - 1) * 5, robotmapy * 5, 2 * 5, 0, 2 * Math.PI, false);
                         context.fill();
 
-                        context.moveTo(map.width - robotmapx - 1, robotmapy);
-                        context.lineTo(map.width - robotmapx - 1 + dx, robotmapy + dy);
+                        context.moveTo((map.width - robotmapx - 1) * 5, robotmapy * 5);
+                        context.lineTo((map.width - robotmapx - 1 + dx) * 5, (robotmapy + dy) * 5);
                         context.stroke();
                     }
                 }
             } else {
+                uistate.robotpath = [];
+
                 remotecontrol.style.display = "none";
                 cavasstack.style.display = "none";
                 rooms.style.display = "flex";

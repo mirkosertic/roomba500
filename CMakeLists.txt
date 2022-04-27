@@ -56,6 +56,7 @@ add_message_files(
   RoombaSensorFrame.msg
   DiffMotorSpeeds.msg
   NavigationInfo.msg
+  Area.msg
 )
 
 ## Generate services in the 'srv' folder

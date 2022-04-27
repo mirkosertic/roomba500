@@ -38,7 +38,7 @@ from luma.emulator.device import pygame
 from luma.oled.device import ssd1306
 from PIL import ImageFont
 
-from roomba500.msg import RoombaSensorFrame, NavigationInfo
+from roomba500.msg import RoombaSensorFrame, NavigationInfo, Area
 from roomba500.srv import Clean, CleanResponse
 
 
@@ -208,8 +208,20 @@ class Supervisor:
         rospy.loginfo('Waiting for service %s', servicename)
         rospy.wait_for_service(servicename)
         rospy.loginfo('Invoking service')
+
+        topX = request.json['topX']
+        topY = request.json['topY']
+        bottomX = request.json['bottomX']
+        bottomY = request.json['bottomY']
+
+        cleanarea = Area()
+        cleanarea.mapTopLeftX = topX
+        cleanarea.mapTopLeftY = topY
+        cleanarea.mapBottomRightX = bottomX
+        cleanarea.mapBottomRightY = bottomY
+
         service = rospy.ServiceProxy(servicename, Clean)
-        r = service()
+        r = service(cleanarea)
         rospy.loginfo('Service called!')
 
         response.content_type='application/json'
@@ -426,7 +438,7 @@ class Supervisor:
         self.app.route('/actions/stop', 'GET', self.stop)
         self.app.route('/actions/backward', 'GET', self.backward)
         self.app.route('/actions/relocalization', 'GET', self.relocalization)
-        self.app.route('/actions/clean', 'GET', self.clean)
+        self.app.route('/actions/clean', 'POST', self.clean)
         self.app.route('/actions/cancel', 'GET', self.cancel)
         self.app.route('/actions/room/<room>/delete', 'GET', self.deleteroom)
         self.app.route('/actions/room/<room>/start', 'GET', self.startroom)
@@ -443,6 +455,7 @@ class Supervisor:
         rospy.Subscriber("cmd_vel", Twist, self.state.newCmdVel)
         rospy.Subscriber("navigation_info", NavigationInfo, self.state.newNavigationInfo)
         rospy.Subscriber("map", OccupancyGrid, self.state.newMap)
+        rospy.Subscriber("move_base/local_costmap/costmap", OccupancyGrid, self.state.newCostMap)
 
         rospy.Subscriber("rosout_agg", Log, self.state.newLogMessage)
 

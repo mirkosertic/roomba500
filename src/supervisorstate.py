@@ -53,6 +53,7 @@ class SupervisorState:
         self.roomsdirectory = roomsdirectory
         self.logmessages = collections.deque(maxlen = 10)
         self.latestmap = None
+        self.latestcostmap = None
 
     def newMap(self, message):
 
@@ -67,6 +68,20 @@ class SupervisorState:
             }
         }
         self.latestmap = data
+
+    def newCostMap(self, message):
+
+        data = {
+            'width': message.info.width,
+            'height': message.info.height,
+            'resolution': message.info.resolution,
+            'data': message.data,
+            'origin': {
+                'x': message.info.origin.position.x,
+                'y': message.info.origin.position.y
+            }
+        }
+        self.latestcostmap = data
 
     def newLogMessage(self, message):
         data = {
@@ -195,6 +210,7 @@ class SupervisorState:
             'hascancel': self.hasservice('/cancel'),
             'log': list(self.logmessages),
             'map': self.latestmap,
+            'costmap': self.latestcostmap,
             'odometryOnMap': self.latestodomonmap,
             'rooms': knownrooms
         }

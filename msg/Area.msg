@@ -1,0 +1,4 @@
+float32 mapTopLeftX
+float32 mapTopLeftY
+float32 mapBottomRightX
+float32 mapBottomRightY
