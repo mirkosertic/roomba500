@@ -1,5 +1,6 @@
 controller_frequency: 5
 xy_goal_tolerance: 0.20
+clearing_rotation_allowed: false
 
 TrajectoryPlannerROS:
   max_vel_x: 0.2

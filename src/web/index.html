@@ -664,51 +664,51 @@
                             return [valr, valg, valb, alpha];
                         });
                     }
+                }
 
-                    // Draw robot
-                    if (data.odometryOnMap) {
+                // Draw robot
+                if (data.odometryOnMap && uistate.latestmap) {
 
-                        let robotmapx = Math.floor((data.odometryOnMap.x - data.map.origin.x) / data.map.resolution);
-                        let robotmapy = Math.floor((data.odometryOnMap.y - data.map.origin.y) / data.map.resolution);
+                    let robotmapx = Math.floor((data.odometryOnMap.x - uistate.latestmap.origin.x) / uistate.latestmap.resolution);
+                    let robotmapy = Math.floor((data.odometryOnMap.y - uistate.latestmap.origin.y) / uistate.latestmap.resolution);
 
-                        uistate.robotpath.push({
-                            x: map.width - robotmapx - 1,
-                            y: robotmapy
-                        });
+                    uistate.robotpath.push({
+                        x: map.width - robotmapx - 1,
+                        y: robotmapy
+                    });
 
-                        path.width = map.width * 5;
-                        path.height = map.height * 5;
+                    path.width = map.width * 5;
+                    path.height = map.height * 5;
 
-                        dx = Math.floor(Math.sin(data.odometryOnMap.theta - Math.PI / 2) * 5);
-                        dy = Math.floor(Math.cos(data.odometryOnMap.theta - Math.PI / 2) * 5);
+                    dx = Math.floor(Math.sin(data.odometryOnMap.theta - Math.PI / 2) * 5);
+                    dy = Math.floor(Math.cos(data.odometryOnMap.theta - Math.PI / 2) * 5);
 
-                        var context = path.getContext('2d');
-                        context.beginPath();
-                        context.lineWidth = 5;
-                        context.strokeStyle = '#ffffff';
-                        context.fillStyle = '#ffffff';
-                        for (var i = 0; i < uistate.robotpath.length; i++) {
-                            var pos = uistate.robotpath[i];
-                            if (i === 0) {
-                                context.moveTo(pos.x * 5, pos.y * 5);
-                            } else {
-                                context.lineTo(pos.x * 5, pos.y * 5);
-                            }
+                    var context = path.getContext('2d');
+                    context.beginPath();
+                    context.lineWidth = 5;
+                    context.strokeStyle = '#ffffff';
+                    context.fillStyle = '#ffffff';
+                    for (var i = 0; i < uistate.robotpath.length; i++) {
+                        var pos = uistate.robotpath[i];
+                        if (i === 0) {
+                            context.moveTo(pos.x * 5, pos.y * 5);
+                        } else {
+                            context.lineTo(pos.x * 5, pos.y * 5);
                         }
-                        context.stroke();
-
-                        context.strokeStyle = '#000000';
-                        context.fillStyle = '#ffffff';
-                        context.lineWidth = 3;
-                        context.beginPath();
-                        context.translate(0.5, 0.5);
-                        context.arc((map.width - robotmapx - 1) * 5, robotmapy * 5, 2 * 5, 0, 2 * Math.PI, false);
-                        context.fill();
-
-                        context.moveTo((map.width - robotmapx - 1) * 5, robotmapy * 5);
-                        context.lineTo((map.width - robotmapx - 1 + dx) * 5, (robotmapy + dy) * 5);
-                        context.stroke();
                     }
+                    context.stroke();
+
+                    context.strokeStyle = '#000000';
+                    context.fillStyle = '#ffffff';
+                    context.lineWidth = 3;
+                    context.beginPath();
+                    context.translate(0.5, 0.5);
+                    context.arc((map.width - robotmapx - 1) * 5, robotmapy * 5, 2 * 5, 0, 2 * Math.PI, false);
+                    context.fill();
+
+                    context.moveTo((map.width - robotmapx - 1) * 5, robotmapy * 5);
+                    context.lineTo((map.width - robotmapx - 1 + dx) * 5, (robotmapy + dy) * 5);
+                    context.stroke();
                 }
             } else {
                 uistate.robotpath = [];
@@ -723,7 +723,7 @@
                 for (let r of data.rooms) {
                     let clone = template.content.cloneNode(true);
                     clone.querySelector("span").innerText = r;
-                    clone.querySelector(".generated").addEventListener("click", function(event) {loadRoom(r); event.preventDefault(); });
+                    clone.querySelector("span").addEventListener("click", function(event) {loadRoom(r); event.preventDefault(); });
                     clone.querySelector(".fa-trash").addEventListener("click", function(event) {deleteRoom(r); event.preventDefault(); });
                     rooms.prepend(clone);
                 }
