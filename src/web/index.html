@@ -574,7 +574,7 @@
             var logtext = '';
             for (let logmessage of logdata) {
                 const ts = new Date();
-                ts.setTime(Math.ceil(logmessage.stamp / 1000));
+                ts.setTime(Math.ceil(logmessage.stamp / 1000000));
                 level = '[UNDEF]';
                 switch (logmessage.level) {
                     case 1:
@@ -593,7 +593,7 @@
                         level = '[FATAL]';
                         break;
                 }
-                logtext += new Intl.DateTimeFormat('en-US').format(ts) + ' ' + level + ' [' + logmessage.node + '] ' + logmessage.msg + '\n';
+                logtext += ts.toUTCString() + ' ' + level + ' [' + logmessage.node + '] ' + logmessage.msg + '\n';
             }
             log.innerText = logtext;
         }
