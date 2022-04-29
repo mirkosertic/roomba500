@@ -347,9 +347,9 @@ class NavigationMap:
             distanceBottom = current.distanceTo(currentspan.cells[len(currentspan.cells) - 1])
             downmovement = distanceTop < distanceBottom
 
-            for index, cell in enumerate(nearestpath):
-                if index > 0 and index < len(nearestpath) - 1:
-                    path.append(cell)
+            #for index, cell in enumerate(nearestpath):
+            #    if index > 0 and index < len(nearestpath) - 1:
+            #        path.append(cell)
 
         pass
 

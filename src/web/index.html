@@ -162,7 +162,12 @@
                 font-size: 1.5rem;
             }
 
+            .navbuttons .stop:hover {
+                background-color: gray;
+            }
+
             .contentarea .remotecontrol .navactions {
+                z-index: 110;
                 display: flex;
                 flex-grow: 1;
                 width: 100%;
@@ -197,22 +202,6 @@
                 width: 100%;
                 height: 100%;
                 image-rendering: pixelated;
-            }
-
-            #map {
-                z-index: 10;
-            }
-
-            #costmap {
-                z-index: 20;
-            }
-
-            #path {
-                z-index: 30;
-            }
-
-            #interaction {
-                z-index: 40;
             }
 
             .logarea {
@@ -325,6 +314,11 @@
         const cavasstack = document.getElementById("canvasstack");
         const remotecontrol = document.getElementById("remotecontrol");
         const rooms = document.getElementById("rooms");
+
+        remotecontrol.addEventListener("click", function(event) {
+           event.preventDefault();
+        });
+
         interaction.width = interaction.clientWidth;
         interaction.height = interaction.clientHeight;
 
