@@ -11,6 +11,8 @@ import fcntl
 import struct
 import time
 import shutil
+import asyncio
+import json
 
 import tf
 import roslaunch
@@ -20,14 +22,17 @@ import actionlib
 from std_srvs.srv import Empty
 from std_msgs.msg import Int16
 from geometry_msgs.msg import Twist, Pose2D, Point32, PoseStamped
-from nav_msgs.msg import Odometry, OccupancyGrid
+from nav_msgs.msg import Odometry, OccupancyGrid, Path
 from sensor_msgs.msg import PointCloud
 from rosgraph_msgs.msg import Log
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 
 from tf.transformations import quaternion_from_euler
 
-from bottle import Bottle, run, request, response, static_file
+from starlette.applications import Starlette
+from starlette.responses import JSONResponse, FileResponse
+from sse_starlette.sse import EventSourceResponse
+import uvicorn
 
 from driver import Driver
 from supervisorstate import SupervisorState
@@ -75,15 +80,15 @@ class Supervisor:
 
     def startWebServer(self):
         rospy.loginfo('Starting supervisor at %s:%s', self.wsinterface, self.wsport)
-        run(app=self.app, host=self.wsinterface, port=self.wsport, debug=True)
+        uvicorn.run(self.app, host=self.wsinterface, port=self.wsport, debug=False, access_log=False, reload=False)
 
-    def deliverStart(self):
-        return static_file('index.html', root=self.staticfileswebdir)
+    def deliverStart(self, req):
+        return FileResponse(self.staticfileswebdir + '/index.html')
 
-    def deliverDummyJS(self):
-        return static_file('dummy.js', root=self.staticfileswebdir)
+    def deliverDummyJS(self, req):
+        return FileResponse(self.staticfileswebdir + '/dummy.js')
 
-    def startnewroom(self):
+    def startnewroom(self, req):
         self.state.syncLock.acquire()
 
         self.roomname = str(round(time.time() * 1000))
@@ -93,95 +98,58 @@ class Supervisor:
 
         self.driver.stop()
 
-        data = {
-        }
-
         rospy.loginfo('Request to wakeup in new room %s', self.roomname)
         self.processwakeup = True
 
         self.state.syncLock.release()
 
-        response.content_type='application/json'
-        return data
+        return JSONResponse({})
 
-    def systemstate(self):
-        self.state.syncLock.acquire()
-
-        data = self.state.gathersystemstate()
-
-        self.state.syncLock.release()
-
-        response.content_type='application/json'
-        return data
-
-    def shutdown(self):
+    def shutdown(self, req):
         self.state.syncLock.acquire()
 
         self.driver.stop()
-
-        data = {
-        }
 
         rospy.loginfo('Request to shutdown')
         self.processshutdown = True
 
         self.state.syncLock.release()
 
-        response.content_type='application/json'
-        return data
+        return JSONResponse({})
 
     def command(self, velx, veltheta):
         self.driver.drive(velx, veltheta)
 
-    def turnleft(self):
-
-        data = {
-        }
+    def turnleft(self, req):
 
         self.command(.0, self.rotationspeed)
-        response.content_type='application/json'
-        return data
 
-    def turnright(self):
+        return JSONResponse({})
 
-        data = {
-        }
+    def turnright(self, req):
 
         self.command(.0, -self.rotationspeed)
-        response.content_type='application/json'
-        return data
 
-    def forward(self):
+        return JSONResponse({})
 
-        data = {
-        }
+    def forward(self, req):
 
         self.command(self.forwardspeed, .0)
-        response.content_type='application/json'
-        return data
 
-    def backward(self):
+        return JSONResponse({})
 
-        data = {
-        }
+    def backward(self, req):
 
         self.command(-self.forwardspeed, .0)
-        response.content_type='application/json'
-        return data
 
-    def stop(self):
+        return JSONResponse({})
 
-        data = {
-        }
+    def stop(self, req):
 
         self.command(.0, .0)
-        response.content_type='application/json'
-        return data
+        return JSONResponse({})
 
-    def relocalization(self):
-
-        data = {
-        }
+    def relocalization(self, req):
 
         self.driver.stop()
 
@@ -196,55 +164,124 @@ class Supervisor:
             logging.error(traceback.format_exc())
             rospy.logerr('Error initiating relocalization : %s', e)
 
-        response.content_type='application/json'
-        return data
+        return JSONResponse({})
 
-    def clean(self):
+    async def logstream(self, req):
+        queue = asyncio.Queue()
+        self.state.loggingqueues.append(queue)
 
-        data = {
-        }
+        async def eventpublisher():
+            try:
+                while True:
+                    disconnected = await req.is_disconnected()
+                    if disconnected:
+                        rospy.loginfo("Disconnecting client %s", req.client)
+                        self.state.loggingqueues.remove(queue)
+                        break
+                    data = await queue.get()
+                    yield json.dumps(data)
+            except asyncio.CancelledError as e:
+                rospy.loginfo("Disconnected from client %s (via refresh/close)", req.client)
+                self.state.loggingqueues.remove(queue)
+                raise e
+        return EventSourceResponse(eventpublisher())
+
+    async def mapstream(self, req):
+        queue = asyncio.Queue()
+        self.state.mapqueues.append(queue)
+
+        async def eventpublisher():
+            try:
+                while True:
+                    disconnected = await req.is_disconnected()
+                    if disconnected:
+                        rospy.loginfo("Disconnecting client %s", req.client)
+                        self.state.mapqueues.remove(queue)
+                        break
+                    data = await queue.get()
+                    yield json.dumps(data)
+            except asyncio.CancelledError as e:
+                rospy.loginfo("Disconnected from client %s (via refresh/close)", req.client)
+                self.state.mapqueues.remove(queue)
+                raise e
+        return EventSourceResponse(eventpublisher())
+
+    async def costmapstream(self, req):
+        queue = asyncio.Queue()
+        self.state.costmapqueues.append(queue)
+
+        async def eventpublisher():
+            try:
+                while True:
+                    disconnected = await req.is_disconnected()
+                    if disconnected:
+                        rospy.loginfo("Disconnecting client %s", req.client)
+                        self.state.costmapqueues.remove(queue)
+                        break
+                    data = await queue.get()
+                    yield json.dumps(data)
+            except asyncio.CancelledError as e:
+                rospy.loginfo("Disconnected from client %s (via refresh/close)", req.client)
+                self.state.costmapqueues.remove(queue)
+                raise e
+        return EventSourceResponse(eventpublisher())
+
+    async def statestream(self, req):
+        queue = asyncio.Queue()
+        self.state.statequeues.append(queue)
+
+        async def eventpublisher():
+            try:
+                while True:
+                    disconnected = await req.is_disconnected()
+                    if disconnected:
+                        rospy.loginfo("Disconnecting client %s", req.client)
+                        self.state.statequeues.remove(queue)
+                        break
+                    data = await queue.get()
+                    yield json.dumps(data)
+            except asyncio.CancelledError as e:
+                rospy.loginfo("Disconnected from client %s (via refresh/close)", req.client)
+                self.state.statequeues.remove(queue)
+                raise e
+        return EventSourceResponse(eventpublisher())
+
+    async def clean(self, req):
+
+        cmd = await req.json()
 
         servicename = 'clean'
         rospy.loginfo('Waiting for service %s', servicename)
         rospy.wait_for_service(servicename)
         rospy.loginfo('Invoking service')
 
-        topX = request.json['topX']
-        topY = request.json['topY']
-        bottomX = request.json['bottomX']
-        bottomY = request.json['bottomY']
-
         cleanarea = Area()
-        cleanarea.mapTopLeftX = topX
-        cleanarea.mapTopLeftY = topY
-        cleanarea.mapBottomRightX = bottomX
-        cleanarea.mapBottomRightY = bottomY
+        cleanarea.mapTopLeftX = cmd['topX']
+        cleanarea.mapTopLeftY = cmd['topY']
+        cleanarea.mapBottomRightX = cmd['bottomX']
+        cleanarea.mapBottomRightY = cmd['bottomY']
 
         service = rospy.ServiceProxy(servicename, Clean)
-        r = service(cleanarea)
+        service(cleanarea)
         rospy.loginfo('Service called!')
 
-        response.content_type='application/json'
-        return data
+        return JSONResponse({})
 
-    def cancel(self):
-
-        data = {
-        }
+    def cancel(self, req):
 
         servicename = 'cancel'
         rospy.loginfo('Waiting for service %s', servicename)
         rospy.wait_for_service(servicename)
         rospy.loginfo('Invoking service')
         service = rospy.ServiceProxy(servicename, Clean)
-        r = service()
+        service()
         rospy.loginfo('Service called!')
 
-        response.content_type='application/json'
-        return data
+        return JSONResponse({})
 
-    def deleteroom(self, room):
+    def deleteroom(self, req):
 
+        room = req.path_params['room']
         rospy.loginfo('Deleting room %s', room)
 
         self.state.syncLock.acquire()
@@ -252,39 +289,30 @@ class Supervisor:
         directory = str(pathlib.Path(self.roomsdirectory).joinpath(room))
         shutil.rmtree(directory)
 
-        data = {
-        }
-
         self.state.syncLock.release()
 
-        response.content_type='application/json'
-        return data
+        return JSONResponse({})
 
-    def startroom(self, room):
+    def startroom(self, req):
+
+        room = req.path_params['room']
 
         rospy.loginfo('Starting room %s', room)
         self.state.syncLock.acquire()
 
         self.driver.stop()
 
-        data = {
-        }
-
         self.processwakeup = True
         self.roomname = room
 
         self.state.syncLock.release()
 
-        response.content_type='application/json'
-        return data
+        return JSONResponse({})
 
-    def simulateObstacle(self):
+    def simulateObstacle(self, req):
 
         rospy.loginfo('Simulating obstacle')
         self.state.syncLock.acquire()
-
-        data = {
-        }
 
         try:
             distance = 0.5
@@ -304,39 +332,36 @@ class Supervisor:
 
         self.state.syncLock.release()
 
-        response.content_type='application/json'
-        return data
+        return JSONResponse({})
 
-    def moveToPosition(self):
+    async def moveToPosition(self, req):
 
-        rospy.loginfo("Received move to command %s", str(request.json))
+        cmd = await req.json()
+
+        rospy.loginfo("Received move to command %s", str(cmd))
 
         if not self.movebaseclient.wait_for_server(rospy.Duration(1.0)):
             rospy.logerr("Action server not available!")
             rospy.signal_shutdown("Action server not available!")
         else:
-            q = quaternion_from_euler(0, 0, request.json['theta']);
+            q = quaternion_from_euler(0, 0, cmd['theta'])
             goal = MoveBaseGoal()
             goal.target_pose.header.frame_id = "map"
             goal.target_pose.header.stamp = rospy.Time.now()
-            goal.target_pose.pose.position.x = request.json['targetx']
-            goal.target_pose.pose.position.y = request.json['targety']
+            goal.target_pose.pose.position.x = cmd['targetx']
+            goal.target_pose.pose.position.y = cmd['targety']
             goal.target_pose.pose.orientation.x = q[0]
             goal.target_pose.pose.orientation.y = q[1]
             goal.target_pose.pose.orientation.z = q[2]
             goal.target_pose.pose.orientation.w = q[3]
 
+            self.state.latestcleaningpath = {}
             self.movebaseclient.send_goal(goal)
 
-        data = {
-        }
+        return JSONResponse({})
 
-        response.content_type='application/json'
-        return data
-
-    def updateDisplay(self):
+    def updateDisplay(self, state):
         device = self.displaydevice
-        state = self.state.gathersystemstate()
         with canvas(device) as draw:
             draw.rectangle(device.bounding_box, outline='white', fill='black')
             draw.text((3, 1), 'IP: ' + self.wsinterface + ':' + str(self.wsport), fill='white', font=self.font8)
@@ -398,7 +423,7 @@ class Supervisor:
     def start(self):
         rospy.init_node('supervisor', anonymous=True)
 
-        pollingRateInHertz = int(rospy.get_param('~pollingRateInHertz', '5'))
+        pollingRateInHertz = int(rospy.get_param('~pollingRateInHertz', '2'))
         self.wsport = int(rospy.get_param('~wsport', '8080'))
         self.wsinterface = self.bindinginterface('0.0.0.0')
 
@@ -422,28 +447,31 @@ class Supervisor:
 
         self.bumperspub = rospy.Publisher('bumpers', PointCloud, queue_size=10)
 
-        self.app = Bottle()
-        self.app.route('/', 'GET', self.deliverStart)
-        self.app.route('/index.html', 'GET', self.deliverStart)
-        self.app.route('/index.htm', 'GET', self.deliverStart)
-        self.app.route('/dummy.js', 'GET', self.deliverDummyJS)
+        self.app = Starlette()
+        self.app.add_route('/', self.deliverStart, methods=['GET'])
+        self.app.add_route('/index.html', self.deliverStart, methods=['GET'])
+        self.app.add_route('/index.htm', self.deliverStart, methods=['GET'])
+        self.app.add_route('/dummy.js', self.deliverDummyJS, methods=['GET'])
 
-        self.app.route('/systemstate.json', 'GET', self.systemstate)
+        self.app.add_route('/logstream', self.logstream, methods=['GET'])
+        self.app.add_route('/mapstream', self.mapstream, methods=['GET'])
+        self.app.add_route('/costmapstream', self.costmapstream, methods=['GET'])
+        self.app.add_route('/statestream', self.statestream, methods=['GET'])
 
-        self.app.route('/actions/startnewroom', 'GET', self.startnewroom)
-        self.app.route('/actions/shutdown', 'GET', self.shutdown)
-        self.app.route('/actions/turnleft', 'GET', self.turnleft)
-        self.app.route('/actions/turnright', 'GET', self.turnright)
-        self.app.route('/actions/forward', 'GET', self.forward)
-        self.app.route('/actions/stop', 'GET', self.stop)
-        self.app.route('/actions/backward', 'GET', self.backward)
-        self.app.route('/actions/relocalization', 'GET', self.relocalization)
-        self.app.route('/actions/clean', 'POST', self.clean)
-        self.app.route('/actions/cancel', 'GET', self.cancel)
-        self.app.route('/actions/room/<room>/delete', 'GET', self.deleteroom)
-        self.app.route('/actions/room/<room>/start', 'GET', self.startroom)
-        self.app.route('/actions/simulateObstacle', 'GET', self.simulateObstacle)
-        self.app.route('/actions/moveTo', 'POST', self.moveToPosition)
+        self.app.add_route('/actions/startnewroom', self.startnewroom, methods=['GET'])
+        self.app.add_route('/actions/shutdown', self.shutdown, methods=['GET'])
+        self.app.add_route('/actions/turnleft', self.turnleft, methods=['GET'])
+        self.app.add_route('/actions/turnright', self.turnright, methods=['GET'])
+        self.app.add_route('/actions/forward', self.forward, methods=['GET'])
+        self.app.add_route('/actions/stop', self.stop, methods=['GET'])
+        self.app.add_route('/actions/backward', self.backward, methods=['GET'])
+        self.app.add_route('/actions/relocalization', self.relocalization, methods=['GET'])
+        self.app.add_route('/actions/clean', self.clean, methods=['POST'])
+        self.app.add_route('/actions/cancel', self.cancel, methods=['GET'])
+        self.app.add_route('/actions/room/{room}/delete', self.deleteroom, methods=['GET'])
+        self.app.add_route('/actions/room/{room}/start', self.startroom, methods=['GET'])
+        self.app.add_route('/actions/simulateObstacle', self.simulateObstacle, methods=['GET'])
+        self.app.add_route('/actions/moveTo', self.moveToPosition, methods=['POST'])
 
         wsThread = threading.Thread(target=self.startWebServer)
         wsThread.start()
@@ -456,6 +484,7 @@ class Supervisor:
         rospy.Subscriber("navigation_info", NavigationInfo, self.state.newNavigationInfo)
         rospy.Subscriber("map", OccupancyGrid, self.state.newMap)
         rospy.Subscriber("move_base/local_costmap/costmap", OccupancyGrid, self.state.newCostMap)
+        rospy.Subscriber("cleaningpath", Path, self.state.newCleaningPath)
 
         rospy.Subscriber("rosout_agg", Log, self.state.newLogMessage)
 
@@ -484,9 +513,13 @@ class Supervisor:
         while not rospy.is_shutdown():
             self.state.syncLock.acquire()
 
+            systemstate = self.state.gathersystemstate()
+            for q in self.state.statequeues:
+                q.put_nowait(systemstate)
+
             displayUpdateCounter = (displayUpdateCounter + 1) % pollingRateInHertz
             if displayUpdateCounter == 0 and self.displaydevice is not None:
-                self.updateDisplay()
+                self.updateDisplay(systemstate)
 
             if self.processwakeup and self.state.robotnode is None:
                 try:
@@ -575,8 +608,6 @@ class Supervisor:
         if self.displaydevice is not None:
             self.displaydevice.clear()
 
-        rospy.loginfo('Stopping threads and webserver')
-        self.app.close()
         rospy.loginfo('Suicide to stop all services')
 
         os.kill(os.getpid(), signal.SIGKILL)

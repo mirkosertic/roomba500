@@ -9,8 +9,6 @@ import rosservice
 from geometry_msgs.msg import PoseStamped
 from tf.transformations import euler_from_quaternion
 
-import collections
-
 class SupervisorState:
 
     def __init__(self, transformlistener, mapframe, roomsdirectory):
@@ -51,9 +49,31 @@ class SupervisorState:
         self.lastcommandedveltheta = .0
 
         self.roomsdirectory = roomsdirectory
-        self.logmessages = collections.deque(maxlen = 10)
-        self.latestmap = None
-        self.latestcostmap = None
+        self.latestcleaningpath = None
+
+        self.loggingqueues = []
+        self.mapqueues = []
+        self.costmapqueues = []
+        self.statequeues = []
+
+    def newCleaningPath(self, message):
+
+        pending = []
+
+        for pose in message.poses:
+            odomQuat = pose.pose.orientation
+            (_, _, theta) = euler_from_quaternion([odomQuat.x, odomQuat.y, odomQuat.z, odomQuat.w])
+
+            pending.append({
+            'x': pose.pose.position.x,
+            'y': pose.pose.position.y,
+            'theta': theta
+            })
+
+        data = {
+            'pending': pending
+        }
+        self.latestcleaningpath = data
 
     def newMap(self, message):
 
@@ -67,7 +87,8 @@ class SupervisorState:
                 'y': message.info.origin.position.y
             }
         }
-        self.latestmap = data
+        for q in self.mapqueues:
+            q.put_nowait(data)
 
     def newCostMap(self, message):
 
@@ -81,7 +102,8 @@ class SupervisorState:
                 'y': message.info.origin.position.y
             }
         }
-        self.latestcostmap = data
+        for q in self.costmapqueues:
+            q.put_nowait(data)
 
     def newLogMessage(self, message):
         data = {
@@ -90,11 +112,12 @@ class SupervisorState:
             'node': message.name,
             'msg': message.msg
         }
-
-        self.logmessages.append(data)
+        for q in self.loggingqueues:
+            q.put_nowait(data)
 
     def newSensorFrame(self, message):
         self.syncLock.acquire()
+
         self.latestbatterycharge = message.batteryCharge
         self.latestbatterycapacity = message.batteryCapacity
         self.bumperleft = message.bumperLeft
@@ -133,12 +156,12 @@ class SupervisorState:
             odometryInTargetposeFrame = self.transformlistener.transformPose(self.mapframe, mpose)
 
             odomQuat = odometryInTargetposeFrame.pose.orientation
-            (_, _, odomyaw) = euler_from_quaternion([odomQuat.x, odomQuat.y, odomQuat.z, odomQuat.w])
+            (_, _, theta) = euler_from_quaternion([odomQuat.x, odomQuat.y, odomQuat.z, odomQuat.w])
 
             self.latestodomonmap = {
                 'x': odometryInTargetposeFrame.pose.position.x,
                 'y': odometryInTargetposeFrame.pose.position.y,
-                'theta': odomyaw,
+                'theta': theta,
                 'velx': message.twist.twist.linear.x,
                 'veltheta': message.twist.twist.angular.z
             }
@@ -167,12 +190,9 @@ class SupervisorState:
 
         self.syncLock.release()
 
-    def hasservice(self, servicename):
-        services = rosservice.get_service_list()
-        return servicename in services
-
     def gathersystemstate(self):
 
+        services = rosservice.get_service_list()
         knownrooms = next(os.walk(self.roomsdirectory))[1]
 
         data = {
@@ -205,13 +225,11 @@ class SupervisorState:
             'lightbumperCenterRightStat': self.lightbumperCenterRightStat,
             'lightbumperFrontRightStat': self.lightbumperFrontRightStat,
             'lightbumperRightStat': self.lightbumperRightStat,
-            'hasrelocalization': self.hasservice('/global_localization'),
-            'hasclean': self.hasservice('/clean'),
-            'hascancel': self.hasservice('/cancel'),
-            'log': list(self.logmessages),
-            'map': self.latestmap,
-            'costmap': self.latestcostmap,
+            'hasrelocalization': '/global_localization' in services,
+            'hasclean': '/clean' in services,
+            'hascancel': '/cancel' in services,
             'odometryOnMap': self.latestodomonmap,
+            'cleaningpath': self.latestcleaningpath,
             'rooms': knownrooms
         }
         return data

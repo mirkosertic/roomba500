@@ -112,7 +112,7 @@
 
             .navbuttons .forward {
                 top: -32.5em;
-                left: 0rem;
+                left: 0;
                 color: white;
                 transform: rotate(45deg);
                 display: flex;
@@ -132,7 +132,7 @@
 
             .navbuttons .backward {
                 bottom: 28.3rem;
-                left: 0rem;
+                left: 0;
                 color: white;
                 transform: rotate(45deg);
                 display: flex;
@@ -219,9 +219,9 @@
                 font-size: 0.6rem;
             }
 
-            .logarea pre {
-                margin: 0;
-                padding: 0.3rem;
+            .logarea .logrow {
+                margin-left: 0.2rem;
+                padding: 0;
                 font-size: 0.6rem;
                 font-family: "Lucida Console", "Courier New", monospace;
             }
@@ -298,8 +298,8 @@
             </div>
             <div class="logarea">
                 <div class="caption">Recent system log</div>
-                <pre id="log">
-                </pre>
+                <div id="log">
+                </div>
             </div>
             <template id="roomtemplate">
                 <div class="room generated"><span>Room 2123123</span><i class="fa fa-trash"></i></div>
@@ -332,7 +332,7 @@
         function updateStopwatch() {
             if (uistate.starttime > 0) {
                 let delta = Date.now() - uistate.starttime;
-                stopwatch.innerText = '' + delta;
+                //stopwatch.innerText = '' + delta;
             }
         }
 
@@ -540,8 +540,8 @@
 
             context.imageSmoothingEnabled = false;
             var imageData = context.createImageData(width, height);
-            for (var row = 0; row < height; row++) {
-                for (var col = 0; col < width; col++) {
+            for (let row = 0; row < height; row++) {
+                for (let col = 0; col < width; col++) {
                     // determine the index into the map data
                     var mapI = width - col - 1 + (row * width);
                     // determine the value
@@ -550,7 +550,7 @@
                     const [valr, valg, valb, alpha] = convFunc(mapdata);
 
                     // determine the index into the image data array
-                    var i = (col + (row * width)) * 4;
+                    let i = (col + (row * width)) * 4;
                     // r
                     imageData.data[i] = valr;
                     // g
@@ -564,37 +564,92 @@
             context.putImageData(imageData, 0, 0);
         }
 
-        function updateLog(logdata) {
-            var logtext = '';
-            for (let logmessage of logdata) {
-                const ts = new Date();
-                ts.setTime(Math.ceil(logmessage.stamp / 1000000));
-                level = '[UNDEF]';
-                switch (logmessage.level) {
-                    case 1:
-                        level = '[DEBUG]';
-                        break;
-                    case 2:
-                        level = '[INFO ]';
-                        break;
-                    case 4:
-                        level = '[WARN ]';
-                        break;
-                    case 8:
-                        level = '[ERROR]';
-                        break;
-                    case 16:
-                        level = '[FATAL]';
-                        break;
-                }
-                logtext += ts.toUTCString() + ' ' + level + ' [' + logmessage.node + '] ' + logmessage.msg + '\n';
+        function appendLog(logmessage) {
+            const ts = new Date();
+            ts.setTime(Math.ceil(logmessage.stamp / 1000000));
+            level = '[UNDEF]';
+            switch (logmessage.level) {
+                case 1:
+                    level = '[DEBUG]';
+                    break;
+                case 2:
+                    level = '[INFO ]';
+                    break;
+                case 4:
+                    level = '[WARN ]';
+                    break;
+                case 8:
+                    level = '[ERROR]';
+                    break;
+                case 16:
+                    level = '[FATAL]';
+                    break;
             }
-            log.innerText = logtext;
+            const txt = ts.toUTCString() + ' ' + level + ' [' + logmessage.node + '] ' + logmessage.msg + '\n';
+            const elem = document.createElement("div");
+            elem.className = 'logrow';
+            elem.innerText = txt;
+            while (log.childElementCount > 10) {
+                log.removeChild(log.firstChild);
+            }
+            log.appendChild(elem);
+        }
+
+        function newMap(mapdata) {
+            uistate.latestmap = mapdata;
+
+            document.getElementById("canvasstack").style.aspectRatio = mapdata.width / mapdata.height;
+
+            mapToCanvas(mapdata, map, function(value) {
+                var valr = 0;
+                var valg = 0;
+                var valb = 0;
+                var alpha = 255;
+                if (value === 100) {
+                    valr = 0;
+                    valg = 0;
+                    valb = 0;
+                } else if (value === 0) {
+                    // 82BDFF
+                    valr = 0x82;
+                    valg = 0xbd;
+                    valb = 0xff;
+                } else {
+                    alpha = 0;
+                }
+                return [valr, valg, valb, alpha];
+            });
+        }
+
+        function newCostMap(mapdata) {
+            mapToCanvas(mapdata, costmap, function(value) {
+                var valr = 0;
+                var valg = 0;
+                var valb = 0;
+                var alpha = 0;
+                if (value === 100) {
+                    // cost_lethal
+                    valr = 255;
+                    valg = 0;
+                    valb = 0;
+                    alpha = 64;
+                } else if (value === 99) {
+                    // cost_inscribed
+                    valr = 255;
+                    valb = 0;
+                    alpha = 64;
+                } else if (value < 99 && value >= 1) {
+                    // not a collision, but costs calculated
+                    valr = value;
+                    valg = value;
+                    valb = value;
+                    alpha = 64;
+                }
+                return [valr, valg, valb, alpha];
+            });
         }
 
         function updateUI(data) {
-
-            updateLog(data.log);
 
             if (data.awake) {
 
@@ -604,61 +659,6 @@
 
                 document.getElementById("relocalization").style.visibility = data.hasrelocalization ? 'visible' : 'hidden';
                 document.getElementById("cancel").style.visibility = data.hascancel ? 'visible' : 'hidden';
-
-                if (data.map) {
-
-                    uistate.latestmap = data.map;
-
-                    document.getElementById("canvasstack").style.aspectRatio = data.map.width / data.map.height;
-
-                    mapToCanvas(data.map, map, function(value) {
-                        var valr = 0;
-                        var valg = 0;
-                        var valb = 0;
-                        var alpha = 255;
-                        if (value === 100) {
-                            valr = 0;
-                            valg = 0;
-                            valb = 0;
-                        } else if (value === 0) {
-                            // 82BDFF
-                            valr = 0x82;
-                            valg = 0xbd;
-                            valb = 0xff;
-                        } else {
-                            alpha = 0;
-                        }
-                        return [valr, valg, valb, alpha];
-                    });
-
-                    if (data.costmap) {
-                        mapToCanvas(data.costmap, costmap, function(value) {
-                            var valr = 0;
-                            var valg = 0;
-                            var valb = 0;
-                            var alpha = 0;
-                            if (value === 100) {
-                                // cost_lethal
-                                valr = 255;
-                                valg = 0;
-                                valb = 0;
-                                alpha = 64;
-                            } else if (value === 99) {
-                                // cost_instribed
-                                valr = 255;
-                                valb = 0;
-                                alpha = 64;
-                            } else if (value < 99 && value >= 1) {
-                                // not a collision, but costs calculated
-                                valr = value;
-                                valg = value;
-                                valb = value;
-                                alpha = 64;
-                            }
-                            return [valr, valg, valb, alpha];
-                        });
-                    }
-                }
 
                 // Draw robot
                 if (data.odometryOnMap && uistate.latestmap) {
@@ -682,7 +682,7 @@
                     context.lineWidth = 5;
                     context.strokeStyle = '#ffffff';
                     context.fillStyle = '#ffffff';
-                    for (var i = 0; i < uistate.robotpath.length; i++) {
+                    for (let i = 0; i < uistate.robotpath.length; i++) {
                         var pos = uistate.robotpath[i];
                         if (i === 0) {
                             context.moveTo(pos.x * 5, pos.y * 5);
@@ -691,6 +691,24 @@
                         }
                     }
                     context.stroke();
+
+                    if (data.cleaningpath && data.cleaningpath.pending && data.cleaningpath.pending.length > 0) {
+
+                        context.beginPath();
+                        context.lineWidth = 5;
+                        context.strokeStyle = '#ecf0f1';
+                        context.fillStyle = '#ecf0f1';
+
+                        context.moveTo((map.width - robotmapx - 1) * 5, robotmapy * 5);
+
+                        for (let i = 0; i < data.cleaningpath.pending.length; i++) {
+                            let robotmapx = Math.floor((data.cleaningpath.pending[i].x - uistate.latestmap.origin.x) / uistate.latestmap.resolution);
+                            let robotmapy = Math.floor((data.cleaningpath.pending[i].y - uistate.latestmap.origin.y) / uistate.latestmap.resolution);
+                            context.lineTo((map.width - robotmapx - 1) * 5, robotmapy * 5);
+                        }
+
+                        context.stroke();
+                    }
 
                     context.strokeStyle = '#000000';
                     context.fillStyle = '#ffffff';
@@ -724,17 +742,35 @@
             }
         }
 
-        function fetchState() {
-            fetch('/systemstate.json')
-                .then(response => response.json())
-                .then(data => updateUI(data))
-                .catch(function(error) {
-                    updateUI(dummymapdata)
-                })
-        }
+        const stateEventSource = new EventSource("/statestream");
+        stateEventSource.onmessage = function(event) {
+            let data = (JSON.parse(event.data));
+            updateUI(data);
+        };
+        stateEventSource.onerror = function(event) {
+            newMap(dummymapdata.map);
+            newCostMap(dummymapdata.costmap);
+            updateUI(dummymapdata);
+        };
 
-        fetchState();
-        setInterval(fetchState, 2000);
+        const logEventSource = new EventSource("/logstream");
+        logEventSource.onmessage = function(event) {
+            let data = (JSON.parse(event.data));
+            appendLog(data);
+        };
+
+        const mapEventSource = new EventSource("/mapstream");
+        mapEventSource.onmessage = function(event) {
+            let data = (JSON.parse(event.data));
+            newMap(data);
+        };
+
+        const costmapEventSource = new EventSource("/costmapstream");
+        costmapEventSource.onmessage = function(event) {
+            let data = (JSON.parse(event.data));
+            newCostMap(data);
+        };
+
     </script>
     </body>
 </html>

@@ -10,7 +10,7 @@ import math
 from map import NavigationMap, GridCellStatus
 
 from std_msgs.msg import Int16, ColorRGBA
-from nav_msgs.msg import Odometry, OccupancyGrid
+from nav_msgs.msg import Odometry, OccupancyGrid, Path
 from geometry_msgs.msg import Twist, Point, Pose, PoseStamped, Quaternion, Vector3
 from visualization_msgs.msg import Marker, MarkerArray
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
@@ -33,6 +33,7 @@ class Highlevel:
         self.markerstopic = None
         self.movebaseclient = None
         self.currentpathindex = 0
+        self.cleaningpathtopic = None
 
     def newOdomMessage(self, data):
 
@@ -76,7 +77,7 @@ class Highlevel:
 
         self.currentpathindex = 0
 
-        def goalAtIndex(index):
+        def poseAtIndex(index):
             # We calculate the target rotation for the robot. It should face to the next waypoint
             # of the path
             if index < len(path) - 1:
@@ -88,15 +89,21 @@ class Highlevel:
                 targetangle = math.atan2(path[index - 1].centery - path[index].centery, path[index - 1].centerx - path[index].centerx) + math.pi
                 q = quaternion_from_euler(0, 0, targetangle)
 
+            pose = PoseStamped()
+            pose.header.frame_id = "map"
+            pose.header.stamp = rospy.Time.now()
+            pose.pose.position.x = path[index].centerx
+            pose.pose.position.y = path[index].centery
+            pose.pose.orientation.x = q[0]
+            pose.pose.orientation.y = q[1]
+            pose.pose.orientation.z = q[2]
+            pose.pose.orientation.w = q[3]
+
+            return pose
+
+        def goalAtIndex(index):
             goal = MoveBaseGoal()
-            goal.target_pose.header.frame_id = "map"
-            goal.target_pose.header.stamp = rospy.Time.now()
-            goal.target_pose.pose.position.x = path[index].centerx
-            goal.target_pose.pose.position.y = path[index].centery
-            goal.target_pose.pose.orientation.x = q[0]
-            goal.target_pose.pose.orientation.y = q[1]
-            goal.target_pose.pose.orientation.z = q[2]
-            goal.target_pose.pose.orientation.w = q[3]
+            goal.target_pose = poseAtIndex(index)
 
             return goal
 
@@ -129,6 +136,7 @@ class Highlevel:
                 rospy.loginfo("Goal pose %s reached", str(self.currentpathindex + 1))
 
                 self.currentpathindex = self.currentpathindex + 1
+
                 if self.currentpathindex < len(path) - 1:
                     rospy.loginfo("Continue with waypoint %s", str(self.currentpathindex + 1))
 
@@ -138,6 +146,14 @@ class Highlevel:
                         return
 
                     self.movebaseclient.send_goal(goalAtIndex(self.currentpathindex), done_cb, active_cb, feedback_cb)
+
+                    cleaningpath = Path()
+                    cleaningpath.header.frame_id = 'map'
+                    cleaningpath.header.stamp = rospy.Time.now()
+                    for i in range(self.currentpathindex, len(path)):
+                        cleaningpath.poses.append(poseAtIndex(i))
+
+                    self.cleaningpathtopic.publish(cleaningpath)
                     return
                 else:
                     rospy.loginfo("Path is completed!")
@@ -158,7 +174,16 @@ class Highlevel:
         # We start by navigating to the starting pose
         self.movebaseclient.send_goal(goalAtIndex(self.currentpathindex), done_cb, active_cb, feedback_cb)
 
-    def newShutdownCommand(self, data):
+        # Info what needs to be done
+        cleaningpath = Path()
+        cleaningpath.header.frame_id = 'map'
+        cleaningpath.header.stamp = rospy.Time.now()
+        for i in range(len(path)):
+            cleaningpath.poses.append(poseAtIndex(i))
+
+        self.cleaningpathtopic.publish(cleaningpath)
+
+    def newShutdownCommand(self, req):
 
         rospy.loginfo("Received shutdown command")
 
@@ -342,6 +367,7 @@ class Highlevel:
         self.transformlistener = tf.TransformListener()
 
         self.infotopic = rospy.Publisher('navigation_info', NavigationInfo, queue_size=10)
+        self.cleaningpathtopic = rospy.Publisher('cleaningpath', Path, queue_size=10)
 
         # We consume odometry here
         rospy.Subscriber("odom", Odometry, self.newOdomMessage)

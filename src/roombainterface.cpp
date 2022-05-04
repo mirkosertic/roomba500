@@ -246,13 +246,13 @@ class BaseController {
             ROS_INFO("Finishing");
             delete robot;
 
-            ROS_INFO("BaseController terminated.");
+            ROS_INFO("RoombaInterface terminated.");
             return 0;
         }
 };
 
 int main(int argc, char *argv[]) {
-    ros::init(argc, argv, "roomba500basecontroller");
+    ros::init(argc, argv, "roombainterface");
 
     ros::NodeHandle nPriv("~");
 
