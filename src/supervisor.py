@@ -384,12 +384,15 @@ class Supervisor:
 
     def bindinginterface(self, default):
         try:
-            return str(self.ipforinterface('wifi0'))
-        except Exception as e:
+            return str(self.ipforinterface('wlan0'))
+        except Exception as e1:
             try:
-                return str(self.ipforinterface('eth0'))
+                return str(self.ipforinterface('wifi0'))
             except Exception as e2:
-                return default
+                try:
+                    return str(self.ipforinterface('eth0'))
+                except Exception as e3:
+                    return default
 
     def savestateformap(self):
         try:
