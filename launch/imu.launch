@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <launch>
-    <node name="accelerometer" pkg="roomba500" type="accel.py" output="screen" respawn="false">
+    <node name="imu" pkg="roomba500" type="imu.py" output="screen" respawn="false">
         <param name="rosout_disable_topics_generation" value="True"/>
         <param name="pollingRateInHertz" value="30"/>
     </node>
