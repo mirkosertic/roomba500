@@ -84,7 +84,7 @@ class IMU:
         orientation = quaternion_about_axis(angle, axis)
 
         o = msg.orientation
-        o.x, o.y, o.z, o.w = orientation
+        #o.x, o.y, o.z, o.w = orientation
 
         msg.linear_acceleration.x = ax # / 9.807
         msg.linear_acceleration.y = ay # / 9.807
@@ -96,7 +96,7 @@ class IMU:
 
         self.imupub.publish(msg)
 
-        print ("Gx=%.2f" %Gx, u'\u00b0'+ "/s", "\tGy=%.2f" %Gy, u'\u00b0'+ "/s", "\tGz=%.2f" %Gz, u'\u00b0'+ "/s", "\tAx=%.2f g" %Ax, "\tAy=%.2f g" %Ay, "\tAz=%.2f g" %Az)
+        print ("Gx=%.2f" %gx, u'\u00b0'+ "/s", "\tgy=%.2f" %gy, u'\u00b0'+ "/s", "\tgz=%.2f" %gz, u'\u00b0'+ "/s", "\tAx=%.2f g" %ax, "\tAy=%.2f g" %ay, "\tAz=%.2f g" %az)
 
     def start(self):
         rospy.init_node('imu', anonymous=True)
