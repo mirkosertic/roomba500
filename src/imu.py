@@ -2,11 +2,9 @@
 
 import threading
 import rospy
-import numpy as np
 
 from std_msgs.msg import Int16
 from sensor_msgs.msg import Imu
-from tf.transformations import quaternion_about_axis
 
 from nav_msgs.msg import Odometry
 
@@ -31,7 +29,6 @@ class IMU:
         self.syncLock.release()
 
     def readOrientation(self):
-        FIFO_buffer = [0]*64
         FIFO_count = self.mpu.get_FIFO_count()
         mpu_int_status = self.mpu.get_int_status()
 
