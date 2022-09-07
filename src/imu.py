@@ -20,6 +20,7 @@ class IMU:
         self.imuframe = None
         self.mpu = None
         self.latestorientation = None
+        self.latestacceleration = None
         self.packet_size = 0
         self.odompub = None
 
@@ -44,13 +45,31 @@ class IMU:
             
             FIFO_buffer = self.mpu.get_FIFO_bytes(self.packet_size)
             accel = self.mpu.DMP_get_acceleration_int16(FIFO_buffer)
-            self.latestorientation = self.mpu.DMP_get_quaternion_int16(FIFO_buffer).get_normalized()
+            orientation = self.mpu.DMP_get_quaternion_int16(FIFO_buffer).get_normalized()
             grav = self.mpu.DMP_get_gravity(self.latestorientation)
 
-            roll_pitch_yaw = self.mpu.DMP_get_euler_roll_pitch_yaw(self.latestorientation, grav)
-            print('roll: ' + str(roll_pitch_yaw.x))
-            print('pitch: ' + str(roll_pitch_yaw.y))
-            print('yaw: ' + str(roll_pitch_yaw.z))
+            if self.latestorientation is None:
+                self.latestorientation = orientation
+                self.latestacceleration = accel
+            else:
+                latest_roll_pitch_yaw = self.mpu.DMP_get_euler_roll_pitch_yaw(self.latestorientation, grav)
+                current_roll_pitch_yaw = self.mpu.DMP_get_euler_roll_pitch_yaw(orientation, grav)
+                # Check for strange measurements
+                if ((abs(latest_roll_pitch_yaw.x - current_roll_pitch_yaw.x) < 20) and
+                    (abs(latest_roll_pitch_yaw.y - current_roll_pitch_yaw.y) < 20) and
+                    (abs(latest_roll_pitch_yaw.z - current_roll_pitch_yaw.z) < 20)):
+
+                    self.latestorientation = orientation
+                    self.latestacceleration = accel
+
+                    print('roll: ' + str(current_roll_pitch_yaw.x))
+                    print('pitch: ' + str(current_roll_pitch_yaw.y))
+                    print('yaw: ' + str(current_roll_pitch_yaw.z))
+                else:
+                    print('ignoring strange measurement')
+                    print('   roll: ' + str(current_roll_pitch_yaw.x))
+                    print('   pitch: ' + str(current_roll_pitch_yaw.y))
+                    print('   yaw: ' + str(current_roll_pitch_yaw.z))
 
     def processROSMessage(self):
         #Read Accelerometer raw value
@@ -83,6 +102,9 @@ class IMU:
             odom.pose.pose.position.x = 0
             odom.pose.pose.position.y = 0
             odom.pose.pose.orientation.x, odom.pose.pose.orientation.y, odom.pose.pose.orientation.z, odom.pose.pose.orientation.w = self.latestorientation.x, self.latestorientation.y, self.latestorientation.z, self.latestorientation.w
+
+            odom.twist.twist.linear.x, odom.twist.twist.linear.y = self.latestacceleration.x, self.latestorientation.y
+            odom.twist.twist.angular.z = self.latestacceleration.z
             self.odompub.publish(odom)
 
         msg.linear_acceleration.x = ax # / 9.807
