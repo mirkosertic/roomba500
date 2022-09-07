@@ -48,28 +48,8 @@ class IMU:
             orientation = self.mpu.DMP_get_quaternion_int16(FIFO_buffer).get_normalized()
             grav = self.mpu.DMP_get_gravity(orientation)
 
-            if self.latestorientation is None:
-                self.latestorientation = orientation
-                self.latestacceleration = accel
-            else:
-                latest_roll_pitch_yaw = self.mpu.DMP_get_euler_roll_pitch_yaw(self.latestorientation, grav)
-                current_roll_pitch_yaw = self.mpu.DMP_get_euler_roll_pitch_yaw(orientation, grav)
-                # Check for strange measurements
-                if ((abs(latest_roll_pitch_yaw.x - current_roll_pitch_yaw.x) < 20) and
-                    (abs(latest_roll_pitch_yaw.y - current_roll_pitch_yaw.y) < 20) and
-                    (abs(latest_roll_pitch_yaw.z - current_roll_pitch_yaw.z) < 20)):
-
-                    self.latestorientation = orientation
-                    self.latestacceleration = accel
-
-                    print('roll: ' + str(current_roll_pitch_yaw.x))
-                    print('pitch: ' + str(current_roll_pitch_yaw.y))
-                    print('yaw: ' + str(current_roll_pitch_yaw.z))
-                else:
-                    print('ignoring strange measurement')
-                    print('   roll: ' + str(current_roll_pitch_yaw.x))
-                    print('   pitch: ' + str(current_roll_pitch_yaw.y))
-                    print('   yaw: ' + str(current_roll_pitch_yaw.z))
+            self.latestorientation = orientation
+            self.latestacceleration = accel
 
     def processROSMessage(self):
         #Read Accelerometer raw value
@@ -121,7 +101,7 @@ class IMU:
 
     def start(self):
         rospy.init_node('imu', anonymous=True)
-        pollingRateInHertz = int(rospy.get_param('~pollingRateInHertz', '20'))
+        pollingRateInHertz = int(rospy.get_param('~pollingRateInHertz', '40'))
 
         self.imuframe = rospy.get_param('~imu_frame', 'map')
 
