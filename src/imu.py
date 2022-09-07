@@ -46,7 +46,7 @@ class IMU:
             FIFO_buffer = self.mpu.get_FIFO_bytes(self.packet_size)
             accel = self.mpu.DMP_get_acceleration_int16(FIFO_buffer)
             orientation = self.mpu.DMP_get_quaternion_int16(FIFO_buffer).get_normalized()
-            grav = self.mpu.DMP_get_gravity(self.latestorientation)
+            grav = self.mpu.DMP_get_gravity(orientation)
 
             if self.latestorientation is None:
                 self.latestorientation = orientation
