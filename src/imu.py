@@ -101,7 +101,7 @@ class IMU:
         rospy.init_node('imu', anonymous=True)
         pollingRateInHertz = int(rospy.get_param('~pollingRateInHertz', '20'))
 
-        self.imuframe = rospy.get_param('~imu_frame', 'imu_link')
+        self.imuframe = rospy.get_param('~imu_frame', 'map')
 
         rospy.loginfo("Polling IMU data with %s hertz", pollingRateInHertz)
         rate = rospy.Rate(pollingRateInHertz)
@@ -112,12 +112,13 @@ class IMU:
         device_address = 0x68
         # The offsets are different for each device and should be changed
         # accordingly using a calibration procedure
-        x_accel_offset = -5489
-        y_accel_offset = -1441
-        z_accel_offset = 1305
-        x_gyro_offset = -2
-        y_gyro_offset = -72
-        z_gyro_offset = -5
+        x_accel_offset = 1265
+        y_accel_offset = -2221
+        z_accel_offset = -230
+        x_gyro_offset = -7
+        y_gyro_offset = 8
+        z_gyro_offset = 64
+
         enable_debug_output = True
 
         self.mpu = MPU6050(i2c_bus, device_address, x_accel_offset, y_accel_offset, z_accel_offset, x_gyro_offset, y_gyro_offset, z_gyro_offset, enable_debug_output)
