@@ -8,22 +8,9 @@ from std_msgs.msg import Int16
 from sensor_msgs.msg import Imu
 from tf.transformations import quaternion_about_axis
 
-import smbus
+from nav_msgs.msg import Odometry
 
-# Code adapted from https://github.com/OSUrobotics/mpu_6050_driver/blob/master/scripts/imu_node.py
-
-#some MPU6050 Registers and their Address
-PWR_MGMT_1   = 0x6B
-SMPLRT_DIV   = 0x19
-CONFIG       = 0x1A
-GYRO_CONFIG  = 0x1B
-INT_ENABLE   = 0x38
-ACCEL_XOUT_H = 0x3B
-ACCEL_YOUT_H = 0x3D
-ACCEL_ZOUT_H = 0x3F
-GYRO_XOUT_H  = 0x43
-GYRO_YOUT_H  = 0x45
-GYRO_ZOUT_H  = 0x47
+from MPU6050 import MPU6050
 
 class IMU:
 
@@ -33,35 +20,47 @@ class IMU:
         self.deviceaddress = 0x68
         self.imupub = None
         self.imuframe = None
+        self.mpu = None
+        self.latestorientation = None
+        self.packet_size = 0
+        self.odompub = None
 
     def newShutdownCommand(self, data):
         self.syncLock.acquire()
         rospy.signal_shutdown('Shutdown requested')
         self.syncLock.release()
 
-    def read_raw_data(self, addr):
-        #Accelero and Gyro value are 16-bit
-        high = self.bus.read_byte_data(self.deviceaddress, addr)
-        low = self.bus.read_byte_data(self.deviceaddress, addr+1)
+    def readOrientation(self):
+        FIFO_buffer = [0]*64
+        FIFO_count = self.mpu.get_FIFO_count()
+        mpu_int_status = self.mpu.get_int_status()
 
-        #concatenate higher and lower value
-        value = ((high << 8) | low)
+        # If overflow is detected by status or fifo count we want to reset
+        if (FIFO_count == 1024) or (mpu_int_status & 0x10):
+            self.mpu.reset_FIFO()
+        # Check if fifo data is ready
+        elif (mpu_int_status & 0x02):
+            # Wait until packet_size number of bytes are ready for reading, default
+            # is 42 bytes
+            while FIFO_count < self.packet_size:
+                FIFO_count = self.mpu.get_FIFO_count()
+            
+            FIFO_buffer = self.mpu.get_FIFO_bytes(self.packet_size)
+            accel = self.mpu.DMP_get_acceleration_int16(FIFO_buffer)
+            self.latestorientation = self.mpu.DMP_get_quaternion_int16(FIFO_buffer).get_normalized()
+            grav = self.mpu.DMP_get_gravity(self.latestorientation)
 
-        #to get signed value from mpu6050
-        if(value > 32768):
-                value = value - 65536
-        return value
+            roll_pitch_yaw = self.mpu.DMP_get_euler_roll_pitch_yaw(self.latestorientation, grav)
+            print('roll: ' + str(roll_pitch_yaw.x))
+            print('pitch: ' + str(roll_pitch_yaw.y))
+            print('yaw: ' + str(roll_pitch_yaw.z))
 
-    def process(self):
+    def processROSMessage(self):
         #Read Accelerometer raw value
-        acc_x = self.read_raw_data(ACCEL_XOUT_H)
-        acc_y = self.read_raw_data(ACCEL_YOUT_H)
-        acc_z = self.read_raw_data(ACCEL_ZOUT_H)
+        acc_x, acc_y, acc_z = self.mpu.get_acceleration()
 
         #Read Gyroscope raw value
-        gyro_x = self.read_raw_data(GYRO_XOUT_H)
-        gyro_y = self.read_raw_data(GYRO_YOUT_H)
-        gyro_z = self.read_raw_data(GYRO_ZOUT_H)
+        gyro_x, gyro_y, gyro_z = self.mpu.get_rotation()
 
         #Full scale range +/- 250 degree/C as per sensitivity scale factor
         ax = acc_x/16384.0
@@ -76,15 +75,18 @@ class IMU:
         msg.header.frame_id = self.imuframe
         msg.header.stamp = rospy.Time.now()
 
-        accel = ax, ay, az
-        ref = np.array([0, 0, 1])
-        acceln = accel / np.linalg.norm(accel)
-        axis = np.cross(acceln, ref)
-        angle = np.arccos(np.dot(acceln, ref))
-        orientation = quaternion_about_axis(angle, axis)
+        if self.latestorientation:		
+            o = msg.orientation
+            o.x, o.y, o.z, o.w = self.latestorientation.x, self.latestorientation.y, self.latestorientation.z, self.latestorientation.w
 
-        o = msg.orientation
-        #o.x, o.y, o.z, o.w = orientation
+            odom = Odometry()
+            odom.header.stamp = rospy.Time.now()
+            odom.header.frame_id = 'map'
+            odom.child_frame_id = 'map'
+            odom.pose.pose.position.x = 0
+            odom.pose.pose.position.y = 0
+            odom.pose.pose.orientation.x, odom.pose.pose.orientation.y, odom.pose.pose.orientation.z, odom.pose.pose.orientation.w = self.latestorientation.x, self.latestorientation.y, self.latestorientation.z, self.latestorientation.w
+            self.odompub.publish(odom)
 
         msg.linear_acceleration.x = ax # / 9.807
         msg.linear_acceleration.y = ay # / 9.807
@@ -96,7 +98,7 @@ class IMU:
 
         self.imupub.publish(msg)
 
-        print ("Gx=%.2f" %gx, u'\u00b0'+ "/s", "\tgy=%.2f" %gy, u'\u00b0'+ "/s", "\tgz=%.2f" %gz, u'\u00b0'+ "/s", "\tAx=%.2f g" %ax, "\tAy=%.2f g" %ay, "\tAz=%.2f g" %az)
+        # print ("Gx=%.2f" %gx, u'\u00b0'+ "/s", "\tgy=%.2f" %gy, u'\u00b0'+ "/s", "\tgz=%.2f" %gz, u'\u00b0'+ "/s", "\tAx=%.2f g" %ax, "\tAy=%.2f g" %ay, "\tAz=%.2f g" %az)
 
     def start(self):
         rospy.init_node('imu', anonymous=True)
@@ -108,29 +110,40 @@ class IMU:
         rate = rospy.Rate(pollingRateInHertz)
 
         # Init MPU6050
-        self.bus = smbus.SMBus(1)
+        rospy.loginfo("Initializing MPU6050 IMU")
+        i2c_bus = 1
+        device_address = 0x68
+        # The offsets are different for each device and should be changed
+        # accordingly using a calibration procedure
+        x_accel_offset = -5489
+        y_accel_offset = -1441
+        z_accel_offset = 1305
+        x_gyro_offset = -2
+        y_gyro_offset = -72
+        z_gyro_offset = -5
+        enable_debug_output = True
 
-        #write to sample rate register
-        self.bus.write_byte_data(self.deviceaddress, SMPLRT_DIV, 7)
-        #Write to power management register
-        self.bus.write_byte_data(self.deviceaddress, PWR_MGMT_1, 1)
-        #Write to Configuration register
-        self.bus.write_byte_data(self.deviceaddress, CONFIG, 0)
-        #Write to Gyro configuration register
-        self.bus.write_byte_data(self.deviceaddress, GYRO_CONFIG, 24)
-        #Write to interrupt enable register
-        self.bus.write_byte_data(self.deviceaddress, INT_ENABLE, 1)
+        self.mpu = MPU6050(i2c_bus, device_address, x_accel_offset, y_accel_offset, z_accel_offset, x_gyro_offset, y_gyro_offset, z_gyro_offset, enable_debug_output)
+
+        self.mpu.dmp_initialize()
+        self.mpu.set_DMP_enabled(True)
+
+        self.packet_size = self.mpu.DMP_get_FIFO_packet_size()
 
         # Handling for administrative shutdowns
         rospy.Subscriber("shutdown", Int16, self.newShutdownCommand)
 
         # Publishing IMU data
-        self.imupub = rospy.Publisher('imu/data', Imu)
+        self.imupub = rospy.Publisher('imu/data', Imu, queue_size=10)
+
+        self.odompub = rospy.Publisher('odom', Odometry, queue_size=10)
 
         # Processing the sensor polling in an endless loop until this node shuts down
+        rospy.loginfo("Polling MPU6050...")
         while not rospy.is_shutdown():
 
-            self.process()
+            self.readOrientation()
+            self.processROSMessage()
 
             rate.sleep()
 
