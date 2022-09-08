@@ -61,7 +61,13 @@ class IMU:
                 dz = current_roll_pitch_yaw.z - latest_roll_pitch_yaw.z
 
                 if abs(dx) > 20 or abs(dy) > 20 or abs(dz) > 20:
-                    print('Ignoring measurement as dx = ' + str(dx) + " dy = " + str(dy) + " dz = " + str(dz))
+                    print('Ignoring linear measurement as dx = ' + str(dx) + " dy = " + str(dy) + " dz = " + str(dz))
+                    validvalue = False
+
+                gyroerrorthreshold = 50*16.4
+
+		if abs(gyro.x) > gyroerrorthreshold  or abs(gyro.y) > gyroerrorthreshold  or abs(gyro.z) > gyroerrorthreshold:
+                    print('Ignoring angular measurement as gyrox = ' + str(gyro.x) + " gyroy = " + str(gyro.y) + " gyroz = " + str(gyro.x))
                     validvalue = False
 
             self.latestorientation = orientation
@@ -73,21 +79,8 @@ class IMU:
         return False
 
     def processROSMessage(self):
-        #Read Accelerometer raw value
         acc_x, acc_y, acc_z = self.mpu.get_acceleration()
-
-        #Read Gyroscope raw value
-        #gyro_x, gyro_y, gyro_z = self.mpu.get_rotation()
         gyro_x, gyro_y, gyro_z = self.latestgyro.x, self.latestgyro.y, self.latestgyro.z
-
-        #Full scale range +/- 250 degree/C as per sensitivity scale factor
-        ax = acc_x/16384.0
-        ay = acc_y/16384.0
-        az = acc_z/16384.0
-
-        gx = gyro_x/131.0
-        gy = gyro_y/131.0
-        gz = gyro_z/131.0
 
         msg = Imu()
         msg.header.frame_id = self.imuframe
@@ -95,13 +88,13 @@ class IMU:
 
         o = msg.orientation
         o.x, o.y, o.z, o.w = self.latestorientation.x, self.latestorientation.y, self.latestorientation.z, self.latestorientation.w
-        msg.linear_acceleration.x = ax * 9.80665
-        msg.linear_acceleration.y = ay * 9.80665
-        msg.linear_acceleration.z = az * 9.80665
+        msg.linear_acceleration.x = acc_x / 16384.0 * 9.80665
+        msg.linear_acceleration.y = acc_y / 16384.0 * 9.80665
+        msg.linear_acceleration.z = acc_z / 16384.0 * 9.80665
 
-        msg.angular_velocity.x = gx
-        msg.angular_velocity.y = gy
-        msg.angular_velocity.z = gz
+        msg.angular_velocity.x = gyro_x / 16.4
+        msg.angular_velocity.y = gyro_y / 16.4
+        msg.angular_velocity.z = gyro_z / 16.4
 
         self.imupub.publish(msg)
 
@@ -116,8 +109,6 @@ class IMU:
         odom.twist.twist.linear.x, odom.twist.twist.linear.y = self.latestacceleration.x, self.latestorientation.y
         odom.twist.twist.angular.z = self.latestacceleration.z
         self.odompub.publish(odom)
-
-        # print ("Gx=%.2f" %gx, u'\u00b0'+ "/s", "\tgy=%.2f" %gy, u'\u00b0'+ "/s", "\tgz=%.2f" %gz, u'\u00b0'+ "/s", "\tAx=%.2f g" %ax, "\tAy=%.2f g" %ay, "\tAz=%.2f g" %az)
 
     def start(self):
         rospy.init_node('imu', anonymous=True)
