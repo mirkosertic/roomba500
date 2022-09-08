@@ -65,7 +65,7 @@ class IMU:
                     validvalue = False
 
             self.latestorientation = orientation
-            self.latestacceleration = self.mpu.DMP_get_linear_accel_int16(accel, grav)
+            self.latestacceleration = self.mpu.DMP_get_linear_accel(accel, grav)
             self.latestgyro = gyro
 
             return validvalue
