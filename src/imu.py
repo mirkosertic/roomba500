@@ -24,6 +24,7 @@ class IMU:
         self.packet_size = 0
         self.odompub = None
         self.packetnum = 0
+        self.ignoremeasurement = False
 
     def newShutdownCommand(self, data):
         self.syncLock.acquire()
@@ -50,7 +51,10 @@ class IMU:
             grav = self.mpu.DMP_get_gravity(orientation)
 
             print('#: ' + str(self.packetnum))
+
             self.packetnum = self.packetnum + 1
+
+            validValue = True
 
             if self.latestorientation is not None:
                 current_roll_pitch_yaw = self.mpu.DMP_get_euler_roll_pitch_yaw(orientation, grav)
@@ -63,6 +67,10 @@ class IMU:
                 print('dx: ' + str(dx))
                 print('dy: ' + str(dy))
                 print('dz: ' + str(dz))
+
+                if abs(dx) > 20 or abs(dy) > 20 or abs(dz) > 20:
+                    validValue = False
+
             else:
                 current_roll_pitch_yaw = self.mpu.DMP_get_euler_roll_pitch_yaw(orientation, grav)
                 print('roll: ' + str(current_roll_pitch_yaw.x))
@@ -71,6 +79,10 @@ class IMU:
 
             self.latestorientation = orientation
             self.latestacceleration = accel
+
+            return validValue
+
+        return False
 
     def processROSMessage(self):
         #Read Accelerometer raw value
@@ -163,8 +175,8 @@ class IMU:
         rospy.loginfo("Polling MPU6050...")
         while not rospy.is_shutdown():
 
-            self.readOrientation()
-            self.processROSMessage()
+            if self.readOrientation():
+                self.processROSMessage()
 
             rate.sleep()
 
