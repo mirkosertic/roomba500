@@ -113,9 +113,9 @@ class IMU:
         x_accel_offset = 1117
         y_accel_offset = -1857
         z_accel_offset = -298
-        x_gyro_offset = -7
+        x_gyro_offset = -6
         y_gyro_offset = 8
-        z_gyro_offset = 59
+        z_gyro_offset = 57
 
         enable_debug_output = True
 
