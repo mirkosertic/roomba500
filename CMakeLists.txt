@@ -209,9 +209,9 @@ target_link_libraries(${PROJECT_NAME}_roombainterface
 # endif()
 
 ## Add folders to be run by python nosetests
-if (CATKIN_ENABLE_TESTING)
-    catkin_add_nosetests(tests)
-endif()
+#if (CATKIN_ENABLE_TESTING)
+#    catkin_add_nosetests(tests)
+#endif()
 
 if (CATKIN_ENABLE_TESTING)
   find_package(rostest REQUIRED)
