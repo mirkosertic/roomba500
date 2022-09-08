@@ -4,16 +4,4 @@
         <param name="rosout_disable_topics_generation" value="True"/>
         <param name="pollingRateInHertz" value="30"/>
     </node>
-
-    <node pkg="nodelet" type="nodelet" name="imu_manager"
-          args="manager" output="screen" />
-
-    <node pkg="nodelet" type="nodelet" name="ImuFilterNodelet"
-          args="load imu_filter_madgwick/ImuFilterNodelet imu_manager"
-          output="screen">
-
-        <param name="publish_tf" value="false"/>
-
-    </node>
-
 </launch>
