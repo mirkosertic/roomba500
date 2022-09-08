@@ -23,6 +23,7 @@ class IMU:
         self.latestacceleration = None
         self.packet_size = 0
         self.odompub = None
+        self.packetnum = 0
 
     def newShutdownCommand(self, data):
         self.syncLock.acquire()
@@ -47,6 +48,9 @@ class IMU:
             accel = self.mpu.DMP_get_acceleration_int16(FIFO_buffer)
             orientation = self.mpu.DMP_get_quaternion_int16(FIFO_buffer).get_normalized()
             grav = self.mpu.DMP_get_gravity(orientation)
+
+            print('#: ' + str(self.packetnum))
+            self.packetnum = self.packetnum + 1
 
             if self.latestorientation is not None:
                 current_roll_pitch_yaw = self.mpu.DMP_get_euler_roll_pitch_yaw(orientation, grav)
