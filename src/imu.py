@@ -95,9 +95,9 @@ class IMU:
 
         o = msg.orientation
         o.x, o.y, o.z, o.w = self.latestorientation.x, self.latestorientation.y, self.latestorientation.z, self.latestorientation.w
-        msg.linear_acceleration.x = ax # / 9.807
-        msg.linear_acceleration.y = ay # / 9.807
-        msg.linear_acceleration.z = az # / 9.807
+        msg.linear_acceleration.x = ax * 9.80665
+        msg.linear_acceleration.y = ay * 9.80665
+        msg.linear_acceleration.z = az * 9.80665
 
         msg.angular_velocity.x = gx
         msg.angular_velocity.y = gy
