@@ -48,10 +48,22 @@ class IMU:
             orientation = self.mpu.DMP_get_quaternion_int16(FIFO_buffer).get_normalized()
             grav = self.mpu.DMP_get_gravity(orientation)
 
-            current_roll_pitch_yaw = self.mpu.DMP_get_euler_roll_pitch_yaw(orientation, grav)
-            print('roll: ' + str(current_roll_pitch_yaw.x))
-            print('pitch: ' + str(current_roll_pitch_yaw.y))
-            print('yaw: ' + str(current_roll_pitch_yaw.z))
+            if self.latestorientation is not None:
+                current_roll_pitch_yaw = self.mpu.DMP_get_euler_roll_pitch_yaw(orientation, grav)
+                latest_roll_pitch_yaw = self.mpu.DMP_get_euler_roll_pitch_yaw(self.latestorientation, grav)
+
+                dx = current_roll_pitch_yaw.x - latest_roll_pitch_yaw.x
+                dy = current_roll_pitch_yaw.y - latest_roll_pitch_yaw.y
+                dz = current_roll_pitch_yaw.z - latest_roll_pitch_yaw.z
+
+                print('dx: ' + str(dx))
+                print('dy: ' + str(dy))
+                print('dz: ' + str(dz))
+            else:
+                current_roll_pitch_yaw = self.mpu.DMP_get_euler_roll_pitch_yaw(orientation, grav)
+                print('roll: ' + str(current_roll_pitch_yaw.x))
+                print('pitch: ' + str(current_roll_pitch_yaw.y))
+                print('yaw: ' + str(current_roll_pitch_yaw.z))
 
             self.latestorientation = orientation
             self.latestacceleration = accel
