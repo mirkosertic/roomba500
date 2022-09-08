@@ -121,9 +121,9 @@ class IMU:
         y_gyro_offset = 8
         z_gyro_offset = 57
 
-        self.linearaccgainx = -0.155
-        self.linearaccgainy = -0.251
-        self.linearaccgainz = -5.162
+        self.linearaccgainx = 0.155
+        self.linearaccgainy = 0.251
+        self.linearaccgainz = 5.162
 
         enable_debug_output = True
 
