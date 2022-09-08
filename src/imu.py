@@ -154,7 +154,7 @@ class IMU:
         rospy.Subscriber("shutdown", Int16, self.newShutdownCommand)
 
         # Publishing IMU data
-        self.imupub = rospy.Publisher('imu/data', Imu, queue_size=10)
+        self.imupub = rospy.Publisher('imu/data_raw', Imu, queue_size=10)
 
         self.odompub = rospy.Publisher('odom', Odometry, queue_size=10)
 
