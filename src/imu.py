@@ -61,7 +61,7 @@ class IMU:
                 dz = current_roll_pitch_yaw.z - latest_roll_pitch_yaw.z
 
                 if abs(dx) > 20 or abs(dy) > 20 or abs(dz) > 20:
-                    print('Ignoring measurement as dx = ' + str(dx) + " dy = " + str(dy) + " dz = " + dz)
+                    print('Ignoring measurement as dx = ' + str(dx) + " dy = " + str(dy) + " dz = " + str(dz))
                     validvalue = False
 
             self.latestorientation = orientation
