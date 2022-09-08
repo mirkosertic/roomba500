@@ -21,6 +21,7 @@ class IMU:
         self.mpu = None
         self.latestorientation = None
         self.latestacceleration = None
+        self.latestgyro = None
         self.packet_size = 0
         self.odompub = None
 
@@ -45,10 +46,11 @@ class IMU:
             
             FIFO_buffer = self.mpu.get_FIFO_bytes(self.packet_size)
             accel = self.mpu.DMP_get_acceleration_int16(FIFO_buffer)
+            gyro = self.mpu.DMP_get_gyro_int16(FIFO_buffer)
             orientation = self.mpu.DMP_get_quaternion_int16(FIFO_buffer).get_normalized()
             grav = self.mpu.DMP_get_gravity(orientation)
 
-            validValue = True
+            validvalue = True
 
             if self.latestorientation is not None:
                 current_roll_pitch_yaw = self.mpu.DMP_get_euler_roll_pitch_yaw(orientation, grav)
@@ -58,23 +60,15 @@ class IMU:
                 dy = current_roll_pitch_yaw.y - latest_roll_pitch_yaw.y
                 dz = current_roll_pitch_yaw.z - latest_roll_pitch_yaw.z
 
-                print('dx: ' + str(dx))
-                print('dy: ' + str(dy))
-                print('dz: ' + str(dz))
-
                 if abs(dx) > 20 or abs(dy) > 20 or abs(dz) > 20:
-                    validValue = False
-
-            else:
-                current_roll_pitch_yaw = self.mpu.DMP_get_euler_roll_pitch_yaw(orientation, grav)
-                print('roll: ' + str(current_roll_pitch_yaw.x))
-                print('pitch: ' + str(current_roll_pitch_yaw.y))
-                print('yaw: ' + str(current_roll_pitch_yaw.z))
+                    print('Ignoring measurement as dx = ' + str(dx) + " dy = " + str(dy) + " dz = " + dz)
+                    validvalue = False
 
             self.latestorientation = orientation
             self.latestacceleration = accel
+            self.latestgyro = gyro
 
-            return validValue
+            return validvalue
 
         return False
 
@@ -83,7 +77,8 @@ class IMU:
         acc_x, acc_y, acc_z = self.mpu.get_acceleration()
 
         #Read Gyroscope raw value
-        gyro_x, gyro_y, gyro_z = self.mpu.get_rotation()
+        #gyro_x, gyro_y, gyro_z = self.mpu.get_rotation()
+        gyro_x, gyro_y, gyro_z = self.latestgyro.x, self.latestgyro.y, self.latestgyro.z
 
         #Full scale range +/- 250 degree/C as per sensitivity scale factor
         ax = acc_x/16384.0
@@ -98,22 +93,8 @@ class IMU:
         msg.header.frame_id = self.imuframe
         msg.header.stamp = rospy.Time.now()
 
-        if self.latestorientation:		
-            o = msg.orientation
-            o.x, o.y, o.z, o.w = self.latestorientation.x, self.latestorientation.y, self.latestorientation.z, self.latestorientation.w
-
-            odom = Odometry()
-            odom.header.stamp = rospy.Time.now()
-            odom.header.frame_id = 'map'
-            odom.child_frame_id = 'map'
-            odom.pose.pose.position.x = 0
-            odom.pose.pose.position.y = 0
-            odom.pose.pose.orientation.x, odom.pose.pose.orientation.y, odom.pose.pose.orientation.z, odom.pose.pose.orientation.w = self.latestorientation.x, self.latestorientation.y, self.latestorientation.z, self.latestorientation.w
-
-            odom.twist.twist.linear.x, odom.twist.twist.linear.y = self.latestacceleration.x, self.latestorientation.y
-            odom.twist.twist.angular.z = self.latestacceleration.z
-            self.odompub.publish(odom)
-
+        o = msg.orientation
+        o.x, o.y, o.z, o.w = self.latestorientation.x, self.latestorientation.y, self.latestorientation.z, self.latestorientation.w
         msg.linear_acceleration.x = ax # / 9.807
         msg.linear_acceleration.y = ay # / 9.807
         msg.linear_acceleration.z = az # / 9.807
@@ -123,6 +104,18 @@ class IMU:
         msg.angular_velocity.z = gz
 
         self.imupub.publish(msg)
+
+        odom = Odometry()
+        odom.header.stamp = rospy.Time.now()
+        odom.header.frame_id = 'map'
+        odom.child_frame_id = 'map'
+        odom.pose.pose.position.x = 0
+        odom.pose.pose.position.y = 0
+        odom.pose.pose.orientation.x, odom.pose.pose.orientation.y, odom.pose.pose.orientation.z, odom.pose.pose.orientation.w = self.latestorientation.x, self.latestorientation.y, self.latestorientation.z, self.latestorientation.w
+
+        odom.twist.twist.linear.x, odom.twist.twist.linear.y = self.latestacceleration.x, self.latestorientation.y
+        odom.twist.twist.angular.z = self.latestacceleration.z
+        self.odompub.publish(odom)
 
         # print ("Gx=%.2f" %gx, u'\u00b0'+ "/s", "\tgy=%.2f" %gy, u'\u00b0'+ "/s", "\tgz=%.2f" %gz, u'\u00b0'+ "/s", "\tAx=%.2f g" %ax, "\tAy=%.2f g" %ay, "\tAz=%.2f g" %az)
 

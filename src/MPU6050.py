@@ -797,6 +797,12 @@ class MPU6050:
         z = ctypes.c_int16(a_FIFO_buffer[36] << 8 | a_FIFO_buffer[37]).value
         return V(x, y, z)
 
+    def DMP_get_gyro_int16(self, a_FIFO_buffer):
+        x = ctypes.c_int16(a_FIFO_buffer[16] << 8 | a_FIFO_buffer[17]).value
+        y = ctypes.c_int16(a_FIFO_buffer[20] << 8 | a_FIFO_buffer[21]).value
+        z = ctypes.c_int16(a_FIFO_buffer[24] << 8 | a_FIFO_buffer[25]).value
+        return V(x, y, z)
+
     def DMP_get_gravity(self, a_quat):
         x = 2.0 * (a_quat.x * a_quat.z - a_quat.w * a_quat.y)
         y = 2.0 * (a_quat.w * a_quat.x + a_quat.y * a_quat.z)
