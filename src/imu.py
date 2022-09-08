@@ -21,6 +21,10 @@ class IMU:
         self.latestgyro = None
         self.packet_size = 0
 
+        self.linearaccgainx = 0.0
+        self.linearaccgainy = 0.0
+        self.linearaccgainz = 0.0
+
     def newShutdownCommand(self, data):
         rospy.signal_shutdown('Shutdown requested')
 
@@ -83,9 +87,9 @@ class IMU:
         o = msg.orientation
         o.x, o.y, o.z, o.w = self.latestorientation.x, self.latestorientation.y, self.latestorientation.z, self.latestorientation.w
         # Convert g to m/s^2
-        msg.linear_acceleration.x = acc_x / 16384.0 * 9.80665
-        msg.linear_acceleration.y = acc_y / 16384.0 * 9.80665
-        msg.linear_acceleration.z = acc_z / 16384.0 * 9.80665
+        msg.linear_acceleration.x = (acc_x / 16384.0 * 9.80665) + self.linearaccgainx
+        msg.linear_acceleration.y = (acc_y / 16384.0 * 9.80665) + self.linearaccgainy
+        msg.linear_acceleration.z = (acc_z / 16384.0 * 9.80665) + self.linearaccgainz
 
         # Convert degrees/sec to rad/sec
         msg.angular_velocity.x = gyro_x / 16.4 * math.pi / 180
@@ -116,6 +120,10 @@ class IMU:
         x_gyro_offset = -6
         y_gyro_offset = 8
         z_gyro_offset = 57
+
+        self.linearaccgainx = -0.155
+        self.linearaccgainy = -0.251
+        self.linearaccgainz = -5.162
 
         enable_debug_output = True
 
