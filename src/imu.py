@@ -1,19 +1,16 @@
 #!/usr/bin/env python3
 
-import threading
 import rospy
+import math
 
 from std_msgs.msg import Int16
 from sensor_msgs.msg import Imu
-
-from nav_msgs.msg import Odometry
 
 from MPU6050 import MPU6050
 
 class IMU:
 
     def __init__(self):
-        self.syncLock = threading.Lock()
         self.bus = None
         self.deviceaddress = 0x68
         self.imupub = None
@@ -23,12 +20,9 @@ class IMU:
         self.latestacceleration = None
         self.latestgyro = None
         self.packet_size = 0
-        self.odompub = None
 
     def newShutdownCommand(self, data):
-        self.syncLock.acquire()
         rospy.signal_shutdown('Shutdown requested')
-        self.syncLock.release()
 
     def readOrientation(self):
         FIFO_count = self.mpu.get_FIFO_count()
@@ -79,7 +73,7 @@ class IMU:
         return False
 
     def processROSMessage(self):
-        acc_x, acc_y, acc_z = self.mpu.get_acceleration()
+        acc_x, acc_y, acc_z = self.latestacceleration.x, self.latestacceleration.y, self.latestacceleration.z
         gyro_x, gyro_y, gyro_z = self.latestgyro.x, self.latestgyro.y, self.latestgyro.z
 
         msg = Imu()
@@ -88,27 +82,18 @@ class IMU:
 
         o = msg.orientation
         o.x, o.y, o.z, o.w = self.latestorientation.x, self.latestorientation.y, self.latestorientation.z, self.latestorientation.w
+        # Convert g to m/s^2
         msg.linear_acceleration.x = acc_x / 16384.0 * 9.80665
         msg.linear_acceleration.y = acc_y / 16384.0 * 9.80665
         msg.linear_acceleration.z = acc_z / 16384.0 * 9.80665
 
-        msg.angular_velocity.x = gyro_x / 16.4
-        msg.angular_velocity.y = gyro_y / 16.4
-        msg.angular_velocity.z = gyro_z / 16.4
+        # Convert degrees/sec to rad/sec
+        msg.angular_velocity.x = gyro_x / 16.4 * math.pi / 180
+        msg.angular_velocity.y = gyro_y / 16.4 * math.pi / 180
+        msg.angular_velocity.z = gyro_z / 16.4 * math.pi / 180
 
         self.imupub.publish(msg)
 
-        odom = Odometry()
-        odom.header.stamp = rospy.Time.now()
-        odom.header.frame_id = 'map'
-        odom.child_frame_id = 'map'
-        odom.pose.pose.position.x = 0
-        odom.pose.pose.position.y = 0
-        odom.pose.pose.orientation.x, odom.pose.pose.orientation.y, odom.pose.pose.orientation.z, odom.pose.pose.orientation.w = self.latestorientation.x, self.latestorientation.y, self.latestorientation.z, self.latestorientation.w
-
-        odom.twist.twist.linear.x, odom.twist.twist.linear.y = self.latestacceleration.x, self.latestorientation.y
-        odom.twist.twist.angular.z = self.latestacceleration.z
-        self.odompub.publish(odom)
 
     def start(self):
         rospy.init_node('imu', anonymous=True)
@@ -146,8 +131,6 @@ class IMU:
 
         # Publishing IMU data
         self.imupub = rospy.Publisher('imu/data', Imu, queue_size=10)
-
-        self.odompub = rospy.Publisher('odom', Odometry, queue_size=10)
 
         # Processing the sensor polling in an endless loop until this node shuts down
         rospy.loginfo("Polling MPU6050...")
