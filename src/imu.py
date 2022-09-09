@@ -45,10 +45,12 @@ class IMU:
             
             FIFO_buffer = self.mpu.get_FIFO_bytes(self.packet_size)
             accel = self.mpu.DMP_get_acceleration_int16(FIFO_buffer)
-            #gyro = self.mpu.DMP_get_gyro_int16(FIFO_buffer)
+            #accel_raw = self.mpu.get_acceleration()
+            #accel = V(accel_raw[0], accel_raw[1], accel_raw[2])
+            gyro = self.mpu.DMP_get_gyro_int16(FIFO_buffer)
 
-            gyro_raw = self.mpu.get_rotation()
-            gyro = V(gyro_raw[0], gyro_raw[1], gyro_raw[2])
+            #gyro_raw = self.mpu.get_rotation()
+            #gyro = V(gyro_raw[0], gyro_raw[1], gyro_raw[2])
 
             orientation = self.mpu.DMP_get_quaternion_int16(FIFO_buffer).get_normalized()
             grav = self.mpu.DMP_get_gravity(orientation)
@@ -69,12 +71,13 @@ class IMU:
 
                 gyroerrorthreshold = 50 * 16.4
 
-                #if abs(gyro.x) > gyroerrorthreshold or abs(gyro.y) > gyroerrorthreshold or abs(gyro.z) > gyroerrorthreshold:
-                #    print('Ignoring angular measurement as gyrox = ' + str(gyro.x) + " gyroy = " + str(gyro.y) + " gyroz = " + str(gyro.x))
-                #    validvalue = False
+                if abs(gyro.x) > gyroerrorthreshold or abs(gyro.y) > gyroerrorthreshold or abs(gyro.z) > gyroerrorthreshold:
+                    print('Ignoring angular measurement as gyrox = ' + str(gyro.x) + " gyroy = " + str(gyro.y) + " gyroz = " + str(gyro.x))
+                    validvalue = False
 
             self.latestorientation = orientation
             self.latestacceleration = self.mpu.DMP_get_linear_accel(accel, grav)
+            #self.latestacceleration = accel
             self.latestgyro = gyro
 
             return validvalue
@@ -92,14 +95,18 @@ class IMU:
         o = msg.orientation
         o.x, o.y, o.z, o.w = self.latestorientation.x, self.latestorientation.y, self.latestorientation.z, self.latestorientation.w
         # Convert g to m/s^2
-        msg.linear_acceleration.x = (acc_x / 16384.0 * 9.80665) + self.linearaccgainx
-        msg.linear_acceleration.y = (acc_y / 16384.0 * 9.80665) + self.linearaccgainy
-        msg.linear_acceleration.z = (acc_z / 16384.0 * 9.80665) + self.linearaccgainz
+        msg.linear_acceleration.x = (acc_x / 8192.0 * 9.80665) + self.linearaccgainx
+        msg.linear_acceleration.y = (acc_y / 8192.0 * 9.80665) + self.linearaccgainy
+        msg.linear_acceleration.z = (acc_z / 8192.0 * 9.80665) + self.linearaccgainz
+
+        # msg.linear_acceleration.x = acc_x
+        # msg.linear_acceleration.y = acc_y
+        # msg.linear_acceleration.z = acc_z
 
         # Convert degrees/sec to rad/sec
-        msg.angular_velocity.x = gyro_x# * math.pi / 180
-        msg.angular_velocity.y = gyro_y# * math.pi / 180
-        msg.angular_velocity.z = gyro_z# * math.pi / 180.0 * 1.411
+        msg.angular_velocity.x = 0.007503 + gyro_x * math.pi / 180.0 * 16.4 / 10
+        msg.angular_velocity.y = 0.025122 + gyro_y * math.pi / 180.0 * 16.4 / 10
+        msg.angular_velocity.z = 0.056413 + gyro_z * math.pi / 180.0 * 16.4 / 10
 
         self.imupub.publish(msg)
 
