@@ -505,9 +505,9 @@ class Supervisor:
         else:
             i2cport = int(rospy.get_param('~i2cport', '1'))
             rospy.loginfo('Using i2c connection to ssd1306 on port %s', i2cport)
-            # interface = i2c(port=i2cport, address=0x3C)
-            # self.displaydevice = ssd1306(interface)
-            self.displaydevice = None
+            interface = i2c(port=i2cport, address=0x3C)
+            self.displaydevice = ssd1306(interface)
+            # self.displaydevice = None
 
         displayUpdateCounter = 0
 

@@ -94,7 +94,7 @@ class IMU:
         # Convert degrees/sec to rad/sec
         msg.angular_velocity.x = gyro_x * math.pi / 180
         msg.angular_velocity.y = gyro_y * math.pi / 180
-        msg.angular_velocity.z = gyro_z * math.pi / 180
+        msg.angular_velocity.z = gyro_z * math.pi / 180.0 * 1.411
 
         self.imupub.publish(msg)
 
