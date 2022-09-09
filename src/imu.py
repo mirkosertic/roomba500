@@ -63,8 +63,9 @@ class IMU:
             #gyro_raw = self.mpu.get_rotation()
             #gyro = V(gyro_raw[0], gyro_raw[1], gyro_raw[2])
 
-            orientation = self.mpu.DMP_get_quaternion(FIFO_buffer).get_normalized()
-            grav = self.mpu.DMP_get_gravity(orientation)
+            orientation_raw = self.mpu.DMP_get_quaternion(FIFO_buffer)
+            orientation = orientation_raw.get_normalized()
+            grav = self.mpu.DMP_get_gravity(orientation_raw)
 
             validvalue = True
 
