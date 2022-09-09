@@ -64,7 +64,7 @@ class IMU:
 
                 gyroerrorthreshold = 50 * 16.4
 
-                if abs(gyro.x) > gyroerrorthreshold  or abs(gyro.y) > gyroerrorthreshold or abs(gyro.z) > gyroerrorthreshold:
+                if abs(gyro.x) > gyroerrorthreshold or abs(gyro.y) > gyroerrorthreshold or abs(gyro.z) > gyroerrorthreshold:
                     print('Ignoring angular measurement as gyrox = ' + str(gyro.x) + " gyroy = " + str(gyro.y) + " gyroz = " + str(gyro.x))
                     validvalue = False
 

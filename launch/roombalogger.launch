@@ -1,8 +1,0 @@
-<?xml version="1.0"?>
-<launch>
-    <arg name="roombalog" default="unknown"/>
-
-    <node name="roombalogger" pkg="roomba500" type="roombalogger.py" output="screen">
-        <param name="roombalog" value="$(arg roombalog)"/>
-    </node>
-</launch>

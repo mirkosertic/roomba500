@@ -11,10 +11,6 @@
 
     <include file="$(find roomba500)/launch/hardware.launch"/>
 
-    <!--<include file="$(find roomba500)/launch/roombalogger.launch">
-        <arg name="roombalog" value="$(arg roombalog)"/>
-    </include>-->
-
     <group if="$(arg createmap)">
         <include file="$(find roomba500)/launch/slam.launch"/>
 
