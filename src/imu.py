@@ -92,9 +92,9 @@ class IMU:
         msg.linear_acceleration.z = (acc_z / 16384.0 * 9.80665) + self.linearaccgainz
 
         # Convert degrees/sec to rad/sec
-        msg.angular_velocity.x = gyro_x / 16.4 * math.pi / 180
-        msg.angular_velocity.y = gyro_y / 16.4 * math.pi / 180
-        msg.angular_velocity.z = gyro_z / 16.4 * math.pi / 180
+        msg.angular_velocity.x = gyro_x * math.pi / 180
+        msg.angular_velocity.y = gyro_y * math.pi / 180
+        msg.angular_velocity.z = gyro_z * math.pi / 180
 
         self.imupub.publish(msg)
 
