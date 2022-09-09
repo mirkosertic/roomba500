@@ -26,10 +26,21 @@ class IMU:
         self.linearaccgainy = 0.0
         self.linearaccgainz = 0.0
 
+        self.angularvelgainx = 0.0
+        self.angularvelgainy = 0.0
+        self.angularvelgainz = 0.0
+
     def newShutdownCommand(self, data):
         rospy.signal_shutdown('Shutdown requested')
 
     def readOrientation(self):
+        #
+        # TODO: Reset the FIFO, wait for an interrupt and read the whole packet
+        # Everything else yields to somehow corrupt packets at some point. The
+        # FIFO has a size of 1024 bytes, and the packet size is 42, which means
+        # that there is a remainder in case of a mostly full buffer for the last
+        # packet, which will be corrupted.
+
         FIFO_count = self.mpu.get_FIFO_count()
         mpu_int_status = self.mpu.get_int_status()
 
@@ -52,7 +63,7 @@ class IMU:
             #gyro_raw = self.mpu.get_rotation()
             #gyro = V(gyro_raw[0], gyro_raw[1], gyro_raw[2])
 
-            orientation = self.mpu.DMP_get_quaternion_int16(FIFO_buffer).get_normalized()
+            orientation = self.mpu.DMP_get_quaternion(FIFO_buffer).get_normalized()
             grav = self.mpu.DMP_get_gravity(orientation)
 
             validvalue = True
@@ -76,6 +87,7 @@ class IMU:
                     validvalue = False
 
             self.latestorientation = orientation
+            # TODO: Is the gravity resolution 16385 or 8192 ?
             self.latestacceleration = self.mpu.DMP_get_linear_accel(accel, grav)
             #self.latestacceleration = accel
             self.latestgyro = gyro
@@ -95,6 +107,8 @@ class IMU:
         o = msg.orientation
         o.x, o.y, o.z, o.w = self.latestorientation.x, self.latestorientation.y, self.latestorientation.z, self.latestorientation.w
         # Convert g to m/s^2
+        # DMP values should have a sensitivity of 16384 for 2g range.
+        # However, the DMP seens to be at 4g range, so we have to use 8192 as a sensitivity.
         msg.linear_acceleration.x = (acc_x / 8192.0 * 9.80665) + self.linearaccgainx
         msg.linear_acceleration.y = (acc_y / 8192.0 * 9.80665) + self.linearaccgainy
         msg.linear_acceleration.z = (acc_z / 8192.0 * 9.80665) + self.linearaccgainz
@@ -104,9 +118,13 @@ class IMU:
         # msg.linear_acceleration.z = acc_z
 
         # Convert degrees/sec to rad/sec
-        msg.angular_velocity.x = 0.007503 + gyro_x * math.pi / 180.0 * 16.4 / 10
-        msg.angular_velocity.y = 0.025122 + gyro_y * math.pi / 180.0 * 16.4 / 10
-        msg.angular_velocity.z = 0.056413 + gyro_z * math.pi / 180.0 * 16.4 / 10
+        # The 16.4 / 10 constant is strange :
+        #   16.4 is the sensitivity for each measurement with a 2000/s resolution, but the DMP
+        #   values seems to be scaled by the DMP sample rate, so 10 = 2000(the resulution) divided by 200 (which is
+        #   the sample rate)
+        msg.angular_velocity.x = self.angularvelgainx + gyro_x * math.pi / 180.0 * 16.4 / 10
+        msg.angular_velocity.y = self.angularvelgainy + gyro_y * math.pi / 180.0 * 16.4 / 10
+        msg.angular_velocity.z = self.angularvelgainz + gyro_z * math.pi / 180.0 * 16.4 / 10
 
         self.imupub.publish(msg)
 
@@ -133,9 +151,14 @@ class IMU:
         y_gyro_offset = 8
         z_gyro_offset = 57
 
-        self.linearaccgainx = 0.155
-        self.linearaccgainy = 0.251
-        self.linearaccgainz = 5.162
+        self.linearaccgainx = 0
+        self.linearaccgainy = 0
+        self.linearaccgainz = 0
+
+        self.angularvelgainx = 0.007503
+        self.angularvelgainy = 0.025122
+        self.angularvelgainz = 0.056413
+
 
         enable_debug_output = True
 
