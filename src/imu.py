@@ -108,7 +108,7 @@ class IMU:
         o.x, o.y, o.z, o.w = self.latestorientation.x, self.latestorientation.y, self.latestorientation.z, self.latestorientation.w
         # Convert g to m/s^2
         # DMP values should have a sensitivity of 16384 for 2g range.
-        # However, the DMP seens to be at 4g range, so we have to use 8192 as a sensitivity.
+        # However, the DMP seems to be at 4g range, so we have to use 8192 as the sensitivity.
         msg.linear_acceleration.x = (acc_x / 8192.0 * 9.80665) + self.linearaccgainx
         msg.linear_acceleration.y = (acc_y / 8192.0 * 9.80665) + self.linearaccgainy
         msg.linear_acceleration.z = (acc_z / 8192.0 * 9.80665) + self.linearaccgainz
@@ -119,8 +119,8 @@ class IMU:
 
         # Convert degrees/sec to rad/sec
         # The 16.4 / 10 constant is strange :
-        #   16.4 is the sensitivity for each measurement with a 2000/s resolution, but the DMP
-        #   values seems to be scaled by the DMP sample rate, so 10 = 2000(the resulution) divided by 200 (which is
+        #   16.4 is the sensitivity for each measurement with a 2000 deg/s resolution, but the DMP
+        #   values seems to be scaled by the DMP sample rate, so 10 = 2000(the resolution) divided by 200 (which is
         #   the sample rate)
         msg.angular_velocity.x = self.angularvelgainx + gyro_x * math.pi / 180.0 * 16.4 / 10
         msg.angular_velocity.y = self.angularvelgainy + gyro_y * math.pi / 180.0 * 16.4 / 10
