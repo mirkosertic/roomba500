@@ -198,7 +198,7 @@ class IMU:
         rospy.loginfo("Polling MPU6050...")
         while not rospy.is_shutdown():
 
-            if self.readOrientationPull():
+            if self.readOrientation():
                 self.processROSMessage()
 
             rate.sleep()
