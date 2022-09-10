@@ -88,10 +88,7 @@ class IMU:
                     validvalue = False
 
             self.latestorientation = orientation
-            # TODO: Is the gravity resolution 16385 or 8192 ?
             self.latestacceleration = self.mpu.DMP_get_linear_accel(accel, grav)
-            # self.latestacceleration = accel accel = 7449 / 8192 = 0.9g
-            # self.latestacceleration = grav grav = 0.96 = 0.96g = 7864
             self.latestgyro = gyro
 
             return validvalue
@@ -114,10 +111,6 @@ class IMU:
         msg.linear_acceleration.x = (acc_x / 8192.0 * 9.80665) + self.linearaccgainx
         msg.linear_acceleration.y = (acc_y / 8192.0 * 9.80665) + self.linearaccgainy
         msg.linear_acceleration.z = (acc_z / 8192.0 * 9.80665) + self.linearaccgainz
-
-        #msg.linear_acceleration.x = acc_x / 8192 + (-0.0125) 
-        #msg.linear_acceleration.y = acc_y / 8192 + 0.009
-        #msg.linear_acceleration.z = acc_z / 8192 + 0.059
 
         # Convert degrees/sec to rad/sec
         # The 16.4 / 10 constant is strange :
