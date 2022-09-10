@@ -53,8 +53,11 @@ class IMU:
             # is 42 bytes
             while FIFO_count < self.packet_size:
                 FIFO_count = self.mpu.get_FIFO_count()
-            
-            FIFO_buffer = self.mpu.get_FIFO_bytes(self.packet_size)
+
+            FIFO_buffer = None
+            while FIFO_count >= self.packet_size:
+                FIFO_buffer = self.mpu.get_FIFO_bytes(self.packet_size)
+
             accel = self.mpu.DMP_get_acceleration_int16(FIFO_buffer)
             #accel_raw = self.mpu.get_acceleration()
             #accel = V(accel_raw[0], accel_raw[1], accel_raw[2])
