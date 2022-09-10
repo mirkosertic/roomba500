@@ -97,10 +97,8 @@ class IMU:
 
     def readOrientationPull(self):
 
-        print("Resetting fifo")
         self.mpu.reset_FIFO()
 
-        print("Waiting for packet")
         FIFO_count = self.mpu.get_FIFO_count()
         while FIFO_count < self.packet_size and not rospy.is_shutdown():
             FIFO_count = self.mpu.get_FIFO_count()
@@ -108,45 +106,19 @@ class IMU:
         if rospy.is_shutdown():
             return False
 
-        print("Processing")
         FIFO_buffer = self.mpu.get_FIFO_bytes(self.packet_size)
         accel = self.mpu.DMP_get_acceleration_int16(FIFO_buffer)
-        #accel_raw = self.mpu.get_acceleration()
-        #accel = V(accel_raw[0], accel_raw[1], accel_raw[2])
         gyro = self.mpu.DMP_get_gyro_int16(FIFO_buffer)
-
-        #gyro_raw = self.mpu.get_rotation()
-        #gyro = V(gyro_raw[0], gyro_raw[1], gyro_raw[2])
 
         orientation_raw = self.mpu.DMP_get_quaternion(FIFO_buffer)
         orientation = orientation_raw.get_normalized()
         grav = self.mpu.DMP_get_gravity(orientation_raw)
 
-        validvalue = True
-
-        if self.latestorientation is not None:
-            current_roll_pitch_yaw = self.mpu.DMP_get_euler_roll_pitch_yaw(orientation, grav)
-            latest_roll_pitch_yaw = self.mpu.DMP_get_euler_roll_pitch_yaw(self.latestorientation, grav)
-
-            dx = current_roll_pitch_yaw.x - latest_roll_pitch_yaw.x
-            dy = current_roll_pitch_yaw.y - latest_roll_pitch_yaw.y
-            dz = current_roll_pitch_yaw.z - latest_roll_pitch_yaw.z
-
-            if abs(dx) > 20 or abs(dy) > 20 or abs(dz) > 20:
-                print('Ignoring linear measurement as dx = ' + str(dx) + " dy = " + str(dy) + " dz = " + str(dz))
-                validvalue = False
-
-            gyroerrorthreshold = 50 * 16.4
-
-            if abs(gyro.x) > gyroerrorthreshold or abs(gyro.y) > gyroerrorthreshold or abs(gyro.z) > gyroerrorthreshold:
-                print('Ignoring angular measurement as gyrox = ' + str(gyro.x) + " gyroy = " + str(gyro.y) + " gyroz = " + str(gyro.x))
-                validvalue = False
-
         self.latestorientation = orientation
         self.latestacceleration = self.mpu.DMP_get_linear_accel(accel, grav)
         self.latestgyro = gyro
 
-        return validvalue
+        return True
 
     def processROSMessage(self):
         acc_x, acc_y, acc_z = self.latestacceleration.x, self.latestacceleration.y, self.latestacceleration.z
@@ -179,7 +151,7 @@ class IMU:
 
     def start(self):
         rospy.init_node('imu', anonymous=True)
-        pollingRateInHertz = int(rospy.get_param('~pollingRateInHertz', '40'))
+        pollingRateInHertz = int(rospy.get_param('~pollingRateInHertz', '80'))
 
         self.imuframe = rospy.get_param('~imu_frame', 'map')
 
