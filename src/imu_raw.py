@@ -34,7 +34,7 @@ class IMU:
         rospy.init_node('imu', anonymous=True)
         pollingRateInHertz = int(rospy.get_param('~pollingRateInHertz', '40'))
 
-        self.imuframe = rospy.get_param('~imu_frame', 'map')
+        self.imuframe = rospy.get_param('~imu_frame', 'imu')
 
         rospy.loginfo("Polling IMU data with %s hertz", pollingRateInHertz)
         rate = rospy.Rate(pollingRateInHertz)
