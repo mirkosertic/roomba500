@@ -74,26 +74,81 @@ class IMU:
 
         # Processing the sensor polling in an endless loop until this node shuts down
         rospy.loginfo("Polling MPU6050...")
+
+        calibrationmode = True
+        calibrationsamples = 0
+
+
+        self.linearaccgainx = 0
+        self.linearaccgainy = 0
+        self.linearaccgainz = 0
+
+        self.angularvelgainx = 0
+        self.angularvelgainy = 0
+        self.angularvelgainz = 0
+
         while not rospy.is_shutdown():
 
             accel_reading = self.mpu.get_acceleration()
             gyro_reading = self.mpu.get_rotation()
 
-            msg = Imu()
-            msg.header.frame_id = self.imuframe
-            msg.header.stamp = rospy.Time.now()
+            linear_accel_x = accel_reading[0] / 16384.0 * 9.80665
+            linear_accel_y = accel_reading[1] / 16384.0 * 9.80665
+            linear_accel_z = accel_reading[2] / 16384.0 * 9.80665
 
-            # Convert g to m/s^2
-            msg.linear_acceleration.x = self.linearaccgainx + (accel_reading[0] / 16384.0 * 9.80665)
-            msg.linear_acceleration.y = self.linearaccgainy + (accel_reading[1] / 16384.0 * 9.80665)
-            msg.linear_acceleration.z = self.linearaccgainz + (accel_reading[2] / 16384.0 * 9.80665)
+            angular_vel_x = gyro_reading[0] / 131.0 * math.pi / 180.0
+            angular_vel_y = gyro_reading[1] / 131.0 * math.pi / 180.0
+            angular_vel_z = gyro_reading[2] / 131.0 * math.pi / 180.0
 
-            # Convert degrees/sec to rad/sec
-            msg.angular_velocity.x = self.angularvelgainx + gyro_reading[0] / 131.0 * math.pi / 180.0
-            msg.angular_velocity.y = self.angularvelgainy + gyro_reading[1] / 131.0 * math.pi / 180.0
-            msg.angular_velocity.z = self.angularvelgainz + gyro_reading[2] / 131.0 * math.pi / 180.0
+            if calibrationmode:
 
-            self.imupub.publish(msg)
+                calibrationsamples = calibrationsamples + 1
+
+                rospy.loginfo('Calibration. Taking sample #' + str(calibrationsamples))
+
+                self.linearaccgainx = self.linearaccgainx + linear_accel_x
+                self.linearaccgainy = self.linearaccgainy + linear_accel_y
+                self.linearaccgainz = self.linearaccgainz + linear_accel_z
+
+                self.angularvelgainx = self.angularvelgainx + angular_vel_x
+                self.angularvelgainy = self.angularvelgainy + angular_vel_y
+                self.angularvelgainz = self.angularvelgainz + angular_vel_z
+
+                if calibrationsamples >= 1000:
+                    calibrationmode = False
+
+                    self.linearaccgainx = self.linearaccgainx / calibrationsamples
+                    self.linearaccgainy = self.linearaccgainy / calibrationsamples
+                    self.linearaccgainz = self.linearaccgainz / calibrationsamples
+
+                    self.angularvelgainx = self.angularvelgainx / calibrationsamples
+                    self.angularvelgainy = self.angularvelgainy / calibrationsamples
+                    self.angularvelgainz = self.angularvelgainz / calibrationsamples
+
+                    rospy.loginfo('Calibration finished:')
+                    rospy.loginfo(' linearaccgainx = ' + str(self.linearaccgainx))
+                    rospy.loginfo(' linearaccgainy = ' + str(self.linearaccgainy))
+                    rospy.loginfo(' linearaccgainz = ' + str(self.linearaccgainz))
+                    rospy.loginfo(' angularvelgainx = ' + str(self.angularvelgainx))
+                    rospy.loginfo(' angularvelgainy = ' + str(self.angularvelgainy))
+                    rospy.loginfo(' angularvelgainz = ' + str(self.angularvelgainz))
+
+            else:
+                msg = Imu()
+                msg.header.frame_id = self.imuframe
+                msg.header.stamp = rospy.Time.now()
+
+                # Convert g to m/s^2
+                msg.linear_acceleration.x = self.linearaccgainx + linear_accel_x
+                msg.linear_acceleration.y = self.linearaccgainy + linear_accel_y
+                msg.linear_acceleration.z = self.linearaccgainz + linear_accel_z
+
+                # Convert degrees/sec to rad/sec
+                msg.angular_velocity.x = self.angularvelgainx + angular_vel_x
+                msg.angular_velocity.y = self.angularvelgainy + angular_vel_y
+                msg.angular_velocity.z = self.angularvelgainz + angular_vel_z
+
+                self.imupub.publish(msg)
 
             rate.sleep()
 
