@@ -172,7 +172,7 @@ class IMU:
 
     def start(self):
         rospy.init_node('imu', anonymous=True)
-        pollingRateInHertz = int(rospy.get_param('~pollingRateInHertz', '40'))
+        pollingRateInHertz = int(rospy.get_param('~pollingRateInHertz', '20'))
 
         self.imuframe = rospy.get_param('~imu_frame', 'map')
 
