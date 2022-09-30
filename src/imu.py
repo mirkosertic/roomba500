@@ -146,7 +146,7 @@ class IMU:
 
         calibrationmode = True
         calibrationsamples = 0
-        calibrationmaxsamples = 250
+        calibrationmaxsamples = 500
 
         self.linearaccgainx = 0
         self.linearaccgainy = 0
