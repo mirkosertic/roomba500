@@ -33,70 +33,14 @@ class IMU:
     def newShutdownCommand(self, data):
         rospy.signal_shutdown('Shutdown requested')
 
-    def readOrientation(self):
+    def readOrientationPull(self):
+
         #
-        # TODO: Reset the FIFO, wait for an interrupt and read the whole packet
+        # Reset the FIFO, wait for an interrupt and read the whole packet
         # Everything else yields to somehow corrupt packets at some point. The
         # FIFO has a size of 1024 bytes, and the packet size is 42, which means
         # that there is a remainder in case of a mostly full buffer for the last
         # packet, which will be corrupted.
-
-        FIFO_count = self.mpu.get_FIFO_count()
-        mpu_int_status = self.mpu.get_int_status()
-
-        # If overflow is detected by status or fifo count we want to reset
-        if (FIFO_count == 1024) or (mpu_int_status & 0x10):
-            self.mpu.reset_FIFO()
-        # Check if fifo data is ready
-        elif (mpu_int_status & 0x02):
-            # Wait until packet_size number of bytes are ready for reading, default
-            # is 42 bytes
-            while FIFO_count < self.packet_size:
-                FIFO_count = self.mpu.get_FIFO_count()
-
-            FIFO_buffer = self.mpu.get_FIFO_bytes(self.packet_size)
-            accel = self.mpu.DMP_get_acceleration_int16(FIFO_buffer)
-            #accel_raw = self.mpu.get_acceleration()
-            #accel = V(accel_raw[0], accel_raw[1], accel_raw[2])
-            gyro = self.mpu.DMP_get_gyro_int16(FIFO_buffer)
-
-            #gyro_raw = self.mpu.get_rotation()
-            #gyro = V(gyro_raw[0], gyro_raw[1], gyro_raw[2])
-
-            orientation_raw = self.mpu.DMP_get_quaternion(FIFO_buffer)
-            orientation = orientation_raw.get_normalized()
-            grav = self.mpu.DMP_get_gravity(orientation_raw)
-
-            validvalue = True
-
-            if self.latestorientation is not None:
-                current_roll_pitch_yaw = self.mpu.DMP_get_euler_roll_pitch_yaw(orientation, grav)
-                latest_roll_pitch_yaw = self.mpu.DMP_get_euler_roll_pitch_yaw(self.latestorientation, grav)
-
-                dx = current_roll_pitch_yaw.x - latest_roll_pitch_yaw.x
-                dy = current_roll_pitch_yaw.y - latest_roll_pitch_yaw.y
-                dz = current_roll_pitch_yaw.z - latest_roll_pitch_yaw.z
-
-                if abs(dx) > 20 or abs(dy) > 20 or abs(dz) > 20:
-                    print('Ignoring linear measurement as dx = ' + str(dx) + " dy = " + str(dy) + " dz = " + str(dz))
-                    validvalue = False
-
-                gyroerrorthreshold = 50 * 16.4
-
-                if abs(gyro.x) > gyroerrorthreshold or abs(gyro.y) > gyroerrorthreshold or abs(gyro.z) > gyroerrorthreshold:
-                    print('Ignoring angular measurement as gyrox = ' + str(gyro.x) + " gyroy = " + str(gyro.y) + " gyroz = " + str(gyro.x))
-                    validvalue = False
-
-            self.latestorientation = orientation
-            self.latestacceleration = self.mpu.DMP_get_linear_accel(accel, grav)
-            self.latestgyro = gyro
-
-            return validvalue
-
-        return False
-
-    def readOrientationPull(self):
-
         self.mpu.reset_FIFO()
 
         FIFO_count = self.mpu.get_FIFO_count()
@@ -151,18 +95,21 @@ class IMU:
         # TODO: Check the comments!
         # DMP values should have a sensitivity of 16384 for 2g range.
         # However, the DMP seems to be at 4g range, so we have to use 8192 as the sensitivity.
-        msg.linear_acceleration.x = self.linearaccgainx + (self.latestacceleration.x / 16384.0 * 9.80665)
-        msg.linear_acceleration.y = self.linearaccgainy + (self.latestacceleration.y / 16384.0 * 9.80665)
-        msg.linear_acceleration.z = self.linearaccgainz + (self.latestacceleration.z / 16384.0 * 9.80665)
+        dmplinearmultiplier = 16384.0
+        dmplinearmultiplier = 8192.0
+
+        msg.linear_acceleration.x = self.linearaccgainx + (self.latestacceleration.x / dmplinearmultiplier * 9.80665)
+        msg.linear_acceleration.y = self.linearaccgainy + (self.latestacceleration.y / dmplinearmultiplier * 9.80665)
+        msg.linear_acceleration.z = self.linearaccgainz + (self.latestacceleration.z / dmplinearmultiplier * 9.80665)
 
         # Convert degrees/sec to rad/sec
         # The 16.4 / 10 constant is strange :
         #   16.4 is the sensitivity for each measurement with a 2000 deg/s resolution, but the DMP
         #   values seems to be scaled by the DMP sample rate, so 10 = 2000(the resolution) divided by 200 (which is
         #   the sample rate)
-        msg.angular_velocity.x = self.angularvelgainx + (self.latestgyro.x * math.pi / 180.0 * 16.4 / 10)
-        msg.angular_velocity.y = self.angularvelgainy + (self.latestgyro.y * math.pi / 180.0 * 16.4 / 10)
-        msg.angular_velocity.z = self.angularvelgainz + (self.latestgyro.z * math.pi / 180.0 * 16.4 / 10)
+        msg.angular_velocity.x = self.angularvelgainx + (self.latestgyro.x * math.pi / 180.0 * 16.4 / 10.0)
+        msg.angular_velocity.y = self.angularvelgainy + (self.latestgyro.y * math.pi / 180.0 * 16.4 / 10.0)
+        msg.angular_velocity.z = self.angularvelgainz + (self.latestgyro.z * math.pi / 180.0 * 16.4 / 10.0)
 
         self.imupub.publish(msg)
 
@@ -236,13 +183,16 @@ class IMU:
 
                     rospy.loginfo('Calibration. Taking sample #' + str(calibrationsamples))
 
-                    self.linearaccgainx = self.linearaccgainx + (self.latestacceleration.x / 16384.0 * 9.80665)
-                    self.linearaccgainy = self.linearaccgainy + (self.latestacceleration.y / 16384.0 * 9.80665)
-                    self.linearaccgainz = self.linearaccgainz + (self.latestacceleration.z / 16384.0 * 9.80665)
+                    dmplinearmultiplier = 16384.0
+                    dmplinearmultiplier = 8192.0
 
-                    self.angularvelgainx = self.angularvelgainx + (self.latestgyro.x * math.pi / 180.0 * 16.4 / 10)
-                    self.angularvelgainy = self.angularvelgainy + (self.latestgyro.y * math.pi / 180.0 * 16.4 / 10)
-                    self.angularvelgainz = self.angularvelgainz + (self.latestgyro.z * math.pi / 180.0 * 16.4 / 10)
+                    self.linearaccgainx = self.linearaccgainx + (self.latestacceleration.x / dmplinearmultiplier * 9.80665)
+                    self.linearaccgainy = self.linearaccgainy + (self.latestacceleration.y / dmplinearmultiplier * 9.80665)
+                    self.linearaccgainz = self.linearaccgainz + (self.latestacceleration.z / dmplinearmultiplier * 9.80665)
+
+                    self.angularvelgainx = self.angularvelgainx + (self.latestgyro.x * math.pi / 180.0 * 16.4 / 10.0)
+                    self.angularvelgainy = self.angularvelgainy + (self.latestgyro.y * math.pi / 180.0 * 16.4 / 10.0)
+                    self.angularvelgainz = self.angularvelgainz + (self.latestgyro.z * math.pi / 180.0 * 16.4 / 10.0)
 
                     if calibrationsamples >= calibrationmaxsamples:
                         calibrationmode = False
