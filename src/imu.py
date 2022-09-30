@@ -92,7 +92,6 @@ class IMU:
         o = msg.orientation
         o.x, o.y, o.z, o.w = self.latestorientation.x, self.latestorientation.y, self.latestorientation.z, self.latestorientation.w
         # Convert g to m/s^2
-        # TODO: Check the comments!
         # DMP values should have a sensitivity of 16384 for 2g range.
         # However, the DMP seems to be at 4g range, so we have to use 8192 as the sensitivity.
         dmplinearmultiplier = 16384.0
@@ -183,6 +182,8 @@ class IMU:
 
                     rospy.loginfo('Calibration. Taking sample #' + str(calibrationsamples))
 
+                    # DMP values should have a sensitivity of 16384 for 2g range.
+                    # However, the DMP seems to be at 4g range, so we have to use 8192 as the sensitivity.
                     dmplinearmultiplier = 16384.0
                     dmplinearmultiplier = 8192.0
 
