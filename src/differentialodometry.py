@@ -85,6 +85,8 @@ class DifferentialOdometry:
         self.bumperspub = None
         self.lightsensorspub = None
 
+        self.publishtf = True
+
     def newShutdownCommand(self, data):
         self.syncLock.acquire()
         rospy.signal_shutdown('Shutdown requested')
@@ -188,13 +190,15 @@ class DifferentialOdometry:
 
         # Publish odometry and transform
         q = quaternion_from_euler(0, 0, newtheta)
-        self.transformbroadcaster.sendTransform(
-            (self.referencex + deltax, self.referencey + deltay, 0),
-            (q[0], q[1], q[2], q[3]),
-            eventtime,
-            self.baselinkframe,
-            self.odomframe
-        )
+
+        if self.publishtf:
+            self.transformbroadcaster.sendTransform(
+                (self.referencex + deltax, self.referencey + deltay, 0),
+                (q[0], q[1], q[2], q[3]),
+                eventtime,
+                self.baselinkframe,
+                self.odomframe
+            )
 
         odom = Odometry()
         odom.header.stamp = eventtime
@@ -377,6 +381,8 @@ class DifferentialOdometry:
         self.lightBumperRightpcdistance = float(rospy.get_param('~lightBumperRightpcdistance', '0.2175'))
         self.lightBumperRightpcangle = float(rospy.get_param('~lightBumperRightpcangle', '-70'))
 
+        self.publishtf = bool(rospy.get_param('~publish_tf', 'True'))
+
         rospy.loginfo("Configured with ticksPerCm                       = %s ", self.ticksPerCm)
         rospy.loginfo("Configured with robotWheelSeparationInCm         = %s ", self.robotWheelSeparationInCm)
         rospy.loginfo("Configured with collisionRevertDistance          = %s ", self.collisionRevertDistance)
@@ -405,6 +411,8 @@ class DifferentialOdometry:
 
         rospy.loginfo("Configured with lightBumperRightpcdistance       = %s ", self.lightBumperRightpcdistance)
         rospy.loginfo("Configured with lightBumperRightpcangle          = %s ", self.lightBumperRightpcangle)
+
+        rospy.loginfo("Configured with publish_tf                       = %s ", self.publishtf)
 
         self.diffmotorspeedspub = rospy.Publisher('cmd_motorspeeds', DiffMotorSpeeds, queue_size=10)
         self.odompub = rospy.Publisher('odom', Odometry, queue_size=10)

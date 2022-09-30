@@ -11,6 +11,7 @@
         <param name="rosout_disable_topics_generation" value="True"/>
         <param name="ticksPerCm" value="22.7157014"/>
         <param name="robotWheelSeparationInCm" value="22.86"/>
+        <param name="publish_tf" value="True" />
     </node>
 
     <node name="ekf_localization_fuser" pkg="robot_localization" type="ekf_localization_node" output="screen" respawn="false">
@@ -20,7 +21,6 @@
         <param name="odom0_differential" value="True"/>
         <param name="imu0" value="imu/data"/>
         <param name="publish_tf" value="False" />
-        <param name="publish_acceleration" value="True"/>
 
         <!-- The order of the boolean values are X,Y,Z,roll,pitch,yaw,X˙,Y˙,Z˙,roll˙,pitch˙,yaw˙,X¨,Y¨,Z¨. -->
         <rosparam param="odom0_config">[false, false, false,
