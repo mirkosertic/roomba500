@@ -95,7 +95,7 @@ class IMU:
         # DMP values should have a sensitivity of 16384 for 2g range.
         # However, the DMP seems to be at 4g range, so we have to use 8192 as the sensitivity.
         dmplinearmultiplier = 16384.0
-        #dmplinearmultiplier = 8192.0
+        dmplinearmultiplier = 8192.0
 
         msg.linear_acceleration.x = self.linearaccgainx + (self.latestacceleration.x / dmplinearmultiplier * 9.80665)
         msg.linear_acceleration.y = self.linearaccgainy + (self.latestacceleration.y / dmplinearmultiplier * 9.80665)
@@ -185,7 +185,7 @@ class IMU:
                     # DMP values should have a sensitivity of 16384 for 2g range.
                     # However, the DMP seems to be at 4g range, so we have to use 8192 as the sensitivity.
                     dmplinearmultiplier = 16384.0
-                    #dmplinearmultiplier = 8192.0
+                    dmplinearmultiplier = 8192.0
 
                     self.linearaccgainx = self.linearaccgainx + (self.latestacceleration.x / dmplinearmultiplier * 9.80665)
                     self.linearaccgainy = self.linearaccgainy + (self.latestacceleration.y / dmplinearmultiplier * 9.80665)
