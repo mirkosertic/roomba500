@@ -141,9 +141,6 @@ class IMU:
         return validvalue
 
     def processROSMessage(self):
-        acc_x, acc_y, acc_z = self.latestacceleration.x, self.latestacceleration.y, self.latestacceleration.z
-        gyro_x, gyro_y, gyro_z = self.latestgyro.x, self.latestgyro.y, self.latestgyro.z
-
         msg = Imu()
         msg.header.frame_id = self.imuframe
         msg.header.stamp = rospy.Time.now()
@@ -154,18 +151,18 @@ class IMU:
         # TODO: Check the comments!
         # DMP values should have a sensitivity of 16384 for 2g range.
         # However, the DMP seems to be at 4g range, so we have to use 8192 as the sensitivity.
-        msg.linear_acceleration.x = (acc_x / 16384.0 * 9.80665) + self.linearaccgainx
-        msg.linear_acceleration.y = (acc_y / 16384.0 * 9.80665) + self.linearaccgainy
-        msg.linear_acceleration.z = (acc_z / 16384.0 * 9.80665) + self.linearaccgainz
+        msg.linear_acceleration.x = self.linearaccgainx + (self.latestacceleration.x / 16384.0 * 9.80665)
+        msg.linear_acceleration.y = self.linearaccgainy + (self.latestacceleration.y / 16384.0 * 9.80665)
+        msg.linear_acceleration.z = self.linearaccgainz + (self.latestacceleration.z / 16384.0 * 9.80665)
 
         # Convert degrees/sec to rad/sec
         # The 16.4 / 10 constant is strange :
         #   16.4 is the sensitivity for each measurement with a 2000 deg/s resolution, but the DMP
         #   values seems to be scaled by the DMP sample rate, so 10 = 2000(the resolution) divided by 200 (which is
         #   the sample rate)
-        msg.angular_velocity.x = self.angularvelgainx + gyro_x * math.pi / 180.0 * 16.4 / 10
-        msg.angular_velocity.y = self.angularvelgainy + gyro_y * math.pi / 180.0 * 16.4 / 10
-        msg.angular_velocity.z = self.angularvelgainz + gyro_z * math.pi / 180.0 * 16.4 / 10
+        msg.angular_velocity.x = self.angularvelgainx + (self.latestgyro.x * math.pi / 180.0 * 16.4 / 10)
+        msg.angular_velocity.y = self.angularvelgainy + (self.latestgyro.y * math.pi / 180.0 * 16.4 / 10)
+        msg.angular_velocity.z = self.angularvelgainz + (self.latestgyro.z * math.pi / 180.0 * 16.4 / 10)
 
         self.imupub.publish(msg)
 
@@ -192,6 +189,7 @@ class IMU:
         y_gyro_offset = 8
         z_gyro_offset = 57
 
+        # Old values
         self.linearaccgainx = -0.115
         self.linearaccgainy = 0.08
         self.linearaccgainz = 0.583
@@ -199,6 +197,18 @@ class IMU:
         self.angularvelgainx = 0.007503
         self.angularvelgainy = 0.025122
         self.angularvelgainz = 0.056413
+
+        calibrationmode = True
+        calibrationsamples = 0
+        calibrationmaxsamples = 250
+
+        self.linearaccgainx = 0
+        self.linearaccgainy = 0
+        self.linearaccgainz = 0
+
+        self.angularvelgainx = 0
+        self.angularvelgainy = 0
+        self.angularvelgainz = 0
 
         enable_debug_output = True
 
@@ -216,11 +226,45 @@ class IMU:
         self.imupub = rospy.Publisher('imu/data', Imu, queue_size=10)
 
         # Processing the sensor polling in an endless loop until this node shuts down
-        rospy.loginfo("Polling MPU6050...")
+        rospy.loginfo("Polling MPU6050 DMP...")
         while not rospy.is_shutdown():
 
             if self.readOrientationPull():
-                self.processROSMessage()
+
+                if calibrationmode:
+                    calibrationsamples = calibrationsamples + 1
+
+                    rospy.loginfo('Calibration. Taking sample #' + str(calibrationsamples))
+
+                    self.linearaccgainx = self.linearaccgainx + (self.latestacceleration.x / 16384.0 * 9.80665)
+                    self.linearaccgainy = self.linearaccgainy + (self.latestacceleration.y / 16384.0 * 9.80665)
+                    self.linearaccgainz = self.linearaccgainz + (self.latestacceleration.z / 16384.0 * 9.80665)
+
+                    self.angularvelgainx = self.angularvelgainx + (self.latestgyro.x * math.pi / 180.0 * 16.4 / 10)
+                    self.angularvelgainy = self.angularvelgainy + (self.latestgyro.y * math.pi / 180.0 * 16.4 / 10)
+                    self.angularvelgainz = self.angularvelgainz + (self.latestgyro.z * math.pi / 180.0 * 16.4 / 10)
+
+                    if calibrationsamples >= calibrationmaxsamples:
+                        calibrationmode = False
+
+                        self.linearaccgainx = self.linearaccgainx / calibrationsamples
+                        self.linearaccgainy = self.linearaccgainy / calibrationsamples
+                        self.linearaccgainz = self.linearaccgainz / calibrationsamples
+
+                        self.angularvelgainx = self.angularvelgainx / calibrationsamples
+                        self.angularvelgainy = self.angularvelgainy / calibrationsamples
+                        self.angularvelgainz = self.angularvelgainz / calibrationsamples
+
+                        rospy.loginfo('Calibration finished:')
+                        rospy.loginfo(' linearaccgainx = ' + str(self.linearaccgainx))
+                        rospy.loginfo(' linearaccgainy = ' + str(self.linearaccgainy))
+                        rospy.loginfo(' linearaccgainz = ' + str(self.linearaccgainz))
+                        rospy.loginfo(' angularvelgainx = ' + str(self.angularvelgainx))
+                        rospy.loginfo(' angularvelgainy = ' + str(self.angularvelgainy))
+                        rospy.loginfo(' angularvelgainz = ' + str(self.angularvelgainz))
+
+                else:
+                    self.processROSMessage()
 
             rate.sleep()
 

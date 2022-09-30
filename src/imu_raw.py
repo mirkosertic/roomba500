@@ -52,14 +52,6 @@ class IMU:
         y_gyro_offset = 8
         z_gyro_offset = 57
 
-        self.linearaccgainx = -0.115
-        self.linearaccgainy = 0.08
-        self.linearaccgainz = 0.583
-
-        self.angularvelgainx = 0.007503
-        self.angularvelgainy = 0.025122
-        self.angularvelgainz = 0.056413
-
         enable_debug_output = True
 
         self.mpu = MPU6050(i2c_bus, device_address, x_accel_offset, y_accel_offset, z_accel_offset, x_gyro_offset, y_gyro_offset, z_gyro_offset, enable_debug_output)
@@ -77,7 +69,7 @@ class IMU:
 
         calibrationmode = True
         calibrationsamples = 0
-
+        calibrationmaxsamples = 250
 
         self.linearaccgainx = 0
         self.linearaccgainy = 0
@@ -114,7 +106,7 @@ class IMU:
                 self.angularvelgainy = self.angularvelgainy + angular_vel_y
                 self.angularvelgainz = self.angularvelgainz + angular_vel_z
 
-                if calibrationsamples >= 1000:
+                if calibrationsamples >= calibrationmaxsamples:
                     calibrationmode = False
 
                     self.linearaccgainx = self.linearaccgainx / calibrationsamples
