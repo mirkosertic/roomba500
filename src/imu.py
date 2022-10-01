@@ -82,6 +82,16 @@ class IMU:
         self.latestacceleration = self.mpu.DMP_get_linear_accel(accel, grav)
         self.latestgyro = gyro
 
+
+        # Example Output:
+        # RAW Z Accel = 7517 Gravity Z = 0.975479856133461 Linear Accel Z without Gravity = -474.1309814453125
+        # RAW Z Accel = 7509 Gravity Z = 0.975466538220644 Linear Accel Z without Gravity = -482.0218811035156
+        # RAW Z Accel = 7516 Gravity Z = 0.975479856133461 Linear Accel Z without Gravity = -475.1309814453125
+        # RAW Z Accel = 7510 Gravity Z = 0.975479856133461 Linear Accel Z without Gravity = -481.1309814453125
+        # RAW Z Accel = 7512 Gravity Z = 0.975479856133461 Linear Accel Z without Gravity = -479.1309814453125
+        # RAW Z Accel = 7519 Gravity Z = 0.9755083061754704 Linear Accel Z without Gravity = -472.3640441894531
+        # DMP seems to be running with 8192 as a multiplier
+
         print('RAW Z Accel = ' + str(accel.z) + " Gravity Z = " + str(grav.z) + " Linear Accel Z without Gravity = " + str(self.latestacceleration.z))
 
         return validvalue
