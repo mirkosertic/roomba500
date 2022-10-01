@@ -82,6 +82,8 @@ class IMU:
         self.latestacceleration = self.mpu.DMP_get_linear_accel(accel, grav)
         self.latestgyro = gyro
 
+        print('RAW Z Accel = ' + str(accel.z) + " Gravity Z = " + str(grav.z) + " Linear Accel Z without Gravity = " + str(self.latestacceleration.z))
+
         return validvalue
 
     def processROSMessage(self):
