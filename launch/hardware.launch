@@ -19,14 +19,14 @@
         <param name="frequency" value="20"/>
         <param name="two_d_mode" value="True"/>
         <param name="odom0" value="odom/wheelencoder"/>
-        <param name="odom0_differential" value="True"/>
+        <!-- <param name="odom0_differential" value="True"/> -->
         <param name="imu0" value="imu/data"/>
         <param name="publish_tf" value="True" />
 
         <!-- The order of the boolean values are X,Y,Z,roll,pitch,yaw,X˙,Y˙,Z˙,roll˙,pitch˙,yaw˙,X¨,Y¨,Z¨. -->
         <rosparam param="odom0_config">[false, false, false,
             false, false, false,
-            true, true, false,
+            true, false, false,
             false, false, true,
             false, false, false]</rosparam>
 

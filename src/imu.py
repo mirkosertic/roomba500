@@ -7,7 +7,6 @@ from std_msgs.msg import Int16
 from sensor_msgs.msg import Imu
 
 from MPU6050 import MPU6050
-from Quaternion import XYZVector as V
 
 class IMU:
 
@@ -92,7 +91,7 @@ class IMU:
         # RAW Z Accel = 7519 Gravity Z = 0.9755083061754704 Linear Accel Z without Gravity = -472.3640441894531
         # DMP seems to be running with 8192 as a multiplier
 
-        print('RAW Z Accel = ' + str(accel.z) + " Gravity Z = " + str(grav.z) + " Linear Accel Z without Gravity = " + str(self.latestacceleration.z))
+        # print('RAW Z Accel = ' + str(accel.z) + " Gravity Z = " + str(grav.z) + " Linear Accel Z without Gravity = " + str(self.latestacceleration.z))
 
         return validvalue
 
