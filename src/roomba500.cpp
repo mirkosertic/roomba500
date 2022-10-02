@@ -138,7 +138,31 @@ class Roomba500 {
         return result;
     }
 
+    void set_port_read_min_size(int min_size) {
+        struct termios settings;
+
+        if (tcgetattr(fd, &settings)) {
+           /* handle error */
+            throw std::invalid_argument("cannot read settings for serial interface");
+        }
+
+        /* set the minimimum no. of chracters to read in each
+         * read call.
+         */
+        settings.c_cc[VMIN]  = min_size;
+        /* set “read timeout between characters” as 100 ms.
+         * read returns either when the specified number of chars
+         * are received or the timout occurs */
+        settings.c_cc[VTIME] = 1; /* 1 * .1s */
+
+        if (tcsetattr (fd, TCSANOW, &settings)) {
+            throw std::invalid_argument("cannot write settings for serial interface");
+        }
+    }
+
     SensorFrame readSensorFrame() {
+
+        char rawdata[23] __attribute((aligned(32)));
 
         tcflush(fd, TCIFLUSH);
 
@@ -149,23 +173,49 @@ class Roomba500 {
         }
         tcdrain(fd);
 
+        // Wait for response or timeout
+        set_port_read_min_size(23);
+
         int bytesAvailable = 0;
         ioctl(fd, FIONREAD, &bytesAvailable);
 
         SensorFrame sensorFrame = SensorFrame();
-        sensorFrame.leftWheel = readData() << 8 | readData(); // packet 43
-        sensorFrame.rightWheel = readData() << 8 | readData(); // packet 44
-        sensorFrame.batteryCharge = readData() << 8 | readData(); // packet 25
-        sensorFrame.batteryCapacity = readData() << 8 | readData(); // packet 26
-        sensorFrame.bumperState = readData(); // packet 7
-        sensorFrame.lightBumperLeft = readData() << 8 | readData(); // packet 46
-        sensorFrame.lightBumperFrontLeft = readData() << 8 | readData(); // packet 47
-        sensorFrame.lightBumperCenterLeft = readData() << 8 | readData(); // packet 48
-        sensorFrame.lightBumperCenterRight = readData() << 8 | readData(); // packet 49
-        sensorFrame.lightBumperFrontRight = readData() << 8 | readData(); // packet 50
-        sensorFrame.lightBumperRight = readData() << 8 | readData(); // packet 51
-        sensorFrame.oimode = readData(); // packet 35
-        sensorFrame.lightBumperStat = readData(); // packet 45
+
+        int recvbytes = 0;
+        int maxfd = fd + 1;
+        int index = 0;
+        /* set the timeout as 1 sec for each read */
+        struct timeval timeout = {1, 0};
+        fd_set readSet;
+
+        FD_ZERO(&readSet);
+        FD_SET(fd, &readSet);
+        if (select(maxfd, &readSet, NULL, NULL, &timeout) > 0) {
+            if (FD_ISSET(fd, &readSet)) {
+                recvbytes = read(fd, &rawdata, sizeof(rawdata));
+                if(recvbytes) {
+                    sensorFrame.leftWheel = rawdata[0] << 8 | rawdata[1]; // packet 43
+                    sensorFrame.rightWheel = rawdata[2] << 8 | rawdata[3]; // packet 44
+                    sensorFrame.batteryCharge = rawdata[4] << 8 | rawdata[5]; // packet 25
+                    sensorFrame.batteryCapacity = rawdata[6] << 8 | rawdata[7]; // packet 26
+                    sensorFrame.bumperState = rawdata[8]; // packet 7
+                    sensorFrame.lightBumperLeft = rawdata[9] << 8 | rawdata[10]; // packet 46
+                    sensorFrame.lightBumperFrontLeft = rawdata[11] << 8 | rawdata[12]; // packet 47
+                    sensorFrame.lightBumperCenterLeft = rawdata[13] << 8 | rawdata[14]; // packet 48
+                    sensorFrame.lightBumperCenterRight = rawdata[15] << 8 | rawdata[16]; // packet 49
+                    sensorFrame.lightBumperFrontRight = rawdata[17] << 8 | rawdata[18]; // packet 50
+                    sensorFrame.lightBumperRight = rawdata[19] << 8 | rawdata[20]; // packet 51
+                    sensorFrame.oimode = rawdata[21]; // packet 35
+                    sensorFrame.lightBumperStat = rawdata[22]; // packet 45
+                } else {
+                    throw std::invalid_argument("failed to read data");
+                }
+
+            }
+        } else {
+            /* select() – returns 0 on timeout and -1 on error condtion */
+            throw std::invalid_argument("timeout or error while waiting for data");
+        }
 
         return sensorFrame;
     }
