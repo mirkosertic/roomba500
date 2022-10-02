@@ -137,7 +137,7 @@ class BaseController {
                 mutex.lock();
 
                 // Read some sensor data
-                ROS_INFO("Getting new sensorframe");
+                ROS_DEBUG("Getting new sensorframe");
 
                 SensorFrame newSensorFrame = robot->readSensorFrame();
 
