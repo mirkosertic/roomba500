@@ -56,6 +56,7 @@ class IMU:
         orientation_raw = self.mpu.DMP_get_quaternion(FIFO_buffer)
         orientation = orientation_raw.get_normalized()
         grav = self.mpu.DMP_get_gravity(orientation_raw)
+        grav_normalized = self.mpu.DMP_get_gravity(orientation)
 
         validvalue = True
 
@@ -91,7 +92,7 @@ class IMU:
         # RAW Z Accel = 7519 Gravity Z = 0.9755083061754704 Linear Accel Z without Gravity = -472.3640441894531
         # DMP seems to be running with 8192 as a multiplier
 
-        # print('RAW Z Accel = ' + str(accel.z) + " Gravity Z = " + str(grav.z) + " Linear Accel Z without Gravity = " + str(self.latestacceleration.z))
+        print('RAW Z Accel = ' + str(accel.z) + " Gravity Z = " + str(grav.z) + " Gravity Norm. Z = " + str(grav_normalized.z) + " Linear Accel Z without Gravity = " + str(self.latestacceleration.z))
 
         return validvalue
 
