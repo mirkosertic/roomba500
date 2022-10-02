@@ -69,13 +69,13 @@ class IMU:
             dz = current_roll_pitch_yaw.z - latest_roll_pitch_yaw.z
 
             if abs(dx) > 20 or abs(dy) > 20 or abs(dz) > 20:
-                print('Ignoring linear measurement as dx = ' + str(dx) + " dy = " + str(dy) + " dz = " + str(dz))
+                rospy.loginfo('Ignoring linear measurement as dx = ' + str(dx) + " dy = " + str(dy) + " dz = " + str(dz))
                 validvalue = False
 
             gyroerrorthreshold = 50 * 16.4
 
             if abs(gyro.x) > gyroerrorthreshold or abs(gyro.y) > gyroerrorthreshold or abs(gyro.z) > gyroerrorthreshold:
-                print('Ignoring angular measurement as gyrox = ' + str(gyro.x) + " gyroy = " + str(gyro.y) + " gyroz = " + str(gyro.x))
+                rospy.loginfo('Ignoring angular measurement as gyrox = ' + str(gyro.x) + " gyroy = " + str(gyro.y) + " gyroz = " + str(gyro.x))
                 validvalue = False
 
         self.latestorientation = orientation
@@ -84,15 +84,21 @@ class IMU:
 
 
         # Example Output:
-        # RAW Z Accel = 7517 Gravity Z = 0.975479856133461 Linear Accel Z without Gravity = -474.1309814453125
-        # RAW Z Accel = 7509 Gravity Z = 0.975466538220644 Linear Accel Z without Gravity = -482.0218811035156
-        # RAW Z Accel = 7516 Gravity Z = 0.975479856133461 Linear Accel Z without Gravity = -475.1309814453125
-        # RAW Z Accel = 7510 Gravity Z = 0.975479856133461 Linear Accel Z without Gravity = -481.1309814453125
-        # RAW Z Accel = 7512 Gravity Z = 0.975479856133461 Linear Accel Z without Gravity = -479.1309814453125
-        # RAW Z Accel = 7519 Gravity Z = 0.9755083061754704 Linear Accel Z without Gravity = -472.3640441894531
+        # RAW Z Accel = 7736 Gravity Z = 0.9992371909320354 Gravity Norm. Z = 0.9993094526074253 Linear Accel Z without Gravity = -449.7510681152344
+        # RAW Z Accel = 7748 Gravity Z = 0.9992371909320354 Gravity Norm. Z = 0.9993094526074253 Linear Accel Z without Gravity = -437.7510681152344
+        # RAW Z Accel = 7746 Gravity Z = 0.9992353916168213 Gravity Norm. Z = 0.9993058549658311 Linear Accel Z without Gravity = -439.736328125
+        # RAW Z Accel = 7746 Gravity Z = 0.9992353916168213 Gravity Norm. Z = 0.9993058549658311 Linear Accel Z without Gravity = -439.736328125
+        # RAW Z Accel = 7752 Gravity Z = 0.9992353916168213 Gravity Norm. Z = 0.9993058549658311 Linear Accel Z without Gravity = -433.736328125
+        # RAW Z Accel = 7742 Gravity Z = 0.9992353916168213 Gravity Norm. Z = 0.9993058549658311 Linear Accel Z without Gravity = -443.736328125
+        # RAW Z Accel = 7744 Gravity Z = 0.9992353916168213 Gravity Norm. Z = 0.9993058549658311 Linear Accel Z without Gravity = -441.736328125
+        # RAW Z Accel = 7745 Gravity Z = 0.9992353916168213 Gravity Norm. Z = 0.9993058549658311 Linear Accel Z without Gravity = -440.736328125
+        # RAW Z Accel = 7750 Gravity Z = 0.9992353916168213 Gravity Norm. Z = 0.9993058549658311 Linear Accel Z without Gravity = -435.736328125
+        # RAW Z Accel = 7745 Gravity Z = 0.9992353916168213 Gravity Norm. Z = 0.9993058549658311 Linear Accel Z without Gravity = -440.736328125
+        # RAW Z Accel = 7757 Gravity Z = 0.9992353916168213 Gravity Norm. Z = 0.9993058549658311 Linear Accel Z without Gravity = -428.736328125
+        # RAW Z Accel = 7752 Gravity Z = 0.9992353916168213 Gravity Norm. Z = 0.9993058549658311 Linear Accel Z without Gravity = -433.736328125
         # DMP seems to be running with 8192 as a multiplier
 
-        print('RAW Z Accel = ' + str(accel.z) + " Gravity Z = " + str(grav.z) + " Gravity Norm. Z = " + str(grav_normalized.z) + " Linear Accel Z without Gravity = " + str(self.latestacceleration.z))
+        rospy.logdebug('RAW Z Accel = ' + str(accel.z) + " Gravity Z = " + str(grav.z) + " Gravity Norm. Z = " + str(grav_normalized.z) + " Linear Accel Z without Gravity = " + str(self.latestacceleration.z))
 
         return validvalue
 

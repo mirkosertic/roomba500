@@ -1,9 +1,6 @@
 <?xml version="1.0"?>
 <launch>
-    <node name="roombainterface" pkg="roomba500" type="roombainterface" output="screen" respawn="false">
-        <param name="rosout_disable_topics_generation" value="True"/>
-        <param name="pollingRateInHertz" value="30"/>
-    </node>
+    <include file="$(find roomba500)/launch/roombainterface.launch"/>
 
     <include file="$(find roomba500)/launch/imu.launch"/>
 
