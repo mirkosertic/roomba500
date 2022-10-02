@@ -140,12 +140,12 @@ class IMU:
         device_address = 0x68
         # The offsets are different for each device and should be changed
         # accordingly using a calibration procedure
-        x_accel_offset = 1117
-        y_accel_offset = -1857
-        z_accel_offset = -298
-        x_gyro_offset = -6
+        x_accel_offset = 1055
+        y_accel_offset = -1830
+        z_accel_offset = -300
+        x_gyro_offset = -7
         y_gyro_offset = 8
-        z_gyro_offset = 57
+        z_gyro_offset = 62
 
         # Old values
         self.linearaccgainx = -0.115
