@@ -9,6 +9,7 @@ from geometry_msgs.msg import Twist, Point32
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import PointCloud
 from tf.transformations import quaternion_from_euler
+from tf.broadcaster import TransformBroadcaster
 
 from roomba500.msg import RoombaSensorFrame, DiffMotorSpeeds
 
@@ -33,6 +34,7 @@ class DifferentialOdometry:
 
         self.diffmotorspeedspub = None
         self.odompub = None
+        self.transformbroadcaster = None
 
         self.odomframe = 'odom'
         self.baselinkframe = 'base_link'
@@ -77,6 +79,8 @@ class DifferentialOdometry:
 
         self.bumperspub = None
         self.lightsensorspub = None
+
+        self.publishtf = True
 
     def newShutdownCommand(self, data):
         self.syncLock.acquire()
@@ -175,6 +179,15 @@ class DifferentialOdometry:
         # Publish odometry
         q = quaternion_from_euler(0, 0, newtheta)
 
+        if self.publishtf:
+            self.transformbroadcaster.sendTransform(
+                (self.referencex + deltax, self.referencey + deltay, 0),
+                (q[0], q[1], q[2], q[3]),
+                currenttime,
+                self.baselinkframe,
+                self.odomframe
+            )
+
         odom = Odometry()
         odom.header.stamp = currenttime
         odom.header.frame_id = self.odomframe
@@ -253,6 +266,8 @@ class DifferentialOdometry:
         self.lightBumperRightpcdistance = float(rospy.get_param('~lightBumperRightpcdistance', '0.2175'))
         self.lightBumperRightpcangle = float(rospy.get_param('~lightBumperRightpcangle', '-70'))
 
+        self.publishtf = bool(rospy.get_param('~publish_tf', 'True'))
+
         rospy.loginfo("Configured with ticksPerCm                       = %s ", self.ticksPerCm)
         rospy.loginfo("Configured with robotWheelSeparationInCm         = %s ", self.robotWheelSeparationInCm)
         rospy.loginfo("Configured with collisionRevertDistance          = %s ", self.collisionRevertDistance)
@@ -282,10 +297,14 @@ class DifferentialOdometry:
         rospy.loginfo("Configured with lightBumperRightpcdistance       = %s ", self.lightBumperRightpcdistance)
         rospy.loginfo("Configured with lightBumperRightpcangle          = %s ", self.lightBumperRightpcangle)
 
+        rospy.loginfo("Configured with publish_tf                       = %s ", self.publishtf)
+
         self.diffmotorspeedspub = rospy.Publisher('cmd_motorspeeds', DiffMotorSpeeds, queue_size=10)
         self.odompub = rospy.Publisher('odom', Odometry, queue_size=10)
         self.bumperspub = rospy.Publisher('bumpers', PointCloud, queue_size=10)
         self.lightsensorspub = rospy.Publisher('lightsensors', PointCloud, queue_size=10)
+
+        self.transformbroadcaster = TransformBroadcaster()
 
         # Handling for cmd_vel and sensor frame data
         rospy.Subscriber("cmd_vel", Twist, self.newCmdVelCommand)
