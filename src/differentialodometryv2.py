@@ -135,8 +135,7 @@ class DifferentialOdometry:
             self.referencetime = currenttime
             return
 
-        deltatime = currenttime - self.referencetime
-        rospy.loginfo("Delta time = %s", deltatime)
+        deltatime = (currenttime - self.referencetime).to_sec()
 
         deltaleftinm = deltaleft / self.ticksPerCm / 100.0
         deltarightinm = deltaright / self.ticksPerCm / 100.0
@@ -216,7 +215,7 @@ class DifferentialOdometry:
 
     def start(self):
         rospy.init_node('differentialodometry', anonymous=True)
-        pollingRateInHertz = int(rospy.get_param('~pollingRateInHertz', '20'))
+        pollingRateInHertz = int(rospy.get_param('~pollingRateInHertz', '10'))
 
         self.encodererrorthreshold = int(rospy.get_param('~encodererrorthreshold', '500'))
         self.angularvelocitythreshold = float(rospy.get_param('~angularvelocitythreshold', '0.05'))
