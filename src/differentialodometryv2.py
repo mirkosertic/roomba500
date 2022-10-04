@@ -169,7 +169,7 @@ class DifferentialOdometry:
 
         newtheta = (self.referencetheta + deltatheta) % (2 * math.pi)
 
-        velx = deltax / deltatime if deltatime > 0 else .0
+        velx = deltatravel / deltatime if deltatime > 0 else .0
         vely = deltay / deltatime if deltatime > 0 else .0
         velz = deltatheta / deltatime if deltatime > 0 else .0
 
@@ -228,7 +228,7 @@ class DifferentialOdometry:
 
     def start(self):
         rospy.init_node('differentialodometry', anonymous=True)
-        pollingRateInHertz = int(rospy.get_param('~pollingRateInHertz', '10'))
+        pollingRateInHertz = int(rospy.get_param('~pollingRateInHertz', '5'))
 
         self.encodererrorthreshold = int(rospy.get_param('~encodererrorthreshold', '500'))
         self.angularvelocitythreshold = float(rospy.get_param('~angularvelocitythreshold', '0.05'))
