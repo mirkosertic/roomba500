@@ -169,10 +169,6 @@ class BaseController {
                         if (newSensorFrame.isBumperRight()) {
                             if (!robot->lastBumperRight) {
                                 ROS_INFO("Right bumper triggered");
-                                stopRobot();
-
-                                // Note C
-                                robot->playNote(72, 16);
 
                                 robot->lastBumperRight = true;
                             }
@@ -186,10 +182,6 @@ class BaseController {
                         if (newSensorFrame.isBumperLeft()) {
                             if (!robot->lastBumperLeft) {
                                 ROS_INFO("Left bumper triggered");
-                                stopRobot();
-
-                                // Note D
-                                robot->playNote(74, 16);
 
                                 robot->lastBumperLeft = true;
                             }
@@ -203,10 +195,6 @@ class BaseController {
                         if (newSensorFrame.isWheeldropRight()) {
                             if (!robot->lastRightWheelDropped) {
                                 ROS_INFO("Right wheel dropped");
-                                stopRobot();
-
-                                // Note E
-                                robot->playNote(76, 16);
 
                                 robot->lastRightWheelDropped = true;
                             }
@@ -220,10 +208,6 @@ class BaseController {
                         if (newSensorFrame.isWheeldropLeft()) {
                             if (!robot->lastLeftWheelDropped) {
                                 ROS_INFO("Left wheel dropped");
-                                stopRobot();
-
-                                // Note F
-                                robot->playNote(77, 16);
 
                                 robot->lastLeftWheelDropped = true;
                             }
@@ -260,7 +244,7 @@ class BaseController {
                     }
 
                 } catch (const std::exception& ex) {
-                    ROS_ERROR("Error getting data from Roomba. Maybe serial timeout?");
+                    ROS_ERROR("Error getting data from Roomba. Maybe serial timeout? Message is %s", ex.what());
 
                     ignorefirstframeaftererror = true;
                 }

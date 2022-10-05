@@ -9,13 +9,13 @@
         <param name="ticksPerCm" value="22.7157014"/>
         <param name="robotWheelSeparationInCm" value="22.86"/>
         <param name="publish_tf" value="False" />
-        <remap from="odom" to="odom/wheelencoder"/>
+        <remap from="odom" to="wheelencoder/odom"/>
     </node>
 
     <node name="ekf_localization_fuser" pkg="robot_localization" type="ekf_localization_node" output="screen" respawn="false">
         <param name="frequency" value="20"/>
         <param name="two_d_mode" value="True"/>
-        <param name="odom0" value="odom/wheelencoder"/>
+        <param name="odom0" value="wheelencoder/odom"/>
         <!-- <param name="odom0_differential" value="True"/> -->
         <param name="imu0" value="imu/data"/>
         <param name="publish_tf" value="True" />

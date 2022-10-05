@@ -120,7 +120,7 @@ class DifferentialOdometry:
     def publishOdometry(self):
 
         if self.leftencoder is None or self.rightencoder is None:
-            # Nothing to do, as there
+            # Nothing to do, as there are no fully initialized wheel encoders
             return
 
         deltaleft = self.leftencoder.getDelta()
@@ -227,6 +227,61 @@ class DifferentialOdometry:
         else:
             self.rightencoder.update(data.wheelEncoderRight)
 
+        if data.bumperLeft or data.bumperRight or data.wheeldropLeft or data.wheeldropRight:
+            if data.bumperLeft:
+                rospy.logwarn("Left bumper triggered.")
+            if data.bumperRight:
+                rospy.logwarn("Right bumper triggered.")
+            if data.wheeldropLeft:
+                rospy.logwarn("Left wheel dropped.")
+            if data.wheeldropRight:
+                rospy.logwarn("Right wheel dropped.")
+
+            rospy.logwarn("Stopping robot.")
+            self.publishCmdVel(.0, .0)
+
+            bumpersmsg = PointCloud()
+            bumpersmsg.header.stamp = rospy.Time.now()
+            bumpersmsg.header.frame_id = self.baselinkframe
+            bumpersmsg.points.append(Point32(self.bumperpcdistance, 0, self.bumperpcheight))
+            self.bumperspub.publish(bumpersmsg)
+
+        lightsensorsmsg = PointCloud()
+        lightsensorsmsg.header.stamp = rospy.Time.now()
+        lightsensorsmsg.header.frame_id = self.baselinkframe
+        if data.lightBumperLeftStat:
+            # Publish collision point cloud
+            dx = math.cos(math.radians(self.lightBumperLeftpcangle)) * self.lightBumperLeftpcdistance
+            dy = math.sin(math.radians(self.lightBumperLeftpcangle)) * self.lightBumperLeftpcdistance
+            lightsensorsmsg.points.append(Point32(dx, dy, self.lightBumperheight))
+        if data.lightBumperFrontLeftStat:
+            # Publish collision point cloud
+            dx = math.cos(math.radians(self.lightBumperFrontLeftpcangle)) * self.lightBumperFrontLeftpcdistance
+            dy = math.sin(math.radians(self.lightBumperFrontLeftpcangle)) * self.lightBumperFrontLeftpcdistance
+            lightsensorsmsg.points.append(Point32(dx, dy, self.lightBumperheight))
+        if data.lightBumperCenterLeftStat:
+            # Publish collision point cloud
+            dx = math.cos(math.radians(self.lightBumperCenterLeftpcangle)) * self.lightBumperCenterLeftpcdistance
+            dy = math.sin(math.radians(self.lightBumperCenterLeftpcangle)) * self.lightBumperCenterLeftpcdistance
+            lightsensorsmsg.points.append(Point32(dx, dy, self.lightBumperheight))
+        if data.lightBumperCenterRightStat:
+            # Publish collision point cloud
+            dx = math.cos(math.radians(self.lightBumperCenterRightpcangle)) * self.lightBumperCenterRightpcdistance
+            dy = math.sin(math.radians(self.lightBumperCenterRightpcangle)) * self.lightBumperCenterRightpcdistance
+            lightsensorsmsg.points.append(Point32(dx, dy, self.lightBumperheight))
+        if data.lightBumperFrontRightStat:
+            # Publish collision point cloud
+            dx = math.cos(math.radians(self.lightBumperFrontRightpcangle)) * self.lightBumperFrontRightpcdistance
+            dy = math.sin(math.radians(self.lightBumperFrontRightpcangle)) * self.lightBumperFrontRightpcdistance
+            lightsensorsmsg.points.append(Point32(dx, dy, self.lightBumperheight))
+        if data.lightBumperRightStat:
+            # Publish collision point cloud
+            dx = math.cos(math.radians(self.lightBumperRightpcangle)) * self.lightBumperRightpcdistance
+            dy = math.sin(math.radians(self.lightBumperRightpcangle)) * self.lightBumperRightpcdistance
+            lightsensorsmsg.points.append(Point32(dx, dy, self.lightBumperheight))
+
+        self.lightsensorspub.publish(lightsensorsmsg)
+
         self.syncLock.release()
 
     def start(self):
@@ -328,7 +383,7 @@ class DifferentialOdometry:
 
             rate.sleep()
 
-        rospy.loginfo('DifferentialOdometry terminated.')
+        rospy.loginfo('differentialodometry terminated.')
 
 
 if __name__ == '__main__':
