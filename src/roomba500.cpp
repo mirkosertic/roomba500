@@ -185,7 +185,7 @@ class Roomba500 {
         int maxfd = fd + 1;
         int index = 0;
         /* set the timeout as 1 sec for each read */
-        struct timeval timeout = {1, 0};
+        struct timeval timeout = {0, 100 * 1000}; // 100ms timeout
         fd_set readSet;
 
         FD_ZERO(&readSet);

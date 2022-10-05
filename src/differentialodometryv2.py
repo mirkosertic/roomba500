@@ -176,6 +176,9 @@ class DifferentialOdometry:
         if abs(velz) < self.angularvelocitythreshold:
             velz = .0
 
+        if abs(deltatravel) > 0:
+            rospy.loginfo("DeltaX = %s DeltaY = %s, DeltaTime = %s, DeltaTravel = %s, TickLeft = %s, TickRight = %s, VelX = %s, VelY = %s, VelZ = %s", deltax, deltay, deltatime, deltatravel, deltaleft, deltaright, velx, vely, velz)
+
         # Publish odometry
         q = quaternion_from_euler(0, 0, newtheta)
 
