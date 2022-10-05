@@ -176,15 +176,11 @@ class Roomba500 {
         // Wait for response or timeout
         set_port_read_min_size(23);
 
-        int bytesAvailable = 0;
-        ioctl(fd, FIONREAD, &bytesAvailable);
-
         SensorFrame sensorFrame = SensorFrame();
 
         int recvbytes = 0;
         int maxfd = fd + 1;
         int index = 0;
-        /* set the timeout as 1 sec for each read */
         struct timeval timeout = {0, 30 * 1000}; // 30ms timeout
         fd_set readSet;
 
@@ -210,11 +206,15 @@ class Roomba500 {
                 } else {
                     throw std::invalid_argument("failed to read data");
                 }
-
+            } else {
+                throw std::invalid_argument("select finished but without right file descriptor");
             }
         } else {
-            /* select() – returns 0 on timeout and -1 on error condtion */
-            throw std::invalid_argument("timeout or error while waiting for data");
+            int bytesAvailable = 0;
+            ioctl(fd, FIONREAD, &bytesAvailable);
+
+            /* select() – returns 0 on timeout and -1 on error condition */
+            throw std::invalid_argument("timeout or error while waiting for data. There are " + std::to_string(bytesAvailables + " bytes available");
         }
 
         return sensorFrame;
