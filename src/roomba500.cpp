@@ -214,7 +214,7 @@ class Roomba500 {
             ioctl(fd, FIONREAD, &bytesAvailable);
 
             /* select() – returns 0 on timeout and -1 on error condition */
-            throw std::invalid_argument("timeout or error while waiting for data. There are " + std::to_string(bytesAvailables + " bytes available");
+            throw std::invalid_argument("timeout or error while waiting for data. There are " + std::to_string(bytesAvailable) + " bytes available");
         }
 
         return sensorFrame;
