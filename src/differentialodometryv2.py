@@ -176,7 +176,7 @@ class DifferentialOdometry:
             velz = .0
 
         if abs(deltatravel) > 0:
-            rospy.loginfo("DeltaX = %s DeltaY = %s, DeltaTime = %s, DeltaTravel = %s, TickLeft = %s, TickRight = %s, VelX = %s, VelY = %s, VelZ = %s", deltax, deltay, deltatime, deltatravel, deltaleft, deltaright, velx, vely, velz)
+            rospy.logdebug("DeltaX = %s DeltaY = %s, DeltaTime = %s, DeltaTravel = %s, TickLeft = %s, TickRight = %s, VelX = %s, VelY = %s, VelZ = %s", deltax, deltay, deltatime, deltatravel, deltaleft, deltaright, velx, vely, velz)
 
         # Publish odometry
         q = quaternion_from_euler(0, 0, newtheta)
@@ -251,8 +251,6 @@ class DifferentialOdometry:
                 bumpersmsg.header.frame_id = self.baselinkframe
                 bumpersmsg.points.append(Point32(self.bumperpcdistance, 0, self.bumperpcheight))
                 self.bumperspub.publish(bumpersmsg)
-            else:
-                rospy.loginfo("Bumper or wheel drop detected but recovery was already initiated.")
 
         lightsensorsmsg = PointCloud()
         lightsensorsmsg.header.stamp = rospy.Time.now()
