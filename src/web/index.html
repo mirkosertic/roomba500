@@ -305,183 +305,219 @@
                 <div class="room generated"><span title="Start this saved room">Room 2123123</span><i title="Delete this room" class="fa fa-trash"></i></div>
             </template>
         </div>
-    <script>
-        const log = document.getElementById("log");
-        const map = document.getElementById("map");
-        const costmap = document.getElementById("costmap");
-        const path = document.getElementById("path");
-        const interaction = document.getElementById("interaction");
-        const cavasstack = document.getElementById("canvasstack");
-        const remotecontrol = document.getElementById("remotecontrol");
-        const rooms = document.getElementById("rooms");
+        <script>
+            const log = document.getElementById("log");
+            const map = document.getElementById("map");
+            const costmap = document.getElementById("costmap");
+            const path = document.getElementById("path");
+            const interaction = document.getElementById("interaction");
+            const cavasstack = document.getElementById("canvasstack");
+            const remotecontrol = document.getElementById("remotecontrol");
+            const rooms = document.getElementById("rooms");
 
-        remotecontrol.addEventListener("click", function(event) {
-           event.preventDefault();
-        });
+            remotecontrol.addEventListener("click", function(event) {
+                event.preventDefault();
+            });
 
-        interaction.width = interaction.clientWidth;
-        interaction.height = interaction.clientHeight;
+            interaction.width = interaction.clientWidth;
+            interaction.height = interaction.clientHeight;
 
-        const uistate = {
-            starttime : undefined,
-            latestmap : undefined,
-            latestodom : undefined,
-            robotpath: []
-        }
-
-        function updateStopwatch() {
-            if (uistate.starttime > 0) {
-                let delta = Date.now() - uistate.starttime;
-                //stopwatch.innerText = '' + delta;
+            const uistate = {
+                starttime : undefined,
+                latestmap : undefined,
+                latestodom : undefined,
+                robotpath: []
             }
-        }
 
-        function loadRoom(roomName) {
-            fetch('/actions/room/' + roomName + '/start');
-        }
-
-        function deleteRoom(roomName) {
-            fetch('/actions/room/' + roomName + '/delete');
-        }
-
-        function startNewRoom() {
-            fetch('/actions/startnewroom');
-        }
-
-        function shutdown() {
-            fetch('/actions/shutdown');
-        }
-
-        function turnleft() {
-            uistate.starttime = Date.now();
-            fetch('/actions/turnleft');
-        }
-
-        function turnright() {
-            uistate.starttime = Date.now();
-            fetch('/actions/turnright');
-        }
-
-        function stop() {
-            fetch('/actions/stop');
-            updateStopwatch();
-            uistate.starttime = undefined;
-        }
-
-        function forward() {
-            uistate.starttime = Date.now();
-            fetch('/actions/forward');
-        }
-
-        function backward() {
-            uistate.starttime = Date.now()
-            fetch('/actions/backward');
-        }
-
-        function relocalization() {
-            fetch('/actions/relocalization');
-        }
-
-        function cancel() {
-            fetch('/actions/cancel');
-        }
-
-        function simulateObstacle() {
-            fetch('/actions/simulateObstacle');
-        }
-
-        document.getElementById("newroom").addEventListener("click", startNewRoom);
-        document.getElementById("shutdown").addEventListener("click", shutdown);
-        document.getElementById("left").addEventListener("click", turnleft);
-        document.getElementById("right").addEventListener("click", turnright);
-        document.getElementById("stop").addEventListener("click", stop);
-        document.getElementById("forward").addEventListener("click", forward);
-        document.getElementById("backward").addEventListener("click", backward);
-        document.getElementById("relocalization").addEventListener("click", relocalization);
-        document.getElementById("cancel").addEventListener("click", cancel);
-        document.getElementById("obstacle").addEventListener("click", simulateObstacle);
-
-        interaction.addEventListener("mousedown", function(event) {
-            var rect = interaction.getBoundingClientRect();
-            var x = event.clientX - rect.left;
-            var y = event.clientY - rect.top;
-            if (!interaction.hasAttribute("data-mousedown")) {
-                interaction.dataset.mousedown = true;
-                interaction.dataset.mousex = Math.floor(x);
-                interaction.dataset.mousey = Math.floor(y);
-                interaction.dataset.mousebutton = event.button;
-            }
-        });
-        interaction.addEventListener("mouseup", function(event) {
-            if (interaction.hasAttribute("data-mousedown")) {
-                var rect = interaction.getBoundingClientRect();
-                let x = parseInt(interaction.dataset.mousex);
-                let y = parseInt(interaction.dataset.mousey);
-
-                var xm = event.clientX - rect.left; //x position within the element.
-                var ym = event.clientY - rect.top;  //y position within the element.
-
-                if (interaction.dataset.mousebutton === "2") {
-
-                    // Clean Zone command
-                    let xpertop = (interaction.width - x) / interaction.width;
-                    let ypertop = y / interaction.height;
-
-                    let xperbottom = (interaction.width - xm) / interaction.width;
-                    let yperbottom = ym / interaction.height;
-
-                    let map = uistate.latestmap;
-
-                    topX = ((map.width * xpertop) * map.resolution) + map.origin.x;
-                    topY = ((map.width * ypertop) * map.resolution) + map.origin.y;
-                    bottomX =  ((map.width * xperbottom) * map.resolution) + map.origin.x;
-                    bottomY =  ((map.width * yperbottom) * map.resolution) + map.origin.y;
-
-                    let command = {
-                        topX: Math.min(topX, bottomX),
-                        topY: Math.max(topY, bottomY),
-                        bottomX: Math.max(topX, bottomX),
-                        bottomY: Math.min(topY, bottomY)
-                    };
-
-                    fetch('/actions/clean', {
-                        method: 'POST',
-                        cache: 'no-cache',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(command)
-                    });
-
-                } else {
-
-                    let xper = (interaction.width - x) / interaction.width;
-                    let yper = y / interaction.height;
-
-                    let map = uistate.latestmap;
-
-                    console.log("XPer = " + xper + " Map = " + (map.origin.x + (map.width * map.resolution * xper)));
-                    console.log("YPer = " + yper + " Map = " + (map.origin.y + (map.height * map.resolution * yper)));
-
-                    let command = {
-                        targetx: ((map.width * xper) * map.resolution) + map.origin.x,
-                        targety: ((map.height * yper) * map.resolution) + map.origin.y,
-                        theta: Math.atan2(ym - y, x - xm)
-                    };
-
-                    console.log("Moving to " + JSON.stringify(command));
-
-                    // Move to pose
-                    fetch('/actions/moveTo', {
-                        method: 'POST',
-                        cache: 'no-cache',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(command)
-                    });
+            function updateStopwatch() {
+                if (uistate.starttime > 0) {
+                    let delta = Date.now() - uistate.starttime;
+                    //stopwatch.innerText = '' + delta;
                 }
+            }
 
+            function loadRoom(roomName) {
+                fetch('/actions/room/' + roomName + '/start');
+            }
+
+            function deleteRoom(roomName) {
+                fetch('/actions/room/' + roomName + '/delete');
+            }
+
+            function startNewRoom() {
+                fetch('/actions/startnewroom');
+            }
+
+            function shutdown() {
+                fetch('/actions/shutdown');
+            }
+
+            function turnleft() {
+                uistate.starttime = Date.now();
+                fetch('/actions/turnleft');
+            }
+
+            function turnright() {
+                uistate.starttime = Date.now();
+                fetch('/actions/turnright');
+            }
+
+            function stop() {
+                fetch('/actions/stop');
+                updateStopwatch();
+                uistate.starttime = undefined;
+            }
+
+            function forward() {
+                uistate.starttime = Date.now();
+                fetch('/actions/forward');
+            }
+
+            function backward() {
+                uistate.starttime = Date.now()
+                fetch('/actions/backward');
+            }
+
+            function relocalization() {
+                fetch('/actions/relocalization');
+            }
+
+            function cancel() {
+                fetch('/actions/cancel');
+            }
+
+            function simulateObstacle() {
+                fetch('/actions/simulateObstacle');
+            }
+
+            document.getElementById("newroom").addEventListener("click", startNewRoom);
+            document.getElementById("shutdown").addEventListener("click", shutdown);
+            document.getElementById("left").addEventListener("click", turnleft);
+            document.getElementById("right").addEventListener("click", turnright);
+            document.getElementById("stop").addEventListener("click", stop);
+            document.getElementById("forward").addEventListener("click", forward);
+            document.getElementById("backward").addEventListener("click", backward);
+            document.getElementById("relocalization").addEventListener("click", relocalization);
+            document.getElementById("cancel").addEventListener("click", cancel);
+            document.getElementById("obstacle").addEventListener("click", simulateObstacle);
+
+            interaction.addEventListener("mousedown", function(event) {
+                var rect = interaction.getBoundingClientRect();
+                var x = event.clientX - rect.left;
+                var y = event.clientY - rect.top;
+                if (!interaction.hasAttribute("data-mousedown")) {
+                    interaction.dataset.mousedown = true;
+                    interaction.dataset.mousex = Math.floor(x);
+                    interaction.dataset.mousey = Math.floor(y);
+                    interaction.dataset.mousebutton = event.button;
+                }
+            });
+            interaction.addEventListener("mouseup", function(event) {
+                if (interaction.hasAttribute("data-mousedown")) {
+                    var rect = interaction.getBoundingClientRect();
+                    let x = parseInt(interaction.dataset.mousex);
+                    let y = parseInt(interaction.dataset.mousey);
+
+                    var xm = event.clientX - rect.left; //x position within the element.
+                    var ym = event.clientY - rect.top;  //y position within the element.
+
+                    if (interaction.dataset.mousebutton === "2") {
+
+                        // Clean Zone command
+                        let xpertop = (interaction.width - x) / interaction.width;
+                        let ypertop = y / interaction.height;
+
+                        let xperbottom = (interaction.width - xm) / interaction.width;
+                        let yperbottom = ym / interaction.height;
+
+                        let map = uistate.latestmap;
+
+                        topX = ((map.width * xpertop) * map.resolution) + map.origin.x;
+                        topY = ((map.width * ypertop) * map.resolution) + map.origin.y;
+                        bottomX =  ((map.width * xperbottom) * map.resolution) + map.origin.x;
+                        bottomY =  ((map.width * yperbottom) * map.resolution) + map.origin.y;
+
+                        let command = {
+                            topX: Math.min(topX, bottomX),
+                            topY: Math.max(topY, bottomY),
+                            bottomX: Math.max(topX, bottomX),
+                            bottomY: Math.min(topY, bottomY)
+                        };
+
+                        fetch('/actions/clean', {
+                            method: 'POST',
+                            cache: 'no-cache',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(command)
+                        });
+
+                    } else {
+
+                        let xper = (interaction.width - x) / interaction.width;
+                        let yper = y / interaction.height;
+
+                        let map = uistate.latestmap;
+
+                        console.log("XPer = " + xper + " Map = " + (map.origin.x + (map.width * map.resolution * xper)));
+                        console.log("YPer = " + yper + " Map = " + (map.origin.y + (map.height * map.resolution * yper)));
+
+                        let command = {
+                            targetx: ((map.width * xper) * map.resolution) + map.origin.x,
+                            targety: ((map.height * yper) * map.resolution) + map.origin.y,
+                            theta: Math.atan2(ym - y, x - xm)
+                        };
+
+                        console.log("Moving to " + JSON.stringify(command));
+
+                        // Move to pose
+                        fetch('/actions/moveTo', {
+                            method: 'POST',
+                            cache: 'no-cache',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(command)
+                        });
+                    }
+
+                    interaction.removeAttribute("data-mousedown")
+                    interaction.removeAttribute("data-mousex");
+                    interaction.removeAttribute("data-mousey");
+                    interaction.removeAttribute("data-mousebutton");
+
+                    interaction.width = interaction.clientWidth;
+                    interaction.height = interaction.clientHeight;
+                }
+            });
+            interaction.addEventListener("mousemove", function(event) {
+                if (interaction.hasAttribute("data-mousedown")) {
+                    var rect = interaction.getBoundingClientRect();
+                    let x = parseInt(interaction.dataset.mousex);
+                    let y = parseInt(interaction.dataset.mousey);
+
+                    var xm = event.clientX - rect.left; //x position within the element.
+                    var ym = event.clientY - rect.top;  //y position within the element.
+
+                    interaction.width = interaction.clientWidth;
+                    interaction.height = interaction.clientHeight;
+
+                    var context = interaction.getContext('2d');
+                    if (interaction.dataset.mousebutton === "2") {
+                        context.lineWidth = 4;
+                        context.strokeStyle = '#2980b9';
+                        context.strokeRect(x, y, xm - x, ym - y);
+                    } else {
+                        context.strokeStyle = '#ffffff';
+                        context.lineWidth = 4;
+                        context.moveTo(x, y);
+                        context.lineTo(xm, ym);
+                        context.stroke();
+                    }
+                }
+            });
+            clearSelection = function(event) {
                 interaction.removeAttribute("data-mousedown")
                 interaction.removeAttribute("data-mousex");
                 interaction.removeAttribute("data-mousey");
@@ -489,288 +525,282 @@
 
                 interaction.width = interaction.clientWidth;
                 interaction.height = interaction.clientHeight;
-            }
-        });
-        interaction.addEventListener("mousemove", function(event) {
-            if (interaction.hasAttribute("data-mousedown")) {
-                var rect = interaction.getBoundingClientRect();
-                let x = parseInt(interaction.dataset.mousex);
-                let y = parseInt(interaction.dataset.mousey);
+            };
+            interaction.addEventListener("mouseup", clearSelection);
+            interaction.addEventListener("mouseleave", clearSelection);
 
-                var xm = event.clientX - rect.left; //x position within the element.
-                var ym = event.clientY - rect.top;  //y position within the element.
+            function mapToCanvas(grid, canvaselement, convFunc) {
 
-                interaction.width = interaction.clientWidth;
-                interaction.height = interaction.clientHeight;
+                let width = grid.width;
+                let height = grid.height;
+                canvaselement.width = width;
+                canvaselement.height = height;
 
-                var context = interaction.getContext('2d');
-                if (interaction.dataset.mousebutton === "2") {
-                    context.lineWidth = 4;
-                    context.strokeStyle = '#2980b9';
-                    context.strokeRect(x, y, xm - x, ym - y);
-                } else {
-                    context.strokeStyle = '#ffffff';
-                    context.lineWidth = 4;
-                    context.moveTo(x, y);
-                    context.lineTo(xm, ym);
-                    context.stroke();
-                }
-            }
-        });
-        clearSelection = function(event) {
-            interaction.removeAttribute("data-mousedown")
-            interaction.removeAttribute("data-mousex");
-            interaction.removeAttribute("data-mousey");
-            interaction.removeAttribute("data-mousebutton");
+                var context = canvaselement.getContext('2d');
 
-            interaction.width = interaction.clientWidth;
-            interaction.height = interaction.clientHeight;
-        };
-        interaction.addEventListener("mouseup", clearSelection);
-        interaction.addEventListener("mouseleave", clearSelection);
+                context.imageSmoothingEnabled = false;
+                var imageData = context.createImageData(width, height);
+                for (let row = 0; row < height; row++) {
+                    for (let col = 0; col < width; col++) {
+                        // determine the index into the map data
+                        var mapI = width - col - 1 + (row * width);
+                        // determine the value
+                        var mapdata = grid.data[mapI];
 
-        function mapToCanvas(grid, canvaselement, convFunc) {
+                        const [valr, valg, valb, alpha] = convFunc(mapdata);
 
-            let width = grid.width;
-            let height = grid.height;
-            canvaselement.width = width;
-            canvaselement.height = height;
-
-            var context = canvaselement.getContext('2d');
-
-            context.imageSmoothingEnabled = false;
-            var imageData = context.createImageData(width, height);
-            for (let row = 0; row < height; row++) {
-                for (let col = 0; col < width; col++) {
-                    // determine the index into the map data
-                    var mapI = width - col - 1 + (row * width);
-                    // determine the value
-                    var mapdata = grid.data[mapI];
-
-                    const [valr, valg, valb, alpha] = convFunc(mapdata);
-
-                    // determine the index into the image data array
-                    let i = (col + (row * width)) * 4;
-                    // r
-                    imageData.data[i] = valr;
-                    // g
-                    imageData.data[++i] = valg;
-                    // b
-                    imageData.data[++i] = valb;
-                    // a
-                    imageData.data[++i] = alpha;
-                }
-            }
-            context.putImageData(imageData, 0, 0);
-        }
-
-        function appendLog(logmessage) {
-            const ts = new Date();
-            ts.setTime(Math.ceil(logmessage.stamp / 1000000));
-            level = '[UNDEF]';
-            switch (logmessage.level) {
-                case 1:
-                    level = '[DEBUG]';
-                    break;
-                case 2:
-                    level = '[INFO ]';
-                    break;
-                case 4:
-                    level = '[WARN ]';
-                    break;
-                case 8:
-                    level = '[ERROR]';
-                    break;
-                case 16:
-                    level = '[FATAL]';
-                    break;
-            }
-            const txt = ts.toUTCString() + ' ' + level + ' [' + logmessage.node + '] ' + logmessage.msg + '\n';
-            const elem = document.createElement("div");
-            elem.className = 'logrow';
-            elem.innerText = txt;
-            while (log.childElementCount > 10) {
-                log.removeChild(log.firstChild);
-            }
-            log.appendChild(elem);
-        }
-
-        function newMap(mapdata) {
-            uistate.latestmap = mapdata;
-
-            document.getElementById("canvasstack").style.aspectRatio = mapdata.width / mapdata.height;
-
-            mapToCanvas(mapdata, map, function(value) {
-                var valr = 0;
-                var valg = 0;
-                var valb = 0;
-                var alpha = 255;
-                if (value === 100) {
-                    valr = 0;
-                    valg = 0;
-                    valb = 0;
-                } else if (value === 0) {
-                    // 82BDFF
-                    valr = 0x82;
-                    valg = 0xbd;
-                    valb = 0xff;
-                } else {
-                    alpha = 0;
-                }
-                return [valr, valg, valb, alpha];
-            });
-        }
-
-        function newCostMap(mapdata) {
-            mapToCanvas(mapdata, costmap, function(value) {
-                var valr = 0;
-                var valg = 0;
-                var valb = 0;
-                var alpha = 0;
-                if (value === 100) {
-                    // cost_lethal
-                    valr = 255;
-                    valg = 0;
-                    valb = 0;
-                    alpha = 64;
-                } else if (value === 99) {
-                    // cost_inscribed
-                    valr = 255;
-                    valb = 0;
-                    alpha = 64;
-                } else if (value < 99 && value >= 1) {
-                    // not a collision, but costs calculated
-                    valr = value;
-                    valg = value;
-                    valb = value;
-                    alpha = 64;
-                }
-                return [valr, valg, valb, alpha];
-            });
-        }
-
-        function updateUI(data) {
-
-            if (data.awake) {
-
-                remotecontrol.style.display = "flex";
-                cavasstack.style.display = "block";
-                rooms.style.display = "none";
-
-                document.getElementById("relocalization").style.visibility = data.hasrelocalization ? 'visible' : 'hidden';
-                document.getElementById("cancel").style.visibility = data.hascancel ? 'visible' : 'hidden';
-
-                // Draw robot
-                if (data.odometryOnMap && uistate.latestmap) {
-
-                    let robotmapx = Math.floor((data.odometryOnMap.x - uistate.latestmap.origin.x) / uistate.latestmap.resolution);
-                    let robotmapy = Math.floor((data.odometryOnMap.y - uistate.latestmap.origin.y) / uistate.latestmap.resolution);
-
-                    uistate.robotpath.push({
-                        x: map.width - robotmapx - 1,
-                        y: robotmapy
-                    });
-
-                    path.width = map.width * 5;
-                    path.height = map.height * 5;
-
-                    dx = Math.floor(Math.sin(data.odometryOnMap.theta - Math.PI / 2) * 5);
-                    dy = Math.floor(Math.cos(data.odometryOnMap.theta - Math.PI / 2) * 5);
-
-                    var context = path.getContext('2d');
-                    context.beginPath();
-                    context.lineWidth = 5;
-                    context.strokeStyle = '#ffffff';
-                    context.fillStyle = '#ffffff';
-                    for (let i = 0; i < uistate.robotpath.length; i++) {
-                        var pos = uistate.robotpath[i];
-                        if (i === 0) {
-                            context.moveTo(pos.x * 5, pos.y * 5);
-                        } else {
-                            context.lineTo(pos.x * 5, pos.y * 5);
-                        }
+                        // determine the index into the image data array
+                        let i = (col + (row * width)) * 4;
+                        // r
+                        imageData.data[i] = valr;
+                        // g
+                        imageData.data[++i] = valg;
+                        // b
+                        imageData.data[++i] = valb;
+                        // a
+                        imageData.data[++i] = alpha;
                     }
-                    context.stroke();
+                }
+                context.putImageData(imageData, 0, 0);
+            }
 
-                    if (data.cleaningpath && data.cleaningpath.pending && data.cleaningpath.pending.length > 0) {
+            function appendLog(logmessage) {
+                const ts = new Date();
+                ts.setTime(Math.ceil(logmessage.stamp / 1000000));
+                level = '[UNDEF]';
+                switch (logmessage.level) {
+                    case 1:
+                        level = '[DEBUG]';
+                        break;
+                    case 2:
+                        level = '[INFO ]';
+                        break;
+                    case 4:
+                        level = '[WARN ]';
+                        break;
+                    case 8:
+                        level = '[ERROR]';
+                        break;
+                    case 16:
+                        level = '[FATAL]';
+                        break;
+                }
+                const txt = ts.toUTCString() + ' ' + level + ' [' + logmessage.node + '] ' + logmessage.msg + '\n';
+                const elem = document.createElement("div");
+                elem.className = 'logrow';
+                elem.innerText = txt;
+                while (log.childElementCount > 10) {
+                    log.removeChild(log.firstChild);
+                }
+                log.appendChild(elem);
+            }
 
+            function newMap(mapdata) {
+                uistate.latestmap = mapdata;
+
+                document.getElementById("canvasstack").style.aspectRatio = mapdata.width / mapdata.height;
+
+                mapToCanvas(mapdata, map, function(value) {
+                    var valr = 0;
+                    var valg = 0;
+                    var valb = 0;
+                    var alpha = 255;
+                    if (value === 100) {
+                        valr = 0;
+                        valg = 0;
+                        valb = 0;
+                    } else if (value === 0) {
+                        // 82BDFF
+                        valr = 0x82;
+                        valg = 0xbd;
+                        valb = 0xff;
+                    } else {
+                        alpha = 0;
+                    }
+                    return [valr, valg, valb, alpha];
+                });
+            }
+
+            function newCostMap(mapdata) {
+                mapToCanvas(mapdata, costmap, function(value) {
+                    var valr = 0;
+                    var valg = 0;
+                    var valb = 0;
+                    var alpha = 0;
+                    if (value === 100) {
+                        // cost_lethal
+                        valr = 255;
+                        valg = 0;
+                        valb = 0;
+                        alpha = 64;
+                    } else if (value === 99) {
+                        // cost_inscribed
+                        valr = 255;
+                        valb = 0;
+                        alpha = 64;
+                    } else if (value < 99 && value >= 1) {
+                        // not a collision, but costs calculated
+                        valr = value;
+                        valg = value;
+                        valb = value;
+                        alpha = 64;
+                    }
+                    return [valr, valg, valb, alpha];
+                });
+            }
+
+            function updateUI(data) {
+
+                if (data.awake) {
+
+                    remotecontrol.style.display = "flex";
+                    cavasstack.style.display = "block";
+                    rooms.style.display = "none";
+
+                    document.getElementById("relocalization").style.visibility = data.hasrelocalization ? 'visible' : 'hidden';
+                    document.getElementById("cancel").style.visibility = data.hascancel ? 'visible' : 'hidden';
+
+                    // Draw robot
+                    if (data.odometryOnMap && uistate.latestmap) {
+
+                        let robotmapx = Math.floor((data.odometryOnMap.x - uistate.latestmap.origin.x) / uistate.latestmap.resolution);
+                        let robotmapy = Math.floor((data.odometryOnMap.y - uistate.latestmap.origin.y) / uistate.latestmap.resolution);
+
+                        uistate.robotpath.push({
+                            x: map.width - robotmapx - 1,
+                            y: robotmapy
+                        });
+
+                        path.width = map.width * 5;
+                        path.height = map.height * 5;
+
+                        dx = Math.floor(Math.sin(data.odometryOnMap.theta - Math.PI / 2) * 5);
+                        dy = Math.floor(Math.cos(data.odometryOnMap.theta - Math.PI / 2) * 5);
+
+                        var context = path.getContext('2d');
                         context.beginPath();
                         context.lineWidth = 5;
-                        context.strokeStyle = '#ecf0f1';
-                        context.fillStyle = '#ecf0f1';
+                        context.strokeStyle = '#ffffff';
+                        context.fillStyle = '#ffffff';
+                        for (let i = 0; i < uistate.robotpath.length; i++) {
+                            var pos = uistate.robotpath[i];
+                            if (i === 0) {
+                                context.moveTo(pos.x * 5, pos.y * 5);
+                            } else {
+                                context.lineTo(pos.x * 5, pos.y * 5);
+                            }
+                        }
+                        context.stroke();
 
-                        context.moveTo((map.width - robotmapx - 1) * 5, robotmapy * 5);
+                        if (data.cleaningpath && data.cleaningpath.pending && data.cleaningpath.pending.length > 0) {
 
-                        for (let i = 0; i < data.cleaningpath.pending.length; i++) {
-                            let robotmapx = Math.floor((data.cleaningpath.pending[i].x - uistate.latestmap.origin.x) / uistate.latestmap.resolution);
-                            let robotmapy = Math.floor((data.cleaningpath.pending[i].y - uistate.latestmap.origin.y) / uistate.latestmap.resolution);
-                            context.lineTo((map.width - robotmapx - 1) * 5, robotmapy * 5);
+                            context.beginPath();
+                            context.lineWidth = 5;
+                            context.strokeStyle = '#ecf0f1';
+                            context.fillStyle = '#ecf0f1';
+
+                            context.moveTo((map.width - robotmapx - 1) * 5, robotmapy * 5);
+
+                            for (let i = 0; i < data.cleaningpath.pending.length; i++) {
+                                let robotmapx = Math.floor((data.cleaningpath.pending[i].x - uistate.latestmap.origin.x) / uistate.latestmap.resolution);
+                                let robotmapy = Math.floor((data.cleaningpath.pending[i].y - uistate.latestmap.origin.y) / uistate.latestmap.resolution);
+                                context.lineTo((map.width - robotmapx - 1) * 5, robotmapy * 5);
+                            }
+
+                            context.stroke();
                         }
 
+                        context.strokeStyle = '#000000';
+                        context.fillStyle = '#ffffff';
+                        context.lineWidth = 3;
+                        context.beginPath();
+                        context.translate(0.5, 0.5);
+                        context.arc((map.width - robotmapx - 1) * 5, robotmapy * 5, 2 * 5, 0, 2 * Math.PI, false);
+                        context.fill();
+
+                        context.moveTo((map.width - robotmapx - 1) * 5, robotmapy * 5);
+                        context.lineTo((map.width - robotmapx - 1 + dx) * 5, (robotmapy + dy) * 5);
                         context.stroke();
                     }
+                } else {
+                    uistate.robotpath = [];
 
-                    context.strokeStyle = '#000000';
-                    context.fillStyle = '#ffffff';
-                    context.lineWidth = 3;
-                    context.beginPath();
-                    context.translate(0.5, 0.5);
-                    context.arc((map.width - robotmapx - 1) * 5, robotmapy * 5, 2 * 5, 0, 2 * Math.PI, false);
-                    context.fill();
+                    remotecontrol.style.display = "none";
+                    cavasstack.style.display = "none";
+                    rooms.style.display = "flex";
 
-                    context.moveTo((map.width - robotmapx - 1) * 5, robotmapy * 5);
-                    context.lineTo((map.width - robotmapx - 1 + dx) * 5, (robotmapy + dy) * 5);
-                    context.stroke();
-                }
-            } else {
-                uistate.robotpath = [];
+                    let template = document.getElementById("roomtemplate");
 
-                remotecontrol.style.display = "none";
-                cavasstack.style.display = "none";
-                rooms.style.display = "flex";
+                    var knownrooms = document.querySelectorAll(".generated span");
+                    for (let i=0; i< knownrooms.length; i++) {
+                        let element = knownrooms[i];
+                        if (!data.rooms.includes(element.dataset.room)) {
+                            console.log("Deleting room " + element.dataset.room);
+                            element.parentNode.remove();
+                        }
+                    }
 
-                let template = document.getElementById("roomtemplate");
+                    for (let r of data.rooms) {
+                        let known = document.querySelectorAll(".generated span[data-room='" + r + "']");
+                        if (known.length === 0) {
+                            console.log("Adding room " + r);
+                            let clone = document.importNode(template.content, true);
+                            clone.querySelector("span").innerText = r;
+                            clone.querySelector("span").dataset.room = r;
+                            clone.querySelector("span").dataset.toinit = 'yes';
+                            clone.querySelector(".fa-trash").dataset.room = r;
+                            clone.querySelector(".fa-trash").dataset.toinit = 'yes';
+                            rooms.prepend(clone);
+                        }
+                    }
+                    let startbuttons = document.querySelectorAll(".generated span");
+                    for (let i=0; i < startbuttons .length; i++) {
+                        let element = startbuttons[i];
+                        if ('yes' === element.dataset.toinit ) {
+                            element.addEventListener("click", function(event) {loadRoom(element.dataset.room); event.preventDefault();});
+                            element.dataset.toinit = 'no';
+                        }
+                    }
 
-                document.querySelectorAll(".generated").forEach(e => e.remove());
-                for (let r of data.rooms) {
-                    let clone = template.content.cloneNode(true);
-                    clone.querySelector("span").innerText = r;
-                    clone.querySelector("span").addEventListener("click", function(event) {loadRoom(r); event.preventDefault(); });
-                    clone.querySelector(".fa-trash").addEventListener("click", function(event) {deleteRoom(r); event.preventDefault(); });
-                    rooms.prepend(clone);
+                    let deletebuttons = document.querySelectorAll(".generated .fa-trash");
+                    for (let i=0; i < deletebuttons.length; i++) {
+                        let element = deletebuttons[i];
+                        if ('yes' === element.dataset.toinit ) {
+                            element.addEventListener("click", function(event) {deleteRoom(element.dataset.room); event.preventDefault();});
+                            element.dataset.toinit = 'no';
+                        }
+                    }
                 }
             }
-        }
 
-        const stateEventSource = new EventSource("/statestream");
-        stateEventSource.onmessage = function(event) {
-            let data = (JSON.parse(event.data));
-            updateUI(data);
-        };
-        stateEventSource.onerror = function(event) {
-            newMap(dummymapdata.map);
-            newCostMap(dummymapdata.costmap);
-            updateUI(dummymapdata);
-        };
+            const stateEventSource = new EventSource("/statestream");
+            stateEventSource.onmessage = function(event) {
+                let data = (JSON.parse(event.data));
+                updateUI(data);
+            };
+            stateEventSource.onerror = function(event) {
+                newMap(dummymapdata.map);
+                newCostMap(dummymapdata.costmap);
+                updateUI(dummymapdata);
+            };
 
-        const logEventSource = new EventSource("/logstream");
-        logEventSource.onmessage = function(event) {
-            let data = (JSON.parse(event.data));
-            appendLog(data);
-        };
+            const logEventSource = new EventSource("/logstream");
+            logEventSource.onmessage = function(event) {
+                let data = (JSON.parse(event.data));
+                appendLog(data);
+            };
 
-        const mapEventSource = new EventSource("/mapstream");
-        mapEventSource.onmessage = function(event) {
-            let data = (JSON.parse(event.data));
-            newMap(data);
-        };
+            const mapEventSource = new EventSource("/mapstream");
+            mapEventSource.onmessage = function(event) {
+                let data = (JSON.parse(event.data));
+                newMap(data);
+            };
 
-        const costmapEventSource = new EventSource("/costmapstream");
-        costmapEventSource.onmessage = function(event) {
-            let data = (JSON.parse(event.data));
-            newCostMap(data);
-        };
-
-    </script>
+            const costmapEventSource = new EventSource("/costmapstream");
+            costmapEventSource.onmessage = function(event) {
+                let data = (JSON.parse(event.data));
+                newCostMap(data);
+            };
+        </script>
     </body>
 </html>
