@@ -337,57 +337,57 @@
         }
 
         function loadRoom(roomName) {
-            fetch('/actions/room/' + roomName + '/start').then(response => fetchState());
+            fetch('/actions/room/' + roomName + '/start');
         }
 
         function deleteRoom(roomName) {
-            fetch('/actions/room/' + roomName + '/delete').then(response => fetchState());
+            fetch('/actions/room/' + roomName + '/delete');
         }
 
         function startNewRoom() {
-            fetch('/actions/startnewroom').then(response => fetchState());
+            fetch('/actions/startnewroom');
         }
 
         function shutdown() {
-            fetch('/actions/shutdown').then(response => fetchState());
+            fetch('/actions/shutdown');
         }
 
         function turnleft() {
             uistate.starttime = Date.now();
-            fetch('/actions/turnleft').then(response => fetchState());
+            fetch('/actions/turnleft');
         }
 
         function turnright() {
             uistate.starttime = Date.now();
-            fetch('/actions/turnright').then(response => fetchState());
+            fetch('/actions/turnright');
         }
 
         function stop() {
-            fetch('/actions/stop').then(response => fetchState());
+            fetch('/actions/stop');
             updateStopwatch();
             uistate.starttime = undefined;
         }
 
         function forward() {
             uistate.starttime = Date.now();
-            fetch('/actions/forward').then(response => fetchState());
+            fetch('/actions/forward');
         }
 
         function backward() {
             uistate.starttime = Date.now()
-            fetch('/actions/backward').then(response => fetchState());
+            fetch('/actions/backward');
         }
 
         function relocalization() {
-            fetch('/actions/relocalization').then(response => fetchState());
+            fetch('/actions/relocalization');
         }
 
         function cancel() {
-            fetch('/actions/cancel').then(response => fetchState());
+            fetch('/actions/cancel');
         }
 
         function simulateObstacle() {
-            fetch('/actions/simulateObstacle').then(response => fetchState());
+            fetch('/actions/simulateObstacle');
         }
 
         document.getElementById("newroom").addEventListener("click", startNewRoom);
