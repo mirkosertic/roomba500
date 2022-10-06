@@ -275,25 +275,25 @@
                     <canvas id="map"></canvas>
                     <canvas id="costmap"></canvas>
                     <canvas id="path"></canvas>
-                    <canvas id="interaction"></canvas>
+                    <canvas id="interaction" title="Left mouseclick to move to this place. Right mouseclick to mark an area for cleaning."></canvas>
                 </div>
                 <div id="remotecontrol" class="remotecontrol">
                     <div class="navbuttons">
-                        <div id="stop" class="item stop hoverbutton"><i class="fa fa-stop"></i></div>
-                        <div id="left" class="item left hoverbutton"><i class="fa fa-angle-left"></i></div>
-                        <div id="right" class="item right hoverbutton"><i class="fa fa-angle-right"></i></div>
-                        <div id="forward" class="item forward hoverbutton"><i class="fa fa-angle-up"></i></div>
-                        <div id="backward" class="item backward hoverbutton"><i class="fa fa-angle-down"></i></div>
+                        <div id="stop" class="item stop hoverbutton"><i title="Stop" class="fa fa-stop"></i></div>
+                        <div id="left" class="item left hoverbutton"><i title="Turn left" class="fa fa-angle-left"></i></div>
+                        <div id="right" class="item right hoverbutton"><i title="Turn right" class="fa fa-angle-right"></i></div>
+                        <div id="forward" class="item forward hoverbutton"><i title="Drive forward" class="fa fa-angle-up"></i></div>
+                        <div id="backward" class="item backward hoverbutton"><i title="Drive backwards" class="fa fa-angle-down"></i></div>
                     </div>
                     <div class="navactions">
-                        <div id="obstacle"><i class="fa fa-building"></i></div>
-                        <div id="cancel"><i class="fa fa-ban"></i></div>
-                        <div id="relocalization"><i class="fa fa-search"></i></div>
-                        <div id="shutdown"><i class="fa fa-power-off"></i></div>
+                        <div id="obstacle"><i title="Simulate obstacle in front of Roomba" class="fa fa-building"></i></div>
+                        <div id="cancel"><i title="Cancel current action" class="fa fa-ban"></i></div>
+                        <div id="relocalization"><i title="Perform relocalization" class="fa fa-search"></i></div>
+                        <div id="shutdown"><i title="Shutdown" class="fa fa-power-off"></i></div>
                     </div>
                 </div>
                 <div id="rooms">
-                    <div id="newroom" class="add"><i class="fa fa-plus"></i></div>
+                    <div id="newroom" class="add"><i title="Start a new room with a fresh map" class="fa fa-plus"></i></div>
                 </div>
             </div>
             <div class="logarea">
@@ -302,7 +302,7 @@
                 </div>
             </div>
             <template id="roomtemplate">
-                <div class="room generated"><span>Room 2123123</span><i class="fa fa-trash"></i></div>
+                <div class="room generated"><span title="Start this saved room">Room 2123123</span><i title="Delete this room" class="fa fa-trash"></i></div>
             </template>
         </div>
     <script>

@@ -5,7 +5,6 @@ import os
 
 import tf
 
-import rosservice
 from geometry_msgs.msg import PoseStamped
 from tf.transformations import euler_from_quaternion
 
@@ -55,6 +54,8 @@ class SupervisorState:
         self.mapqueues = []
         self.costmapqueues = []
         self.statequeues = []
+
+        self.knownservices = []
 
     def newCleaningPath(self, message):
 
@@ -192,7 +193,6 @@ class SupervisorState:
 
     def gathersystemstate(self):
 
-        services = rosservice.get_service_list()
         knownrooms = next(os.walk(self.roomsdirectory))[1]
 
         data = {
@@ -225,9 +225,9 @@ class SupervisorState:
             'lightbumperCenterRightStat': self.lightbumperCenterRightStat,
             'lightbumperFrontRightStat': self.lightbumperFrontRightStat,
             'lightbumperRightStat': self.lightbumperRightStat,
-            'hasrelocalization': '/global_localization' in services,
-            'hasclean': '/clean' in services,
-            'hascancel': '/cancel' in services,
+            'hasrelocalization': '/global_localization' in self.knownservices,
+            'hasclean': '/clean' in self.knownservices,
+            'hascancel': '/cancel' in self.knownservices,
             'odometryOnMap': self.latestodomonmap,
             'cleaningpath': self.latestcleaningpath,
             'rooms': knownrooms

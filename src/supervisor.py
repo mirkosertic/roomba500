@@ -18,6 +18,7 @@ import tf
 import roslaunch
 import rospy
 import actionlib
+import rosservice
 
 from std_srvs.srv import Empty
 from std_msgs.msg import Int16
@@ -514,15 +515,12 @@ class Supervisor:
         # Processing the sensor polling in an endless loop until this node goes to die
         rospy.loginfo('Starting main loop')
         while not rospy.is_shutdown():
+
             self.state.syncLock.acquire()
 
             systemstate = self.state.gathersystemstate()
             for q in self.state.statequeues:
                 q.put_nowait(systemstate)
-
-            displayUpdateCounter = (displayUpdateCounter + 1) % pollingRateInHertz
-            if displayUpdateCounter == 0 and self.displaydevice is not None:
-                self.updateDisplay(systemstate)
 
             if self.processwakeup and self.state.robotnode is None:
                 try:
@@ -605,7 +603,13 @@ class Supervisor:
                 self.state.latestbatterycharge = None
 
             self.state.syncLock.release()
-            rate.sleep()
+
+            displayUpdateCounter = (displayUpdateCounter + 1) % pollingRateInHertz
+            if displayUpdateCounter == 0 and self.displaydevice is not None:
+                self.updateDisplay(systemstate)
+                self.state.knownservices = rosservice.get_service_list()
+
+        rate.sleep()
 
         rospy.loginfo('Clearing status display')
         if self.displaydevice is not None:
@@ -614,7 +618,6 @@ class Supervisor:
         rospy.loginfo('Suicide to stop all services')
 
         os.kill(os.getpid(), signal.SIGKILL)
-
 
 if __name__ == '__main__':
     try:
