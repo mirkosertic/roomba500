@@ -245,7 +245,7 @@ class DifferentialOdometry:
 
                 rospy.logwarn("Performing recovery")
 
-                self.publishCmdVel(self.collisionRevertVelocity, 0)
+                self.publishCmdVel(self.collisionRevertVelocity, .0)
 
                 # Publish pointcloud so the navigation stack marks the area in front
                 # of the robot as an obstacle
@@ -262,6 +262,7 @@ class DifferentialOdometry:
             if distance > self.collisionRevertDistance:
                 rospy.loginfo("Recovery done. Current distance is %s, target is %s", distance, self.collisionRevertDistance)
                 self.inrecovery = False
+                self.publishCmdVel(.0, .0)
             else:
                 rospy.loginfo("Performing recovery. Current distance is %s, target is %s", distance, self.collisionRevertDistance)
 
