@@ -260,10 +260,10 @@ class DifferentialOdometry:
             dy = self.referencey - self.collisionY
             distance = math.sqrt(dx * dx + dy * dy)
             if distance > self.collisionRevertDistance:
-                rospy.loginfo("Performing recovery. Current distance is %s, target is %s", distance, self.collisionRevertDistance)
-            else:
                 rospy.loginfo("Recovery done. Current distance is %s, target is %s", distance, self.collisionRevertDistance)
                 self.inrecovery = False
+            else:
+                rospy.loginfo("Performing recovery. Current distance is %s, target is %s", distance, self.collisionRevertDistance)
 
         lightsensorsmsg = PointCloud()
         lightsensorsmsg.header.stamp = rospy.Time.now()
