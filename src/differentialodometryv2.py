@@ -49,8 +49,8 @@ class DifferentialOdometry:
         self.latestSpeedRightWheelMillimeterPerSecond = 0
 
         self.inrecovery = False
-        self.collisionX = .0
-        self.collisionY = .0
+        self.collisionx = .0
+        self.collisiony = .0
         self.collisionRevertDistance = .0
         self.collisionRevertVelocity = .0
 
@@ -232,7 +232,7 @@ class DifferentialOdometry:
             if not self.inrecovery:
                 self.inrecovery = True
                 self.collisionx = self.referencex
-                self.collisionY = self.referencey
+                self.collisiony = self.referencey
 
                 if data.bumperLeft:
                     rospy.logwarn("Left bumper triggered.")
@@ -256,8 +256,8 @@ class DifferentialOdometry:
                 self.bumperspub.publish(bumpersmsg)
 
         if self.inrecovery:
-            dx = self.referencex - self.collisionX
-            dy = self.referencey - self.collisionY
+            dx = self.referencex - self.collisionx
+            dy = self.referencey - self.collisiony
             distance = math.sqrt(dx * dx + dy * dy)
             if distance > self.collisionRevertDistance:
                 rospy.loginfo("Recovery done. Current distance is %s, target is %s", distance, self.collisionRevertDistance)
