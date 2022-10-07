@@ -49,8 +49,10 @@ class DifferentialOdometry:
         self.latestSpeedRightWheelMillimeterPerSecond = 0
 
         self.inrecovery = False
-        self.currentrecoverywait = .0
-        self.recoverywaitcycles = .0
+        self.collisionX = .0
+        self.collisionY = .0
+        self.collisionRevertDistance = .0
+        self.collisionRevertVelocity = .0
 
         self.bumperpcdistance = .0
         self.bumperpcheight = .0
@@ -229,7 +231,8 @@ class DifferentialOdometry:
         if data.bumperLeft or data.bumperRight or data.wheeldropLeft or data.wheeldropRight:
             if not self.inrecovery:
                 self.inrecovery = True
-                self.currentrecoverywait = 0
+                self.collisionx = self.referencex
+                self.collisionY = self.referencey
 
                 if data.bumperLeft:
                     rospy.logwarn("Left bumper triggered.")
@@ -242,7 +245,7 @@ class DifferentialOdometry:
 
                 rospy.logwarn("Performing recovery")
 
-                self.publishCmdVel(-self.targetvelx, -self.targetvelz)
+                self.publishCmdVel(self.collisionRevertVelocity, 0)
 
                 # Publish pointcloud so the navigation stack marks the area in front
                 # of the robot as an obstacle
@@ -251,6 +254,16 @@ class DifferentialOdometry:
                 bumpersmsg.header.frame_id = self.baselinkframe
                 bumpersmsg.points.append(Point32(self.bumperpcdistance, 0, self.bumperpcheight))
                 self.bumperspub.publish(bumpersmsg)
+
+        if self.inrecovery:
+            dx = self.referencex - self.collisionX
+            dy = self.referencey - self.collisionY
+            distance = math.sqrt(dx * dx + dy * dy)
+            if distance > self.collisionRevertDistance:
+                rospy.loginfo("Performing recovery. Current distance is %s, target is %s", distance, self.collisionRevertDistance)
+            else:
+                rospy.loginfo("Recovery done. Current distance is %s, target is %s", distance, self.collisionRevertDistance)
+                self.inrecovery = False
 
         lightsensorsmsg = PointCloud()
         lightsensorsmsg.header.stamp = rospy.Time.now()
@@ -303,7 +316,8 @@ class DifferentialOdometry:
         self.ticksPerCm = float(rospy.get_param('~ticksPerCm', '22.7157014'))
         self.robotWheelSeparationInCm = float(rospy.get_param('~robotWheelSeparationInCm', '22.86'))  # 22.56 is calculated 22.86 seems to fit well
 
-        self.recoverywaitcycles = float(rospy.get_param('~recoverywaitcycles', '3'))
+        self.collisionRevertDistance = float(rospy.get_param('~collisionRevertDistance', '0.2'))
+        self.collisionRevertVelocity = float(rospy.get_param('~collisionRevertVelocity', '-0.2'))
 
         self.bumperpcdistance = float(rospy.get_param('~bumperpcdistance', '0.167'))
         self.bumperpcheight = float(rospy.get_param('~bumperpcheight', '0.01'))
@@ -332,7 +346,9 @@ class DifferentialOdometry:
 
         rospy.loginfo("Configured with ticksPerCm                       = %s ", self.ticksPerCm)
         rospy.loginfo("Configured with robotWheelSeparationInCm         = %s ", self.robotWheelSeparationInCm)
-        rospy.loginfo("Configured with recoverywaitcycles               = %s ", self.recoverywaitcycles)
+
+        rospy.loginfo("Configured with collisionRevertDistance          = %s ", self.collisionRevertDistance)
+        rospy.loginfo("Configured with collisionRevertVelocity          = %s ", self.collisionRevertVelocity)
 
         rospy.loginfo("Configured with bumperpcdistance                 = %s ", self.bumperpcdistance)
         rospy.loginfo("Configured with bumperpcheight                   = %s ", self.bumperpcheight)
@@ -378,14 +394,6 @@ class DifferentialOdometry:
         # Processing the sensor polling in an endless loop until this node shuts down
         while not rospy.is_shutdown():
             self.syncLock.acquire()
-
-            if self.inrecovery:
-                self.currentrecoverywait = self.currentrecoverywait + 1
-                if self.currentrecoverywait > self.recoverywaitcycles:
-                    rospy.loginfo("Recovery done.")
-                    self.inrecovery = False
-                else:
-                    rospy.loginfo("Performing recovery cycle %s out of %s", self.currentrecoverywait, self.recoverywaitcycles)
 
             self.publishOdometry()
 
