@@ -317,7 +317,7 @@ class DifferentialOdometry:
         self.ticksPerCm = float(rospy.get_param('~ticksPerCm', '22.7157014'))
         self.robotWheelSeparationInCm = float(rospy.get_param('~robotWheelSeparationInCm', '22.86'))  # 22.56 is calculated 22.86 seems to fit well
 
-        self.collisionRevertDistance = float(rospy.get_param('~collisionRevertDistance', '0.2'))
+        self.collisionRevertDistance = float(rospy.get_param('~collisionRevertDistance', '0.05'))
         self.collisionRevertVelocity = float(rospy.get_param('~collisionRevertVelocity', '-0.2'))
 
         self.bumperpcdistance = float(rospy.get_param('~bumperpcdistance', '0.167'))
