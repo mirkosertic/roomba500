@@ -15,13 +15,6 @@
 
     <group if="$(arg createmap)">
         <include file="$(find roomba500)/launch/slam.launch"/>
-
-        <include file="$(find roomba500)/launch/navigation.launch"/>
-
-        <include file="$(find roomba500)/launch/highlevel.launch">
-            <arg name="debugimagelocation" value="$(arg debugimagelocation)"/>
-        </include>
-
     </group>
 
     <group if="$(arg loadmap)">
@@ -35,14 +28,11 @@
             <arg name="initialyaw" value="$(arg initialyaw)"/>
         </include>
 
-        <include file="$(find roomba500)/launch/navigation.launch"/>
-
-        <include file="$(find roomba500)/launch/highlevel.launch">
-            <arg name="debugimagelocation" value="$(arg debugimagelocation)"/>
-        </include>
     </group>
 
-    <include file="$(find roomba500)/launch/roombalogger.launch">
-        <arg name="roombalog" value="$(arg roombalog)"/>
+    <include file="$(find roomba500)/launch/navigation.launch"/>
+
+    <include file="$(find roomba500)/launch/highlevel.launch">
+        <arg name="debugimagelocation" value="$(arg debugimagelocation)"/>
     </include>
 </launch>
