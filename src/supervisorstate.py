@@ -79,7 +79,27 @@ class SupervisorState:
 
     def newCleaningMap(self, message):
 
-        self.latestcleaningmap = message
+        markers = []
+
+        for marker in message.markers:
+
+            markers.append({
+                'x': marker.pose.position.x,
+                'y': marker.pose.position.y,
+                'scalex': marker.scale.x,
+                'scaley': marker.scale.y,
+                'id': marker.id,
+                'action': marker.action,
+                'colorr': marker.color.r,
+                'colorg': marker.color.g,
+                'colorb': marker.color.b,
+            })
+
+        data = {
+            'markers': markers
+        }
+
+        self.latestcleaningmap = data
 
     def newMap(self, message):
 
