@@ -274,6 +274,7 @@
                 <div id="canvasstack" class="canvasstack">
                     <canvas id="map"></canvas>
                     <canvas id="costmap"></canvas>
+                    <canvas id="markers"></canvas>
                     <canvas id="path"></canvas>
                     <canvas id="interaction" title="Left mouseclick to move to this place. Right mouseclick to mark an area for cleaning."></canvas>
                 </div>
@@ -308,6 +309,7 @@
         <script>
             const log = document.getElementById("log");
             const map = document.getElementById("map");
+            const markers = document.getElementById("markers");
             const costmap = document.getElementById("costmap");
             const path = document.getElementById("path");
             const interaction = document.getElementById("interaction");
@@ -529,6 +531,43 @@
             interaction.addEventListener("mouseup", clearSelection);
             interaction.addEventListener("mouseleave", clearSelection);
 
+            function markersToCanvas(grid, canvaselement, markers) {
+
+                if (markers) {
+                    canvaselement.width = canvaselement.clientWidth;
+                    canvaselement.height = canvaselement.clientHeight;
+
+                    let width = grid.width;
+                    let height = grid.height;
+                    let originx = grid.origin.x;
+                    let originy = grid.origin.y;
+
+                    var context = canvaselement.getContext('2d');
+                    context.imageSmoothingEnabled = false;
+                    let cwidth = canvaselement.width;
+                    let cheight = canvaselement.height;
+
+                    let scalex = cwidth / (width * grid.resolution);
+                    let scaley = cheight / (height * grid.resolution);
+
+                    context.beginPath();
+                    for (let i = 0; i < markers.markers.length; i++) {
+                        let m = markers.markers[i];
+                        dx = (m.x - originx) * scalex;
+                        dy = (m.y - originy) * scaley;
+
+                        w = m.scalex * scalex;
+                        h = m.scaley * scaley;
+
+                        context.lineWidth = 1;
+                        context.fillStyle = "rgba(" + parseInt(255 * m.colorr) + "," + parseInt(m.colorg * 255) + "," + parseInt(m.colorb * 255) + ",0.4)";
+                        context.strokeStyle = "rgba(" + parseInt(255 * m.colorr) + "," + parseInt(m.colorg * 255) + "," + parseInt(m.colorb * 255) + ",0.4)";
+                        context.fillRect(cwidth - Math.round(dx - (w / 2)), Math.round(dy - (h / 2)), 1 + Math.round(w), 1 + Math.round(h));
+                    }
+                    context.stroke();
+                }
+            }
+
             function mapToCanvas(grid, canvaselement, convFunc) {
 
                 let width = grid.width;
@@ -721,6 +760,8 @@
                         context.moveTo((map.width - robotmapx - 1) * 5, robotmapy * 5);
                         context.lineTo((map.width - robotmapx - 1 + dx) * 5, (robotmapy + dy) * 5);
                         context.stroke();
+
+                        markersToCanvas(uistate.latestmap, markers, data.cleaningmap);
                     }
                 } else {
                     uistate.robotpath = [];
@@ -782,6 +823,7 @@
                 newMap(dummymapdata.map);
                 newCostMap(dummymapdata.costmap);
                 updateUI(dummymapdata);
+                markersToCanvas(dummymapdata.map, markers, dummymapdata.cleaningmap);
             };
 
             const logEventSource = new EventSource("/logstream");
