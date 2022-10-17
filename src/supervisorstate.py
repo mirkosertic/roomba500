@@ -49,6 +49,7 @@ class SupervisorState:
 
         self.roomsdirectory = roomsdirectory
         self.latestcleaningpath = None
+        self.latestcleaningmap = None
 
         self.loggingqueues = []
         self.mapqueues = []
@@ -75,6 +76,10 @@ class SupervisorState:
             'pending': pending
         }
         self.latestcleaningpath = data
+
+    def newCleaningMap(self, message):
+
+        self.latestcleaningmap = message
 
     def newMap(self, message):
 
@@ -230,6 +235,7 @@ class SupervisorState:
             'hascancel': '/cancel' in self.knownservices,
             'odometryOnMap': self.latestodomonmap,
             'cleaningpath': self.latestcleaningpath,
+            'cleaningmap': self.latestcleaningmap,
             'rooms': knownrooms
         }
         return data

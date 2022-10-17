@@ -27,6 +27,7 @@ from nav_msgs.msg import Odometry, OccupancyGrid, Path
 from sensor_msgs.msg import PointCloud
 from rosgraph_msgs.msg import Log
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
+from visualization_msgs.msg import MarkerArray
 
 from tf.transformations import quaternion_from_euler
 
@@ -489,6 +490,7 @@ class Supervisor:
         rospy.Subscriber("map", OccupancyGrid, self.state.newMap)
         rospy.Subscriber("move_base/local_costmap/costmap", OccupancyGrid, self.state.newCostMap)
         rospy.Subscriber("cleaningpath", Path, self.state.newCleaningPath)
+        rospy.Subscriber("cleaningmap", MarkerArray, self.state.newCleaningMap)
 
         rospy.Subscriber("rosout_agg", Log, self.state.newLogMessage)
 

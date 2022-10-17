@@ -30,7 +30,7 @@ class Highlevel:
         self.map = None
         self.transformlistener = None
         self.infotopic = None
-        self.markerstopic = None
+        self.cleaningmaptopic = None
         self.movebaseclient = None
         self.currentpathindex = 0
         self.cleaningpathtopic = None
@@ -242,66 +242,6 @@ class Highlevel:
         message.numWaypoints = numWaypoints
         self.infotopic.publish(message)
 
-    def highlightPath(self, path, frameid):
-
-        markers = MarkerArray()
-        quat = quaternion_from_euler(0, 0, 0)
-
-        marker = Marker()
-        marker.header.frame_id = frameid
-        marker.header.stamp = rospy.Time.now()
-        marker.id = 3
-        marker.type = 4  # Line-strip
-        marker.action = 0
-        marker.scale.x = 0.05
-        marker.pose.position.x = 0
-        marker.pose.position.y = 0
-        marker.pose.position.z = 0.0
-        marker.pose.orientation.x = quat[0]
-        marker.pose.orientation.y = quat[1]
-        marker.pose.orientation.z = quat[2]
-        marker.pose.orientation.w = quat[3]
-        marker.points = []
-        marker.colors = []
-
-        for index, cell in enumerate(path):
-            marker.points.append(Point(cell.centerx, cell.centery, 0.05))
-            marker.colors.append(ColorRGBA(0, 0, 1, 1))
-
-            p = Marker()
-            p.header.frame_id = 'map'
-            p.header.stamp = rospy.Time.now()
-            p.id = 100 + index
-            p.type = 2  # sphere
-            p.action = 0
-            p.scale.x = 0.15
-            p.scale.y = 0.15
-            p.scale.z = 0.15
-            p.pose.position.x = cell.centerx
-            p.pose.position.y = cell.centery
-            p.pose.position.z = 0.0
-            p.pose.orientation.x = quat[0]
-            p.pose.orientation.y = quat[1]
-            p.pose.orientation.z = quat[2]
-            p.pose.orientation.w = quat[3]
-            p.points = []
-            p.colors = []
-            p.color.a = 1
-            p.color.r = 0
-            p.color.g = 0
-            p.color.b = 1
-
-            markers.markers.append(p)
-
-        marker.color.a = 1
-        marker.color.r = 0
-        marker.color.g = 0
-        marker.color.b = 1
-
-        markers.markers.append(marker)
-
-        self.markerstopic.publish(markers)
-
     def publishMapState(self):
         markers = MarkerArray()
 
@@ -338,7 +278,7 @@ class Highlevel:
 
                 markers.markers.append(marker)
 
-        self.markerstopic.publish(markers)
+        self.cleaningmaptopic.publish(markers)
 
     def start(self):
         rospy.init_node('highlevel', anonymous=True)
@@ -349,7 +289,7 @@ class Highlevel:
         rospy.loginfo("Checking system state with %s hertz", pollingRateInHertz)
         rate = rospy.Rate(pollingRateInHertz)
 
-        self.markerstopic = rospy.Publisher('visualization_marker', MarkerArray, queue_size=10, latch=True)
+        self.cleaningmaptopic = rospy.Publisher('cleaningmap', MarkerArray, queue_size=10, latch=True)
 
         # This is our map responsible for navigation and pathfinding
         gridcellwidthinmeters = float(rospy.get_param('~gridcellwidthinmeters', '0.18'))
