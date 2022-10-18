@@ -562,7 +562,7 @@
                         context.lineWidth = 1;
                         context.fillStyle = "rgba(" + parseInt(255 * m.colorr) + "," + parseInt(m.colorg * 255) + "," + parseInt(m.colorb * 255) + ",0.4)";
                         context.strokeStyle = "rgba(" + parseInt(255 * m.colorr) + "," + parseInt(m.colorg * 255) + "," + parseInt(m.colorb * 255) + ",0.4)";
-                        context.fillRect(cwidth - Math.round(dx - (w / 2)), Math.round(dy - (h / 2)), 1 + Math.round(w), 1 + Math.round(h));
+                        context.fillRect(cwidth - Math.round(dx) - Math.round(w / 2), Math.round(dy) - Math.round(h / 2), 1 + Math.round(w), 1 + Math.round(h));
                     }
                     context.stroke();
                 }

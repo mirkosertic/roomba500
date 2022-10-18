@@ -70,9 +70,6 @@ class Highlevel:
 
     def followPath(self, path, frameid):
 
-        # Draw some debug information
-        self.highlightPath(path, frameid)
-
         rospy.loginfo("Path to target has : %s waypoints", str(len(path)))
 
         self.currentpathindex = 0
