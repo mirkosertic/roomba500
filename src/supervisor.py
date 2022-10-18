@@ -80,6 +80,10 @@ class Supervisor:
 
         self.movebaseclient = None
 
+        self.sidebrushpub = None
+        self.mainbrushpub = None
+        self.vacuumpub = None
+
     def startWebServer(self):
         rospy.loginfo('Starting supervisor at %s:%s', self.wsinterface, self.wsport)
         uvicorn.run(self.app, host=self.wsinterface, port=self.wsport, debug=False, access_log=False, reload=False)
@@ -136,6 +140,10 @@ class Supervisor:
 
     def forward(self, req):
 
+        self.mainbrushpub.publish(Int16(127))
+        self.sidebrushpub.publish(Int16(127))
+        self.vacuum.publish(Int16(127))
+
         self.command(self.forwardspeed, .0)
 
         return JSONResponse({})
@@ -147,6 +155,10 @@ class Supervisor:
         return JSONResponse({})
 
     def stop(self, req):
+
+        self.mainbrushpub.publish(Int16(0))
+        self.sidebrushpub.publish(Int16(0))
+        self.vacuum.publish(Int16(0))
 
         self.command(.0, .0)
         return JSONResponse({})
@@ -493,6 +505,10 @@ class Supervisor:
         rospy.Subscriber("cleaningmap", MarkerArray, self.state.newCleaningMap)
 
         rospy.Subscriber("rosout_agg", Log, self.state.newLogMessage)
+
+        self.mainbrushpub = rospy.Publisher('cmd_mainbrush', Int16, queue_size=10)
+        self.sidebrushpub = rospy.Publisher('cmd_sidebrush', Int16, queue_size=10)
+        self.vacuum = rospy.Publisher('cmd_vacuum', Int16, queue_size=10)
 
         # We need the client for move base
         rospy.loginfo("Connecting to move_base action server")
