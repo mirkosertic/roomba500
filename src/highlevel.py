@@ -35,6 +35,10 @@ class Highlevel:
         self.currentpathindex = 0
         self.cleaningpathtopic = None
 
+        self.sidebrushpub = None
+        self.mainbrushpub = None
+        self.vacuumpub = None
+
     def newOdomMessage(self, data):
 
         rospy.logdebug("Received new odometry data")
@@ -142,6 +146,7 @@ class Highlevel:
                         rospy.signal_shutdown("Action server not available!")
                         return
 
+                    self.startVacuum()
                     self.movebaseclient.send_goal(goalAtIndex(self.currentpathindex), done_cb, active_cb, feedback_cb)
 
                     cleaningpath = Path()
@@ -154,21 +159,26 @@ class Highlevel:
                     return
                 else:
                     rospy.loginfo("Path is completed!")
+                    self.stopVacuum()
 
             if status == GoalStatus.ABORTED:
                 rospy.loginfo("Goal pose %s was aborted by the action server!", str(self.currentpathindex + 1))
+                self.stopVacuum()
 
             if status == GoalStatus.REJECTED:
                 rospy.loginfo("Goal pose %s has been rejected by the action server!", str(self.currentpathindex + 1))
+                self.stopVacuum()
 
             if status == GoalStatus.RECALLED:
                 rospy.loginfo("Goal pose %s received a cancel request before it started executing, successfull cancellation!", str(self.currentpathindex + 1))
+                self.stopVacuum()
 
             self.publishNavigationInfo(.0, .0, self.currentpathindex, len(path))
 
             pass
 
         # We start by navigating to the starting pose
+        self.startVacuum()
         self.movebaseclient.send_goal(goalAtIndex(self.currentpathindex), done_cb, active_cb, feedback_cb)
 
         # Info what needs to be done
@@ -185,6 +195,8 @@ class Highlevel:
         rospy.loginfo("Received shutdown command")
 
         self.syncLock.acquire()
+
+        self.stopVacuum()
 
         rospy.signal_shutdown('Shutdown requested')
 
@@ -214,6 +226,7 @@ class Highlevel:
         self.syncLock.acquire()
 
         self.movebaseclient.cancel_all_goals()
+        self.stopVacuum()
 
         self.syncLock.release()
 
@@ -238,6 +251,16 @@ class Highlevel:
         message.currentWaypoint = currentWaypoint
         message.numWaypoints = numWaypoints
         self.infotopic.publish(message)
+
+    def startVacuum(self):
+        self.mainbrushpub.publish(Int16(127))
+        self.sidebrushpub.publish(Int16(127))
+        self.vacuum.publish(Int16(127))
+
+    def stopVacuum(self):
+        self.mainbrushpub.publish(Int16(0))
+        self.sidebrushpub.publish(Int16(0))
+        self.vacuum.publish(Int16(0))
 
     def publishMapState(self):
         markers = MarkerArray()
@@ -305,6 +328,11 @@ class Highlevel:
 
         self.infotopic = rospy.Publisher('navigation_info', NavigationInfo, queue_size=10)
         self.cleaningpathtopic = rospy.Publisher('cleaningpath', Path, queue_size=10)
+
+        # Motor control
+        self.mainbrushpub = rospy.Publisher('cmd_mainbrush', Int16, queue_size=10)
+        self.sidebrushpub = rospy.Publisher('cmd_sidebrush', Int16, queue_size=10)
+        self.vacuum = rospy.Publisher('cmd_vacuum', Int16, queue_size=10)
 
         # We consume odometry here
         rospy.Subscriber("odom", Odometry, self.newOdomMessage)

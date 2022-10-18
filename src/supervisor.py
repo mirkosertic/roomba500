@@ -140,9 +140,9 @@ class Supervisor:
 
     def forward(self, req):
 
-        self.mainbrushpub.publish(Int16(127))
-        self.sidebrushpub.publish(Int16(127))
-        self.vacuum.publish(Int16(127))
+        #self.mainbrushpub.publish(Int16(127))
+        #self.sidebrushpub.publish(Int16(127))
+        #self.vacuum.publish(Int16(127))
 
         self.command(self.forwardspeed, .0)
 
