@@ -414,7 +414,7 @@ class DifferentialOdometry:
 
         rospy.loginfo("Configured with publish_tf                       = %s ", self.publishtf)
 
-        self.diffmotorspeedspub = rospy.Publisher('cmd_motorspeeds', DiffMotorSpeeds, queue_size=10)
+        self.diffmotorspeedspub = rospy.Publisher('roomba/cmd_motorspeeds', DiffMotorSpeeds, queue_size=10)
         self.odompub = rospy.Publisher('odom', Odometry, queue_size=10)
         self.bumperspub = rospy.Publisher('bumpers', PointCloud, queue_size=10)
         self.lightsensorspub = rospy.Publisher('lightsensors', PointCloud, queue_size=10)
@@ -423,7 +423,7 @@ class DifferentialOdometry:
 
         # Handling for cmd_vel and sensor frame data
         rospy.Subscriber("cmd_vel", Twist, self.newCmdVelCommand)
-        rospy.Subscriber("sensorframe", RoombaSensorFrame, self.newSensorFrame)
+        rospy.Subscriber("roomba/sensorframe", RoombaSensorFrame, self.newSensorFrame)
 
         # Handling for administrative shutdowns
         rospy.Subscriber("shutdown", Int16, self.newShutdownCommand)

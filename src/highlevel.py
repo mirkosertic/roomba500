@@ -330,9 +330,9 @@ class Highlevel:
         self.cleaningpathtopic = rospy.Publisher('cleaningpath', Path, queue_size=10)
 
         # Motor control
-        self.mainbrushpub = rospy.Publisher('cmd_mainbrush', Int16, queue_size=10)
-        self.sidebrushpub = rospy.Publisher('cmd_sidebrush', Int16, queue_size=10)
-        self.vacuum = rospy.Publisher('cmd_vacuum', Int16, queue_size=10)
+        self.mainbrushpub = rospy.Publisher('roomba/cmd_mainbrush', Int16, queue_size=10)
+        self.sidebrushpub = rospy.Publisher('roomba/cmd_sidebrush', Int16, queue_size=10)
+        self.vacuum = rospy.Publisher('roomba/cmd_vacuum', Int16, queue_size=10)
 
         # We consume odometry here
         rospy.Subscriber("odom", Odometry, self.newOdomMessage)

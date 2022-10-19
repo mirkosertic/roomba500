@@ -131,13 +131,13 @@ class BaseController {
             initroomba();
 
             // Topic for battery charge, capacity and light bumpers etc
-            ros::Publisher sensorFrameTopic = n.advertise<::roomba500::RoombaSensorFrame>("sensorframe", 1000);
+            ros::Publisher sensorFrameTopic = n.advertise<::roomba500::RoombaSensorFrame>("roomba/sensorframe", 1000);
 
             // We also consume motor control commands
-            ros::Subscriber mainbrushSub = n.subscribe("cmd_mainbrush", 1000, &BaseController::newCmdPWMMainBrush, this);
-            ros::Subscriber sidebrushSub = n.subscribe("cmd_sidebrush", 1000, &BaseController::newCmdPWMSideBrush, this);
-            ros::Subscriber vacuumSub = n.subscribe("cmd_vacuum", 1000, &BaseController::newCmdPWMVacuum, this);
-            ros::Subscriber motorSpeedsSub = n.subscribe("cmd_motorspeeds", 1000, &BaseController::newMotorSpeedsCommand, this);
+            ros::Subscriber mainbrushSub = n.subscribe("roomba/cmd_mainbrush", 1000, &BaseController::newCmdPWMMainBrush, this);
+            ros::Subscriber sidebrushSub = n.subscribe("roomba/cmd_sidebrush", 1000, &BaseController::newCmdPWMSideBrush, this);
+            ros::Subscriber vacuumSub = n.subscribe("roomba/cmd_vacuum", 1000, &BaseController::newCmdPWMVacuum, this);
+            ros::Subscriber motorSpeedsSub = n.subscribe("roomba/cmd_motorspeeds", 1000, &BaseController::newMotorSpeedsCommand, this);
 
             // Proper shutdown handling
             ros::Subscriber shutdownSub = n.subscribe("shutdown", 1000, &BaseController::newShutdownCommand, this);
