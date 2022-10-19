@@ -526,7 +526,7 @@ class Supervisor:
             rospy.loginfo('Using i2c connection to ssd1306 on port %s', i2cport)
             interface = i2c(port=i2cport, address=0x3C)
             self.displaydevice = ssd1306(interface)
-            # self.displaydevice = None
+            #self.displaydevice = None
 
         displayUpdateCounter = 0
 
@@ -627,7 +627,7 @@ class Supervisor:
                 self.updateDisplay(systemstate)
                 self.state.knownservices = rosservice.get_service_list()
 
-        rate.sleep()
+            rate.sleep()
 
         rospy.loginfo('Clearing status display')
         if self.displaydevice is not None:

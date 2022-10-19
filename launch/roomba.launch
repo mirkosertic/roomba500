@@ -1,5 +1,7 @@
 <?xml version="1.0"?>
 <launch>
+    <rosparam param="enable_statistics">true</rosparam>
+
     <arg name="createmap" default="false"/>
     <arg name="loadmap" default="false"/>
     <arg name="mapfile" default=""/>
