@@ -92,7 +92,7 @@ class Magnetometer:
             rate.sleep()
 
         rospy.loginfo('Magnetometer terminated.')
--113 138
+
 
 if __name__ == '__main__':
     try:
