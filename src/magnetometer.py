@@ -80,7 +80,7 @@ class Magnetometer:
                 yaw = math.atan2(y, x)
                 q = quaternion_from_euler(roll, pitch, yaw)
 
-                rospy.loginfo("Mag x = %s, y = %s, yaw = %s", x, y, yaw)
+                rospy.logdebug("Mag x = %s, y = %s, yaw = %s", x, y, yaw)
 
                 odommessage.pose.pose.orientation.x = q[0]
                 odommessage.pose.pose.orientation.y = q[1]
