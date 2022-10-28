@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 
 import rospy
+import math
 
 from std_msgs.msg import Int16
 from sensor_msgs.msg import MagneticField
+from nav_msgs.msg import Odometry
+from tf.transformations import quaternion_from_euler
 
 from HMC5883L import HMC5883L
 
@@ -13,8 +16,10 @@ class Magnetometer:
         self.bus = None
         self.deviceaddress = 0x68
         self.magneticfieldpub = None
+        self.magneticfieldodompub = None
         self.magneticfieldframe = None
         self.hmc5883l = None
+        self.odomframe = 'odom'
 
     def newShutdownCommand(self, data):
         rospy.signal_shutdown('Shutdown requested')
@@ -41,24 +46,46 @@ class Magnetometer:
         # Publishing IMU data
         self.magneticfieldpub = rospy.Publisher('imu/mag', MagneticField, queue_size=10)
 
+        self.magneticfieldodompub = rospy.Publisher('odom', Odometry, queue_size=10)
+
         # Processing the sensor polling in an endless loop until this node shuts down
         rospy.loginfo("Polling magnetometer..")
         while not rospy.is_shutdown():
 
             (x, y, z) = self.hmc5883l.axes()
 
-            msg = MagneticField()
-            msg.header.frame_id = self.magneticfieldframe
-            msg.header.stamp = rospy.Time.now()
+            currenttime = rospy.Time.now()
+
+            magmessage = MagneticField()
+            magmessage.header.frame_id = self.magneticfieldframe
+            magmessage.header.stamp = currenttime
 
             if x is not None:
-                msg.magnetic_field.x = x
+                magmessage.magnetic_field.x = x
             if y is not None:
-                msg.magnetic_field.y = y
+                magmessage.magnetic_field.y = y
             if z is not None:
-                msg.magnetic_field.z = z
+                magmessage.magnetic_field.z = z
 
-            self.magneticfieldpub.publish(msg)
+            self.magneticfieldpub.publish(magmessage)
+
+            if x is not None and y is not None:
+                odommessage = Odometry()
+                odommessage.header.stamp = currenttime
+                odommessage.header.frame_id = self.odomframe
+                odommessage.child_frame_id = self.magneticfieldframe
+
+                roll = 0
+                pitch = 0
+                yaw = math.atan2(y, x)
+                q = quaternion_from_euler(roll, pitch, yaw)
+
+                odommessage.pose.pose.orientation.x = q[0]
+                odommessage.pose.pose.orientation.y = q[1]
+                odommessage.pose.pose.orientation.z = q[2]
+                odommessage.pose.pose.orientation.w = q[3]
+
+                self.magneticfieldodompub.publish(odommessage)
 
             rate.sleep()
 

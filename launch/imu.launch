@@ -8,6 +8,7 @@
     <node name="magnetometer" pkg="roomba500" type="magnetometer.py" output="screen" respawn="false">
         <param name="rosout_disable_topics_generation" value="True"/>
         <param name="pollingRateInHertz" value="10"/>
+        <remap from="odom" to="magnetometer/odom"/>
     </node>
 
     <!-- <node name="imu" pkg="roomba500" type="imu.py" output="screen" respawn="false">
