@@ -80,6 +80,8 @@ class Magnetometer:
                 yaw = math.atan2(y, x)
                 q = quaternion_from_euler(roll, pitch, yaw)
 
+                rospy.loginfo("Mag x = %s, y = %s, yaw = %s", x, y, yaw)
+
                 odommessage.pose.pose.orientation.x = q[0]
                 odommessage.pose.pose.orientation.y = q[1]
                 odommessage.pose.pose.orientation.z = q[2]
@@ -90,7 +92,7 @@ class Magnetometer:
             rate.sleep()
 
         rospy.loginfo('Magnetometer terminated.')
-
+-113 138
 
 if __name__ == '__main__':
     try:
