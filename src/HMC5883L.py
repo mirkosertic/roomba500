@@ -34,7 +34,7 @@ class HMC5883L:
 
     def convert(self, val):
         if val == -4096:
-            return None;
+            return None
         return round(val * self.__scale, 4)
 
     def axes(self):
