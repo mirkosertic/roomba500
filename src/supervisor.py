@@ -28,6 +28,7 @@ from sensor_msgs.msg import PointCloud
 from rosgraph_msgs.msg import Log
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from visualization_msgs.msg import MarkerArray
+from actionlib_msgs.msg import GoalStatus
 
 from tf.transformations import quaternion_from_euler
 
@@ -86,7 +87,7 @@ class Supervisor:
 
     def startWebServer(self):
         rospy.loginfo('Starting supervisor at %s:%s', self.wsinterface, self.wsport)
-        uvicorn.run(self.app, host=self.wsinterface, port=self.wsport, debug=False, access_log=False, reload=False)
+        uvicorn.run(self.app, host=self.wsinterface, port=self.wsport, access_log=False, reload=False)
 
     def deliverStart(self, req):
         return FileResponse(self.staticfileswebdir + '/index.html')
@@ -358,19 +359,69 @@ class Supervisor:
             rospy.logerr("Action server not available!")
             rospy.signal_shutdown("Action server not available!")
         else:
-            q = quaternion_from_euler(0, 0, cmd['theta'])
-            goal = MoveBaseGoal()
-            goal.target_pose.header.frame_id = "map"
-            goal.target_pose.header.stamp = rospy.Time.now()
-            goal.target_pose.pose.position.x = cmd['targetx']
-            goal.target_pose.pose.position.y = cmd['targety']
-            goal.target_pose.pose.orientation.x = q[0]
-            goal.target_pose.pose.orientation.y = q[1]
-            goal.target_pose.pose.orientation.z = q[2]
-            goal.target_pose.pose.orientation.w = q[3]
+            # Rotate to target
+            rospy.loginfo("Rotating towards target position...")
+            currentx = self.state.latestodomonmap["x"]
+            currenty = self.state.latestodomonmap["y"]
+            targetangle = math.atan2(cmd['targety'] - currenty, cmd['targetx'] - currentx)
+            q = quaternion_from_euler(0, 0, targetangle)
+            rotationgoal = MoveBaseGoal()
+            rotationgoal.target_pose.header.frame_id = "map"
+            rotationgoal.target_pose.header.stamp = rospy.Time.now()
+            rotationgoal.target_pose.pose.position.x = currentx
+            rotationgoal.target_pose.pose.position.y = currenty
+            rotationgoal.target_pose.pose.orientation.x = q[0]
+            rotationgoal.target_pose.pose.orientation.y = q[1]
+            rotationgoal.target_pose.pose.orientation.z = q[2]
+            rotationgoal.target_pose.pose.orientation.w = q[3]
 
+            def done_cb(status, result):
+                rospy.loginfo("Rotation done")
+
+                if status == GoalStatus.SUCCEEDED:
+                    rospy.loginfo("Sending final goal to navigation stack...")
+                    # Move to target
+
+                    goal = MoveBaseGoal()
+                    goal.target_pose.header.frame_id = "map"
+                    goal.target_pose.header.stamp = rospy.Time.now()
+                    goal.target_pose.pose.position.x = cmd['targetx']
+                    goal.target_pose.pose.position.y = cmd['targety']
+                    goal.target_pose.pose.orientation.x = q[0]
+                    goal.target_pose.pose.orientation.y = q[1]
+                    goal.target_pose.pose.orientation.z = q[2]
+                    goal.target_pose.pose.orientation.w = q[3]
+
+                    def done_cb_2(status, result):
+                        rospy.loginfo("Reached target pose, rotating to final state")
+
+                        if status == GoalStatus.SUCCEEDED:
+                            q = quaternion_from_euler(0, 0, cmd['theta'])
+                            rot = MoveBaseGoal()
+                            rot.target_pose.header.frame_id = "map"
+                            rot.target_pose.header.stamp = rospy.Time.now()
+                            rot.target_pose.pose.position.x = cmd['targetx']
+                            rot.target_pose.pose.position.y = cmd['targety']
+                            rot.target_pose.pose.orientation.x = q[0]
+                            rot.target_pose.pose.orientation.y = q[1]
+                            rot.target_pose.pose.orientation.z = q[2]
+                            rot.target_pose.pose.orientation.w = q[3]
+
+                            self.movebaseclient.send_goal(goal)
+
+                    self.movebaseclient.send_goal(goal, done_cb_2, active_cb, feedback_cb)
+                pass
+
+            def active_cb():
+                rospy.loginfo("Goal is now being processing by action server...")
+                pass
+
+            def feedback_cb(feedback):
+                rospy.logdebug("Got feedback from action server : (%s) %s", str(type(feedback)), str(feedback))
+                pass
+
+            self.movebaseclient.send_goal(rotationgoal, done_cb, active_cb, feedback_cb)
             self.state.latestcleaningpath = {}
-            self.movebaseclient.send_goal(goal)
 
         return JSONResponse({})
 
@@ -500,7 +551,7 @@ class Supervisor:
         rospy.Subscriber("cmd_vel", Twist, self.state.newCmdVel)
         rospy.Subscriber("navigation_info", NavigationInfo, self.state.newNavigationInfo)
         rospy.Subscriber("map", OccupancyGrid, self.state.newMap)
-        rospy.Subscriber("move_base/local_costmap/costmap", OccupancyGrid, self.state.newCostMap)
+        rospy.Subscriber("move_base/global_costmap/costmap", OccupancyGrid, self.state.newCostMap)
         rospy.Subscriber("cleaningpath", Path, self.state.newCleaningPath)
         rospy.Subscriber("cleaningmap", MarkerArray, self.state.newCleaningMap)
 
@@ -591,6 +642,8 @@ class Supervisor:
 
                     self.state.ready = True
 
+                    self.state.latestcleaningpath = {}
+
                 except Exception as e:
                     self.state.robotnode = None
 
@@ -619,6 +672,7 @@ class Supervisor:
                 self.state.robotnode = None
                 self.state.latestbatterycapacity = None
                 self.state.latestbatterycharge = None
+                self.state.latestcleaningpath = {}
 
             self.state.syncLock.release()
 
@@ -636,6 +690,7 @@ class Supervisor:
         rospy.loginfo('Suicide to stop all services')
 
         os.kill(os.getpid(), signal.SIGKILL)
+
 
 if __name__ == '__main__':
     try:

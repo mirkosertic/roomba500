@@ -1,0 +1,9 @@
+<?xml version='1.0'?>
+<launch>
+    <rosparam param="enable_statistics">true</rosparam>
+    <node name='supervisor' pkg='roomba500' type='supervisor.py' output='screen' respawn='false'>
+        <param name="rosout_disable_topics_generation" value="True"/>
+        <param name="launchfile" value="highlevelsimulation.launch"/>
+        <param name="displaytype" value="demo"/>
+    </node>
+</launch>
