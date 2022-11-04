@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import cv2
 import rospy
 import threading
 import tf
@@ -11,7 +10,7 @@ from map import NavigationMap, GridCellStatus
 
 from std_msgs.msg import Int16, ColorRGBA
 from nav_msgs.msg import Odometry, OccupancyGrid, Path
-from geometry_msgs.msg import Twist, Point, Pose, PoseStamped, Quaternion, Vector3
+from geometry_msgs.msg import Twist, Point, Pose, PoseStamped, Quaternion, Vector3, PoseWithCovarianceStamped
 from visualization_msgs.msg import Marker, MarkerArray
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from actionlib_msgs.msg import GoalStatus
@@ -26,7 +25,10 @@ class Highlevel:
 
     def __init__(self):
         self.syncLock = threading.Lock()
-        self.latestOdometry = None
+
+        self.latestOdometryPose = None
+        self.latestOdometryFrame = None
+
         self.map = None
         self.transformlistener = None
         self.infotopic = None
@@ -45,7 +47,19 @@ class Highlevel:
 
         self.syncLock.acquire()
 
-        self.latestOdometry = data
+        self.latestOdometryPose = data.pose.pose
+        self.latestOdometryFrame = data.header.frame_id
+
+        self.syncLock.release()
+
+    def newInitialPose(self,data):
+
+        rospy.loginfo("Received new initial pose")
+
+        self.syncLock.acquire()
+
+        self.latestOdometryPose = data.pose.pose
+        self.latestOdometryFrame = data.header.frame_id
 
         self.syncLock.release()
 
@@ -170,7 +184,7 @@ class Highlevel:
                 self.stopVacuum()
 
             if status == GoalStatus.RECALLED:
-                rospy.loginfo("Goal pose %s received a cancel request before it started executing, successfull cancellation!", str(self.currentpathindex + 1))
+                rospy.loginfo("Goal pose %s received a cancel request before it started executing, successful cancellation!", str(self.currentpathindex + 1))
                 self.stopVacuum()
 
             self.publishNavigationInfo(.0, .0, self.currentpathindex, len(path))
@@ -234,12 +248,12 @@ class Highlevel:
 
     def latestOdometryTransformedToFrame(self, targetframe):
 
-        latestcommontime = self.transformlistener.getLatestCommonTime(targetframe, self.latestOdometry.header.frame_id)
+        latestcommontime = self.transformlistener.getLatestCommonTime(targetframe, self.latestOdometryFrame)
 
         mpose = PoseStamped()
-        mpose.pose.position = self.latestOdometry.pose.pose.position
-        mpose.pose.orientation = self.latestOdometry.pose.pose.orientation
-        mpose.header.frame_id = self.latestOdometry.header.frame_id
+        mpose.pose.position = self.latestOdometryPose.position
+        mpose.pose.orientation = self.latestOdometryPose.orientation
+        mpose.header.frame_id = self.latestOdometryFrame
         mpose.header.stamp = latestcommontime
 
         return self.transformlistener.transformPose(targetframe, mpose)
@@ -304,8 +318,6 @@ class Highlevel:
         rospy.init_node('highlevel', anonymous=True)
         pollingRateInHertz = int(rospy.get_param('~pollingRateInHertz', '1'))
 
-        debugimagelocation = rospy.get_param('~debugimagelocation', None)
-
         rospy.loginfo("Checking system state with %s hertz", pollingRateInHertz)
         rate = rospy.Rate(pollingRateInHertz)
 
@@ -336,6 +348,7 @@ class Highlevel:
 
         # We consume odometry here
         rospy.Subscriber("odom", Odometry, self.newOdomMessage)
+        rospy.Subscriber("initialpose", PoseWithCovarianceStamped, self.newInitialPose)
 
         # We need the client for move base
         rospy.loginfo("Connecting to move_base action server")
@@ -357,11 +370,6 @@ class Highlevel:
             self.syncLock.release()
 
             rate.sleep()
-
-        # We only write the debug image on exit as this is a very expensive operation on tiny devices such as a RPI.
-        rospy.loginfo('Writing debug image...')
-        image = self.map.toDebugImage()
-        cv2.imwrite(debugimagelocation, image)
 
         rospy.loginfo('Highlevel Controller terminated.')
 

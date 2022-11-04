@@ -139,6 +139,8 @@ class NavigationMap:
 
     def initOrUpdateFromOccupancyGrid(self, griddata):
 
+        rospy.loginfo("Got new costmap")
+
         if not self.isNewMap(griddata):
             self.updateCellStatusFrom(griddata)
             return
@@ -293,9 +295,14 @@ class NavigationMap:
         downmovement = True
 
         # Find the first span covering
+        rospy.loginfo("Cleaning area contains %s spans", len(spanstocover))
         for span in spanstocover:
             if src in span.cells:
                 currentspan = span
+
+        if currentspan is None:
+            rospy.loginfo("Robot is not in cleaning area!")
+            pass
 
         while len(spanstocover) > 0:
 
@@ -439,32 +446,3 @@ class NavigationMap:
                     came_from[nextCell] = currentcell
 
         return None
-
-    def toDebugImage(self):
-        image = np.zeros((self.currentmap.info.height, self.currentmap.info.width, 3), np.uint8)
-        image[:] = [0, 0, 0]
-
-        for y in range(0, self.currentmap.info.height, 1):
-            for x in range(0, self.currentmap.info.width, 1):
-                value = self.currentmap.data[y * self.currentmap.info.width + x]
-                if value == -1:
-                    color = [200, 200, 200]
-                elif value > self.occupancythreshold:
-                    color = [0, 0, 0]
-                else:
-                    color = [255, 255, 255]
-
-                image[self.currentmap.info.height - y - 1, x] = color
-
-        for cell in self.cells:
-
-            debugx = int((cell.centerx - self.currentmap.info.origin.position.x) / self.currentmap.info.resolution)
-            debugy = int((cell.centery - self.currentmap.info.origin.position.y) / self.currentmap.info.resolution)
-
-            if debugx < self.currentmap.info.width and debugy < self.currentmap.info.height:
-                if cell.status == GridCellStatus.FREE:
-                    image[self.currentmap.info.height - debugy - 1, debugx] = [0, 255, 0]
-                elif cell.status == GridCellStatus.OCCUPIED:
-                    image[self.currentmap.info.height - debugy - 1, debugx] = [0, 0, 255]
-
-        return image
