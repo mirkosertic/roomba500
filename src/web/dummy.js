@@ -1,7 +1,7 @@
 let dummymapdata = {
     "awake": true,
-    "batteryCapacity": null,
-    "batteryCharge": null,
+    "batteryCapacity": 8000,
+    "batteryCharge": 2000,
     "bumperLeft": false,
     "bumperRight": false,
     "wheeldropLeft": false,

@@ -264,12 +264,20 @@
                 right: 4.5rem;
             }
 
+            .floatright {
+                width: 20rem;
+                margin-left: auto;
+                order: 2;
+                text-align: right;
+                padding-right: 1rem;
+            }
+
         </style>
         <script src="dummy.js"></script>
     </head>
     <body oncontextmenu="return false;">
         <div class="main">
-            <div class="headerarea">Roomba System Control</div>
+            <div class="headerarea">Roomba System Control<span class="floatright" id="battery">Battery : <span id="batterystatus"></span></span></div>
             <div class="contentarea">
                 <div id="canvasstack" class="canvasstack">
                     <canvas id="map"></canvas>
@@ -316,6 +324,8 @@
             const cavasstack = document.getElementById("canvasstack");
             const remotecontrol = document.getElementById("remotecontrol");
             const rooms = document.getElementById("rooms");
+            const battery = document.getElementById("battery");
+            const batterystatus = document.getElementById("batterystatus");
 
             remotecontrol.addEventListener("click", function(event) {
                 event.preventDefault();
@@ -695,9 +705,12 @@
                     remotecontrol.style.display = "flex";
                     cavasstack.style.display = "block";
                     rooms.style.display = "none";
+                    battery.style.display = "block";
 
                     document.getElementById("relocalization").style.visibility = data.hasrelocalization ? 'visible' : 'hidden';
                     document.getElementById("cancel").style.visibility = data.hascancel ? 'visible' : 'hidden';
+
+                    batterystatus.innerText = "" + data.batteryCharge + " / " + data.batteryCapacity + " mAh";
 
                     // Draw robot
                     if (data.odometryOnMap && uistate.latestmap) {
@@ -769,6 +782,7 @@
                     remotecontrol.style.display = "none";
                     cavasstack.style.display = "none";
                     rooms.style.display = "flex";
+                    battery.style.display = "none";
 
                     let template = document.getElementById("roomtemplate");
 
