@@ -4,22 +4,14 @@
         <param name="rosout_disable_topics_generation" value="True"/>
         <param name="map_update_interval" value="1.0"/>
         <param name="maxUrange" value="8.0"/>
-        <param name="xmin" value="-5.0"/>
-        <param name="xmax" value="5.0"/>
+        <param name="xmin" value="-19.4"/>
+        <param name="xmax" value="4.6"/>
         <param name="ymin" value="-5.0"/>
-        <param name="ymax" value="5.0"/>
+        <param name="ymax" value="4.6"/>
         <param name="delta" value="0.05"/> <!-- Map-Grid-Size -->
     </node>
 
-    <!--    <include file="$(find hector_mapping)/launch/mapping_default.launch">
-            <arg name="base_frame" default="base_link"/>
-            <arg name="odom_frame" default="odom"/>
-            <arg name="pub_map_odom_transform" default="true"/>
-            <arg name="scan_subscriber_queue_size" default="5"/>
-            <arg name="scan_topic" default="scan"/>
-            <arg name="map_size" default="2048"/>
-        </include>-->
-
+    <!-- 480 * 192 x = -0.463182 y = -0.555886 yaw = -3.104431 origin: [-19.400000, -5.000000, 0.000000] width = 24m height = 9.6m -->
 
     <!--    <node pkg="slam_toolbox" type="sync_slam_toolbox_node" name="slam_toolbox" output="screen">
             <param name="rosout_disable_topics_generation" value="True" />

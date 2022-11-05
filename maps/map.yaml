@@ -1,6 +1,6 @@
-image: map.pgm
+image: /home/ubuntu/catkin_ws/src/roomba500/rooms/1667578741527/map.pgm
 resolution: 0.050000
-origin: [-16.200000, -5.000000, 0.000000]
+origin: [-19.400000, -5.000000, 0.000000]
 negate: 0
 occupied_thresh: 0.65
 free_thresh: 0.196

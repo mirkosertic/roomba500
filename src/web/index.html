@@ -445,9 +445,9 @@
                         let map = uistate.latestmap;
 
                         topX = ((map.width * xpertop) * map.resolution) + map.origin.x;
-                        topY = ((map.width * ypertop) * map.resolution) + map.origin.y;
+                        topY = ((map.height * ypertop) * map.resolution) + map.origin.y;
                         bottomX =  ((map.width * xperbottom) * map.resolution) + map.origin.x;
-                        bottomY =  ((map.width * yperbottom) * map.resolution) + map.origin.y;
+                        bottomY =  ((map.height * yperbottom) * map.resolution) + map.origin.y;
 
                         let command = {
                             topX: Math.min(topX, bottomX),

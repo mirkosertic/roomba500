@@ -230,7 +230,7 @@ class NavigationMap:
         # Boustrophedon cell decomposition
 
         def isCellInCleanArea(cell):
-            return cell.centerx >= cleanarea.mapTopLeftX and cell.centerx <= cleanarea.mapBottomRightX and cell.centery >= cleanarea.mapBottomRightY and cell.centery <= cleanarea.mapTopLeftY
+            return cell.centerx >= cleanarea.mapTopLeftX and cell.centerx <= cleanarea.mapBottomRightX and cell.centery <= cleanarea.mapTopLeftY and cell.centery >= cleanarea.mapBottomRightY
 
         def isFreeCell(cell):
             return cell is not None and cell.status == GridCellStatus.FREE and isCellInCleanArea(cell)
@@ -263,6 +263,9 @@ class NavigationMap:
         current = src
         initialspans = None
         prevspans = None
+
+        rospy.loginfo("Robot is in grid cell x=%s, y=%s", str(src.centerx), str(src.centery))
+        rospy.loginfo("Clean area is %s", str(cleanarea))
 
         rospy.loginfo("Scanning to the right...")
         while current.right is not None:
