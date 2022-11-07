@@ -103,15 +103,29 @@ class Magnetometer:
 
             self.magneticfieldpub.publish(magmessage)
 
+            rospy.logdebug("minx = %s miny = %s, maxx = %s, maxy = %s",str(minx), str(miny), str(maxx), str(maxy))
+
             if x is not None and y is not None:
                 odommessage = Odometry()
                 odommessage.header.stamp = currenttime
                 odommessage.header.frame_id = self.odomframe
                 odommessage.child_frame_id = self.magneticfieldframe
 
+                # [INFO] [1667813807.932398]: debug data contains 1001 points
+                # [INFO] [1667813807.943645]: minx = -529.92 miny = 10.12, maxx = -523.48, maxy = 21.16
+                scalex = 2 / (maxx - minx)
+                scaley = 2 / (maxy - miny)
+                dx = x - minx
+                dy = y - miny
+
+                xscaled = -1 + (dx * scalex)
+                yscaled = -1 + (dy * scaley)
+
+                rospy.logdebug("x = %s, y=%s scaled to x1 = %s, y1 = %s", str(x), str(y), str(xscaled), str(yscaled))
+
                 roll = 0
                 pitch = 0
-                yaw = math.atan2(y, x)
+                yaw = math.atan2(yscaled, xscaled)
                 q = quaternion_from_euler(roll, pitch, yaw)
 
                 rospy.logdebug("Mag x = %s, y = %s, yaw = %s", x, y, yaw)
@@ -131,9 +145,6 @@ class Magnetometer:
 
                 debugdata.points.append(Point32(x, y, 0))
                 self.debugpointcloudpub.publish(debugdata)
-
-                rospy.loginfo("debug data contains %s points", str(len(debugdata.points)))
-                rospy.loginfo("minx = %s miny = %s, maxx = %s, maxy = %s",str(minx), str(miny), str(maxx), str(maxy))
 
             rate.sleep()
 

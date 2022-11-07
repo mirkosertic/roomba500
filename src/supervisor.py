@@ -625,9 +625,6 @@ class Supervisor:
                     roombalog = str(pathlib.Path(self.roomsdirectory).joinpath(self.roomname, 'roombalog.txt'))
                     arguments.append('roombalog:=' + roombalog)
 
-                    debugimage = str(pathlib.Path(self.roomsdirectory).joinpath(self.roomname, 'debug.png'))
-                    arguments.append('debugimagelocation:=' + debugimage)
-
                     rospy.loginfo('Launching with arguments %s', str(arguments))
                     uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
                     roslaunch.configure_logging(uuid)
