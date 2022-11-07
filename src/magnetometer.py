@@ -143,7 +143,7 @@ class Magnetometer:
                 if len(debugdata.points) > 1000:
                     debugdata.points.pop(0)
 
-                debugdata.points.append(Point32(x, y, 0))
+                debugdata.points.append(Point32(scalex, scaley, 0))
                 self.debugpointcloudpub.publish(debugdata)
 
             rate.sleep()
