@@ -622,8 +622,8 @@ class Supervisor:
                         arguments.append('loadmap:=false')
                         arguments.append('createmap:=true')
 
-                    roombalog = str(pathlib.Path(self.roomsdirectory).joinpath(self.roomname, 'roombalog.txt'))
-                    arguments.append('roombalog:=' + roombalog)
+                    roomdir = str(pathlib.Path(self.roomsdirectory).joinpath(self.roomname))
+                    arguments.append('roomdirectory:=' + roomdir)
 
                     rospy.loginfo('Launching with arguments %s', str(arguments))
                     uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)

@@ -2,6 +2,8 @@
 
 import rospy
 import math
+import os
+import pathlib
 
 from std_msgs.msg import Int16
 from sensor_msgs.msg import MagneticField
@@ -49,9 +51,9 @@ class Magnetometer:
         # Publishing IMU data
         self.magneticfieldpub = rospy.Publisher('imu/mag', MagneticField, queue_size=10)
 
-        self.magneticfieldodompub = rospy.Publisher('odom', Odometry, queue_size=10)
+        self.magneticfieldodompub = rospy.Publisher('magnetometer/odom', Odometry, queue_size=10)
 
-        self.debugpointcloudpub = rospy.Publisher('imu/mag_debugpoints', PointCloud, queue_size=10)
+        self.debugpointcloudpub = rospy.Publisher('magnetometer/debugpoints', PointCloud, queue_size=10)
 
         minx = None
         miny = None
@@ -60,6 +62,22 @@ class Magnetometer:
 
         debugdata = PointCloud()
         debugdata.header.frame_id = self.magneticfieldframe
+
+        calibrationfile = str(pathlib.Path(rospy.get_param('~roomdirectory', '/tmp')).joinpath('magcalibration.txt'))
+        if os.path.exists(calibrationfile):
+            rospy.loginfo("Reading calibration data from %s", calibrationfile)
+            handle = open(calibrationfile, 'r')
+            minx = float(handle.readline())
+            miny = float(handle.readline())
+            maxx = float(handle.readline())
+            maxy = float(handle.readline())
+
+            rospy.loginfo(' minx = ' + str(minx))
+            rospy.loginfo(' miny = ' + str(miny))
+            rospy.loginfo(' maxx = ' + str(maxx))
+            rospy.loginfo(' maxy = ' + str(maxy))
+
+            handle.close()
 
         # Processing the sensor polling in an endless loop until this node shuts down
         rospy.loginfo("Polling magnetometer..")
@@ -123,7 +141,7 @@ class Magnetometer:
 
                 roll = 0
                 pitch = 0
-                yaw = math.atan2(yscaled, xscaled)
+                yaw = math.atan2(xscaled, yscaled)
                 q = quaternion_from_euler(roll, pitch, yaw)
 
                 rospy.logdebug("Mag x = %s, y = %s, yaw = %s", x, y, yaw)
@@ -135,12 +153,25 @@ class Magnetometer:
 
                 self.magneticfieldodompub.publish(odommessage)
 
-                debugdata.header.stamp = rospy.Time.now()
+                debugdata.header.stamp = currenttime
+
+                # Make sure memory is not exploding
+                if len(debugdata.points) > 1000:
+                    debugdata.points.pop(0)
 
                 debugdata.points.append(Point32(scalex, scaley, 0))
                 self.debugpointcloudpub.publish(debugdata)
 
             rate.sleep()
+
+        rospy.loginfo('Saving calibration data to %s', calibrationfile)
+        handle = open(calibrationfile, 'w')
+        handle.write('{:.6f}'.format(minx) + '\n')
+        handle.write('{:.6f}'.format(miny) + '\n')
+        handle.write('{:.6f}'.format(maxx) + '\n')
+        handle.write('{:.6f}'.format(maxy) + '\n')
+        handle.flush()
+        handle.close()
 
         rospy.loginfo('Magnetometer terminated.')
 

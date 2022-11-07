@@ -1,8 +1,12 @@
 <?xml version="1.0"?>
 <launch>
+    <arg name="roomdirectory" default="unknown"/>
+
     <include file="$(find roomba500)/launch/roombainterface.launch"/>
 
-    <include file="$(find roomba500)/launch/imu.launch"/>
+    <include file="$(find roomba500)/launch/imu.launch">
+        <arg name="roomdirectory" value="$(arg roomdirectory)"/>
+    </include>
 
     <node name="differentialodometry" pkg="roomba500" type="differentialodometryv2.py" output="screen">
         <param name="rosout_disable_topics_generation" value="True"/>

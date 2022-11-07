@@ -2,6 +2,8 @@
 
 import rospy
 import math
+import pathlib
+import os
 
 from std_msgs.msg import Int16
 from sensor_msgs.msg import Imu
@@ -153,15 +155,6 @@ class IMU:
         y_gyro_offset = 8
         z_gyro_offset = 62
 
-        # Old values
-        self.linearaccgainx = -0.115
-        self.linearaccgainy = 0.08
-        self.linearaccgainz = 0.583
-
-        self.angularvelgainx = 0.007503
-        self.angularvelgainy = 0.025122
-        self.angularvelgainz = 0.056413
-
         calibrationmode = True
         calibrationsamples = 0
         calibrationmaxsamples = 500
@@ -188,6 +181,28 @@ class IMU:
 
         # Publishing IMU data
         self.imupub = rospy.Publisher('imu/data', Imu, queue_size=10)
+
+        # Here goes our calibration data
+        calibrationfile = str(pathlib.Path(rospy.get_param('~roomdirectory', '/tmp')).joinpath('imucalibration.txt'))
+        if os.path.exists(calibrationfile):
+            rospy.loginfo("Reading calibration data from %s", calibrationfile)
+            handle = open(calibrationfile, 'r')
+            self.linearaccgainx = float(handle.readline())
+            self.linearaccgainy = float(handle.readline())
+            self.linearaccgainz = float(handle.readline())
+            self.angularvelgainx = float(handle.readline())
+            self.angularvelgainy = float(handle.readline())
+            self.angularvelgainz = float(handle.readline())
+
+            rospy.loginfo(' linearaccgainx = ' + str(self.linearaccgainx))
+            rospy.loginfo(' linearaccgainy = ' + str(self.linearaccgainy))
+            rospy.loginfo(' linearaccgainz = ' + str(self.linearaccgainz))
+            rospy.loginfo(' angularvelgainx = ' + str(self.angularvelgainx))
+            rospy.loginfo(' angularvelgainy = ' + str(self.angularvelgainy))
+            rospy.loginfo(' angularvelgainz = ' + str(self.angularvelgainz))
+
+            handle.close()
+            calibrationmode = False
 
         # Processing the sensor polling in an endless loop until this node shuts down
         rospy.loginfo("Polling MPU6050 DMP...")
@@ -232,6 +247,16 @@ class IMU:
                         rospy.loginfo(' angularvelgainy = ' + str(self.angularvelgainy))
                         rospy.loginfo(' angularvelgainz = ' + str(self.angularvelgainz))
 
+                        rospy.loginfo('Saving calibration data to %s', calibrationfile)
+                        handle = open(calibrationfile, 'w')
+                        handle.write('{:.6f}'.format(self.linearaccgainx) + '\n')
+                        handle.write('{:.6f}'.format(self.linearaccgainy) + '\n')
+                        handle.write('{:.6f}'.format(self.linearaccgainz) + '\n')
+                        handle.write('{:.6f}'.format(self.angularvelgainx) + '\n')
+                        handle.write('{:.6f}'.format(self.angularvelgainy) + '\n')
+                        handle.write('{:.6f}'.format(self.angularvelgainz) + '\n')
+                        handle.flush()
+                        handle.close()
                 else:
                     self.processROSMessage()
 
