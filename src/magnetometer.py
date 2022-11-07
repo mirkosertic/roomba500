@@ -111,8 +111,6 @@ class Magnetometer:
                 odommessage.header.frame_id = self.odomframe
                 odommessage.child_frame_id = self.magneticfieldframe
 
-                # [INFO] [1667813807.932398]: debug data contains 1001 points
-                # [INFO] [1667813807.943645]: minx = -529.92 miny = 10.12, maxx = -523.48, maxy = 21.16
                 scalex = 2 / (maxx - minx)
                 scaley = 2 / (maxy - miny)
                 dx = x - minx
@@ -138,10 +136,6 @@ class Magnetometer:
                 self.magneticfieldodompub.publish(odommessage)
 
                 debugdata.header.stamp = rospy.Time.now()
-
-                # Make sure memory is not exploding
-                if len(debugdata.points) > 1000:
-                    debugdata.points.pop(0)
 
                 debugdata.points.append(Point32(scalex, scaley, 0))
                 self.debugpointcloudpub.publish(debugdata)
