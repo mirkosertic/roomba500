@@ -26,8 +26,25 @@ class Magnetometer:
         self.odomframe = 'odom'
         self.debugpointcloudpub = None
 
+        self.minx = None
+        self.miny = None
+        self.maxx = None
+        self.maxy = None
+
+        self.calibrationfile = None
+
+
     def newShutdownCommand(self, data):
         rospy.signal_shutdown('Shutdown requested')
+
+        rospy.loginfo('Saving calibration data to %s', self.calibrationfile)
+        handle = open(self.calibrationfile, 'w')
+        handle.write('{:.6f}'.format(self.minx) + '\n')
+        handle.write('{:.6f}'.format(self.miny) + '\n')
+        handle.write('{:.6f}'.format(self.maxx) + '\n')
+        handle.write('{:.6f}'.format(self.maxy) + '\n')
+        handle.flush()
+        handle.close()
 
     def start(self):
         rospy.init_node('magnetometer', anonymous=True)
@@ -55,27 +72,22 @@ class Magnetometer:
 
         self.debugpointcloudpub = rospy.Publisher('magnetometer/debugpoints', PointCloud, queue_size=10)
 
-        minx = None
-        miny = None
-        maxx = None
-        maxy = None
-
         debugdata = PointCloud()
         debugdata.header.frame_id = self.magneticfieldframe
 
-        calibrationfile = str(pathlib.Path(rospy.get_param('~roomdirectory', '/tmp')).joinpath('magcalibration.txt'))
-        if os.path.exists(calibrationfile):
-            rospy.loginfo("Reading calibration data from %s", calibrationfile)
-            handle = open(calibrationfile, 'r')
-            minx = float(handle.readline())
-            miny = float(handle.readline())
-            maxx = float(handle.readline())
-            maxy = float(handle.readline())
+        self.calibrationfile = str(pathlib.Path(rospy.get_param('~roomdirectory', '/tmp')).joinpath('magcalibration.txt'))
+        if os.path.exists(self.calibrationfile):
+            rospy.loginfo("Reading calibration data from %s", self.calibrationfile)
+            handle = open(self.calibrationfile, 'r')
+            self.minx = float(handle.readline())
+            self.miny = float(handle.readline())
+            self.maxx = float(handle.readline())
+            self.maxy = float(handle.readline())
 
-            rospy.loginfo(' minx = ' + str(minx))
-            rospy.loginfo(' miny = ' + str(miny))
-            rospy.loginfo(' maxx = ' + str(maxx))
-            rospy.loginfo(' maxy = ' + str(maxy))
+            rospy.loginfo(' minx = ' + str(self.minx))
+            rospy.loginfo(' miny = ' + str(self.miny))
+            rospy.loginfo(' maxx = ' + str(self.maxx))
+            rospy.loginfo(' maxy = ' + str(self.maxy))
 
             handle.close()
 
@@ -92,27 +104,27 @@ class Magnetometer:
             magmessage.header.stamp = currenttime
 
             if x is not None:
-                if maxx is None:
-                    maxx = x
+                if self.maxx is None:
+                    self.maxx = x
                 else:
-                    maxx = max(x, maxx)
+                    self.maxx = max(x, self.maxx)
 
-                if minx is None:
-                    minx = x
+                if self.minx is None:
+                    self.minx = x
                 else:
-                    minx = min(x, minx)
+                    self.minx = min(x, self.minx)
 
                 magmessage.magnetic_field.x = x
             if y is not None:
-                if maxy is None:
-                    maxy = y
+                if self.maxy is None:
+                    self.maxy = y
                 else:
-                    maxy = max(y, maxy)
+                    self.maxy = max(y, self.maxy)
 
-                if miny is None:
-                    miny = y
+                if self.miny is None:
+                    self.miny = y
                 else:
-                    miny = min(y, miny)
+                    self.miny = min(y, self.miny)
 
                 magmessage.magnetic_field.y = y
             if z is not None:
@@ -121,18 +133,18 @@ class Magnetometer:
 
             self.magneticfieldpub.publish(magmessage)
 
-            rospy.logdebug("minx = %s miny = %s, maxx = %s, maxy = %s",str(minx), str(miny), str(maxx), str(maxy))
+            rospy.logdebug("minx = %s miny = %s, maxx = %s, maxy = %s",str(self.minx), str(self.miny), str(self.maxx), str(self.maxy))
 
-            if x is not None and y is not None and maxx > minx and maxy > miny:
+            if x is not None and y is not None and self.maxx > self.minx and self.maxy > self.miny:
                 odommessage = Odometry()
                 odommessage.header.stamp = currenttime
                 odommessage.header.frame_id = self.odomframe
                 odommessage.child_frame_id = self.magneticfieldframe
 
-                scalex = 2 / (maxx - minx)
-                scaley = 2 / (maxy - miny)
-                dx = x - minx
-                dy = y - miny
+                scalex = 2 / (self.maxx - self.minx)
+                scaley = 2 / (self.maxy - self.miny)
+                dx = x - self.minx
+                dy = y - self.miny
 
                 xscaled = -1 + (dx * scalex)
                 yscaled = -1 + (dy * scaley)
@@ -163,15 +175,6 @@ class Magnetometer:
                 self.debugpointcloudpub.publish(debugdata)
 
             rate.sleep()
-
-        rospy.loginfo('Saving calibration data to %s', calibrationfile)
-        handle = open(calibrationfile, 'w')
-        handle.write('{:.6f}'.format(minx) + '\n')
-        handle.write('{:.6f}'.format(miny) + '\n')
-        handle.write('{:.6f}'.format(maxx) + '\n')
-        handle.write('{:.6f}'.format(maxy) + '\n')
-        handle.flush()
-        handle.close()
 
         rospy.loginfo('Magnetometer terminated.')
 
