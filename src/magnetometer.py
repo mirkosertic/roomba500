@@ -105,7 +105,7 @@ class Magnetometer:
 
             rospy.logdebug("minx = %s miny = %s, maxx = %s, maxy = %s",str(minx), str(miny), str(maxx), str(maxy))
 
-            if x is not None and y is not None:
+            if x is not None and y is not None and maxx > minx and maxy > miny:
                 odommessage = Odometry()
                 odommessage.header.stamp = currenttime
                 odommessage.header.frame_id = self.odomframe
