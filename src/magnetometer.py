@@ -132,6 +132,9 @@ class Magnetometer:
                 debugdata.points.append(Point32(x, y, 0))
                 self.debugpointcloudpub.publish(debugdata)
 
+                rospy.loginfo("debug data contains %s points", str(len(debugdata.points)))
+                rospy.loginfo("minx = %s miny = %s, maxx = %s, maxy = %s",str(minx), str(miny), str(maxx), str(maxy))
+
             rate.sleep()
 
         rospy.loginfo('Magnetometer terminated.')
