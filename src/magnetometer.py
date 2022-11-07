@@ -33,18 +33,8 @@ class Magnetometer:
 
         self.calibrationfile = None
 
-
     def newShutdownCommand(self, data):
         rospy.signal_shutdown('Shutdown requested')
-
-        rospy.loginfo('Saving calibration data to %s', self.calibrationfile)
-        handle = open(self.calibrationfile, 'w')
-        handle.write('{:.6f}'.format(self.minx) + '\n')
-        handle.write('{:.6f}'.format(self.miny) + '\n')
-        handle.write('{:.6f}'.format(self.maxx) + '\n')
-        handle.write('{:.6f}'.format(self.maxy) + '\n')
-        handle.flush()
-        handle.close()
 
     def start(self):
         rospy.init_node('magnetometer', anonymous=True)
@@ -93,88 +83,100 @@ class Magnetometer:
 
         # Processing the sensor polling in an endless loop until this node shuts down
         rospy.loginfo("Polling magnetometer..")
-        while not rospy.is_shutdown():
+        try:
+            while not rospy.is_shutdown():
 
-            (x, y, z) = self.hmc5883l.axes()
+                (x, y, z) = self.hmc5883l.axes()
 
-            currenttime = rospy.Time.now()
+                currenttime = rospy.Time.now()
 
-            magmessage = MagneticField()
-            magmessage.header.frame_id = self.magneticfieldframe
-            magmessage.header.stamp = currenttime
+                magmessage = MagneticField()
+                magmessage.header.frame_id = self.magneticfieldframe
+                magmessage.header.stamp = currenttime
 
-            if x is not None:
-                if self.maxx is None:
-                    self.maxx = x
-                else:
-                    self.maxx = max(x, self.maxx)
+                if x is not None:
+                    if self.maxx is None:
+                        self.maxx = x
+                    else:
+                        self.maxx = max(x, self.maxx)
 
-                if self.minx is None:
-                    self.minx = x
-                else:
-                    self.minx = min(x, self.minx)
+                    if self.minx is None:
+                        self.minx = x
+                    else:
+                        self.minx = min(x, self.minx)
 
-                magmessage.magnetic_field.x = x
-            if y is not None:
-                if self.maxy is None:
-                    self.maxy = y
-                else:
-                    self.maxy = max(y, self.maxy)
+                    magmessage.magnetic_field.x = x
+                if y is not None:
+                    if self.maxy is None:
+                        self.maxy = y
+                    else:
+                        self.maxy = max(y, self.maxy)
 
-                if self.miny is None:
-                    self.miny = y
-                else:
-                    self.miny = min(y, self.miny)
+                    if self.miny is None:
+                        self.miny = y
+                    else:
+                        self.miny = min(y, self.miny)
 
-                magmessage.magnetic_field.y = y
-            if z is not None:
+                    magmessage.magnetic_field.y = y
+                if z is not None:
 
-                magmessage.magnetic_field.z = z
+                    magmessage.magnetic_field.z = z
 
-            self.magneticfieldpub.publish(magmessage)
+                self.magneticfieldpub.publish(magmessage)
 
-            rospy.logdebug("minx = %s miny = %s, maxx = %s, maxy = %s",str(self.minx), str(self.miny), str(self.maxx), str(self.maxy))
+                rospy.logdebug("minx = %s miny = %s, maxx = %s, maxy = %s",str(self.minx), str(self.miny), str(self.maxx), str(self.maxy))
 
-            if x is not None and y is not None and self.maxx > self.minx and self.maxy > self.miny:
-                odommessage = Odometry()
-                odommessage.header.stamp = currenttime
-                odommessage.header.frame_id = self.odomframe
-                odommessage.child_frame_id = self.magneticfieldframe
+                if x is not None and y is not None and self.maxx > self.minx and self.maxy > self.miny:
+                    odommessage = Odometry()
+                    odommessage.header.stamp = currenttime
+                    odommessage.header.frame_id = self.odomframe
+                    odommessage.child_frame_id = self.magneticfieldframe
 
-                scalex = 2 / (self.maxx - self.minx)
-                scaley = 2 / (self.maxy - self.miny)
-                dx = x - self.minx
-                dy = y - self.miny
+                    scalex = 2 / (self.maxx - self.minx)
+                    scaley = 2 / (self.maxy - self.miny)
+                    dx = x - self.minx
+                    dy = y - self.miny
 
-                xscaled = -1 + (dx * scalex)
-                yscaled = -1 + (dy * scaley)
+                    xscaled = -1 + (dx * scalex)
+                    yscaled = -1 + (dy * scaley)
 
-                rospy.logdebug("x = %s, y=%s scaled to x1 = %s, y1 = %s", str(x), str(y), str(xscaled), str(yscaled))
+                    rospy.logdebug("x = %s, y=%s scaled to x1 = %s, y1 = %s", str(x), str(y), str(xscaled), str(yscaled))
 
-                roll = 0
-                pitch = 0
-                yaw = math.atan2(xscaled, yscaled)
-                q = quaternion_from_euler(roll, pitch, yaw)
+                    roll = 0
+                    pitch = 0
+                    yaw = math.atan2(xscaled, yscaled)
+                    q = quaternion_from_euler(roll, pitch, yaw)
 
-                rospy.logdebug("Mag x = %s, y = %s, yaw = %s", x, y, yaw)
+                    rospy.logdebug("Mag x = %s, y = %s, yaw = %s", x, y, yaw)
 
-                odommessage.pose.pose.orientation.x = q[0]
-                odommessage.pose.pose.orientation.y = q[1]
-                odommessage.pose.pose.orientation.z = q[2]
-                odommessage.pose.pose.orientation.w = q[3]
+                    odommessage.pose.pose.orientation.x = q[0]
+                    odommessage.pose.pose.orientation.y = q[1]
+                    odommessage.pose.pose.orientation.z = q[2]
+                    odommessage.pose.pose.orientation.w = q[3]
 
-                self.magneticfieldodompub.publish(odommessage)
+                    self.magneticfieldodompub.publish(odommessage)
 
-                debugdata.header.stamp = currenttime
+                    debugdata.header.stamp = currenttime
 
-                # Make sure memory is not exploding
-                if len(debugdata.points) > 1000:
-                    debugdata.points.pop(0)
+                    # Make sure memory is not exploding
+                    if len(debugdata.points) > 1000:
+                        debugdata.points.pop(0)
 
-                debugdata.points.append(Point32(scalex, scaley, 0))
-                self.debugpointcloudpub.publish(debugdata)
+                    debugdata.points.append(Point32(scalex, scaley, 0))
+                    self.debugpointcloudpub.publish(debugdata)
 
-            rate.sleep()
+                rate.sleep()
+        except Exception as e:
+            rospy.logerr('Error shutting down node : %s', e)
+
+        rospy.loginfo('Saving calibration data to %s', self.calibrationfile)
+        handle = open(self.calibrationfile, 'w')
+        handle.write('{:.6f}'.format(self.minx) + '\n')
+        handle.write('{:.6f}'.format(self.miny) + '\n')
+        handle.write('{:.6f}'.format(self.maxx) + '\n')
+        handle.write('{:.6f}'.format(self.maxy) + '\n')
+        handle.flush()
+        handle.close()
 
         rospy.loginfo('Magnetometer terminated.')
 
