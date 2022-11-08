@@ -134,13 +134,14 @@ class Magnetometer:
 
                 rospy.logdebug("minx = %s miny = %s, maxx = %s, maxy = %s",str(self.minx), str(self.miny), str(self.maxx), str(self.maxy))
 
-                if x is not None and y is not None: #and self.maxx > self.minx and self.maxy > self.miny:
+                if x is not None and y is not None and self.maxx > self.minx and self.maxy > self.miny:
 
                     z = 100
 
                     if lograwdata:
                         raw_data_handle.write('{:.6f}'.format(x) + ',')
-                        raw_data_handle.write('{:.6f}'.format(y) + ',0\n')
+                        raw_data_handle.write('{:.6f}'.format(y) + ',')
+                        raw_data_handle.write('{:.6f}'.format(z) + '\n')
 
                     currenttime = rospy.Time.now()
 
@@ -178,8 +179,8 @@ class Magnetometer:
                     magmessageraw = MagneticField()
                     magmessageraw.header.frame_id = self.magneticfieldframe
                     magmessageraw.header.stamp = currenttime
-                    magmessageraw.magnetic_field.x = yscaled
-                    magmessageraw.magnetic_field.y = xscaled
+                    magmessageraw.magnetic_field.x = x
+                    magmessageraw.magnetic_field.y = y
                     self.magneticfieldpubraw.publish(magmessageraw)
 
                     roll = 0
