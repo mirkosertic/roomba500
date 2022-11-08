@@ -44,6 +44,22 @@ class Magnetometer:
 
         lograwdata = bool(rospy.get_param('~lograwdata', 'True'))
 
+        hard_iron_bias_x = float(rospy.get_param('~hard_iron_bias_x', '244.6953822373436'))
+        hard_iron_bias_y = float(rospy.get_param('~hard_iron_bias_y', '-478.3109347752146'))
+        hard_iron_bias_z = float(rospy.get_param('~hard_iron_bias_z', '187.88851271580867'))
+
+        soft_iron_bias_xx = float(rospy.get_param('~soft_iron_bias_xx', '0.0819028609649276'))
+        soft_iron_bias_xy =  float(rospy.get_param('~soft_iron_bias_xy', '-0.08186652146555928'))
+        soft_iron_bias_xz =  float(rospy.get_param('~soft_iron_bias_xz', '0.0052316581647013'))
+
+        soft_iron_bias_yx =  float(rospy.get_param('~soft_iron_bias_yx', '-0.08186652146555924'))
+        soft_iron_bias_yy =  float(rospy.get_param('~soft_iron_bias_yy', '0.08193966402754398'))
+        soft_iron_bias_yz =  float(rospy.get_param('~soft_iron_bias_yz', '0.0004502243369786666'))
+
+        soft_iron_bias_zx =  float(rospy.get_param('~soft_iron_bias_zx', '0.005231658164701299'))
+        soft_iron_bias_zy =  float(rospy.get_param('~soft_iron_bias_zy', '0.0004502243369786652'))
+        soft_iron_bias_zz =  float(rospy.get_param('~soft_iron_bias_zz', '0.2950141209373251'))
+
         rospy.loginfo("Polling magnetometer data with %s hertz", pollingRateInHertz)
         rate = rospy.Rate(pollingRateInHertz)
 
@@ -116,7 +132,9 @@ class Magnetometer:
 
                 rospy.logdebug("minx = %s miny = %s, maxx = %s, maxy = %s",str(self.minx), str(self.miny), str(self.maxx), str(self.maxy))
 
-                if x is not None and y is not None and self.maxx > self.minx and self.maxy > self.miny:
+                if x is not None and y is not None: #and self.maxx > self.minx and self.maxy > self.miny:
+
+                    z = 100
 
                     if lograwdata:
                         raw_data_handle.write('{:.6f}'.format(x) + ',')
@@ -130,22 +148,29 @@ class Magnetometer:
                     odommessage.child_frame_id = self.magneticfieldframe
 
                     # Implementation is here: https://github.com/nliaudat/magnetometer_calibration
+                    xm_off = x - hard_iron_bias_x
+                    ym_off = y - hard_iron_bias_y
+                    zm_off = z - hard_iron_bias_z
 
-                    scalex = 2 / (self.maxx - self.minx)
-                    scaley = 2 / (self.maxy - self.miny)
-                    dx = x - self.minx
-                    dy = y - self.miny
+                    xm_cal = xm_off * soft_iron_bias_xx + ym_off * soft_iron_bias_yx + zm_off * soft_iron_bias_zx
+                    ym_cal = xm_off * soft_iron_bias_xy + ym_off * soft_iron_bias_yy + zm_off * soft_iron_bias_zy
+                    zm_cal = xm_off * soft_iron_bias_xz + ym_off * soft_iron_bias_yz + zm_off * soft_iron_bias_zz
 
-                    xscaled = -1 + (dx * scalex)
-                    yscaled = -1 + (dy * scaley)
+                    #scalex = 2 / (self.maxx - self.minx)
+                    #scaley = 2 / (self.maxy - self.miny)
+                    #dx = x - self.minx
+                    #dy = y - self.miny
 
-                    rospy.logdebug("x = %s, y=%s scaled to x1 = %s, y1 = %s", str(x), str(y), str(xscaled), str(yscaled))
+                    #xscaled = -1 + (dx * scalex)
+                    #yscaled = -1 + (dy * scaley)
+
+                    rospy.logdebug("x = %s, y=%s scaled to x1 = %s, y1 = %s", str(x), str(y), str(xm_cal), str(ym_cal))
 
                     magmessage = MagneticField()
                     magmessage.header.frame_id = self.magneticfieldframe
                     magmessage.header.stamp = currenttime
-                    magmessage.magnetic_field.x = yscaled
-                    magmessage.magnetic_field.y = xscaled
+                    magmessage.magnetic_field.x = ym_cal
+                    magmessage.magnetic_field.y = xm_cal
                     self.magneticfieldpub.publish(magmessage)
 
                     magmessageraw = MagneticField()
@@ -157,7 +182,7 @@ class Magnetometer:
 
                     roll = 0
                     pitch = 0
-                    yaw = math.atan2(xscaled, yscaled)
+                    yaw = math.atan2(xm_cal, ym_cal)
                     q = quaternion_from_euler(roll, pitch, yaw)
 
                     rospy.logdebug("Mag x = %s, y = %s, yaw = %s", x, y, yaw)
