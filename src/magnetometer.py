@@ -20,6 +20,7 @@ class Magnetometer:
         self.magneticfieldpub = None
         self.magneticfieldpubraw = None
         self.magneticfieldodompub = None
+        self.magneticfieldsoftironodompub = None
         self.magneticfieldframe = None
         self.hmc5883l = None
         self.odomframe = 'odom'
@@ -78,6 +79,7 @@ class Magnetometer:
         self.magneticfieldpubraw = rospy.Publisher('imu/mag_raw', MagneticField, queue_size=10)
 
         self.magneticfieldodompub = rospy.Publisher('magnetometer/odom', Odometry, queue_size=10)
+        self.magneticfieldsoftironodompub = rospy.Publisher('magnetometer/odom_softiron', Odometry, queue_size=10)
 
         calibrationfile = str(pathlib.Path(rospy.get_param('~roomdirectory', '/tmp')).joinpath('magcalibration.txt'))
         if os.path.exists(calibrationfile):
@@ -185,14 +187,22 @@ class Magnetometer:
                     yaw = math.atan2(xscaled, yscaled)
                     q = quaternion_from_euler(roll, pitch, yaw)
 
-                    rospy.logdebug("Mag x = %s, y = %s, yaw = %s", x, y, yaw)
-
                     odommessage.pose.pose.orientation.x = q[0]
                     odommessage.pose.pose.orientation.y = q[1]
                     odommessage.pose.pose.orientation.z = q[2]
                     odommessage.pose.pose.orientation.w = q[3]
 
                     self.magneticfieldodompub.publish(odommessage)
+
+                    yaw = math.atan2(xm_cal, ym_cal)
+                    q = quaternion_from_euler(roll, pitch, yaw)
+
+                    odommessage.pose.pose.orientation.x = q[0]
+                    odommessage.pose.pose.orientation.y = q[1]
+                    odommessage.pose.pose.orientation.z = q[2]
+                    odommessage.pose.pose.orientation.w = q[3]
+
+                    self.magneticfieldsoftironodompub.publish(odommessage)
 
                 rate.sleep()
         except Exception as e:
