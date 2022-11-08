@@ -42,7 +42,7 @@ class Magnetometer:
         self.maxx = float(rospy.get_param('~initial_maxx', '-79.12'))
         self.maxy = float(rospy.get_param('~initial_maxy', '283.36'))
 
-        lograwdata = bool(rospy.get_param('~lograwdata', 'True'))
+        lograwdata = bool(rospy.get_param('~lograwdata', 'False'))
 
         hard_iron_bias_x = float(rospy.get_param('~hard_iron_bias_x', '244.6953822373436'))
         hard_iron_bias_y = float(rospy.get_param('~hard_iron_bias_y', '-478.3109347752146'))
