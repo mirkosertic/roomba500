@@ -3,14 +3,14 @@ base_local_planner: dwa_local_planner/DWAPlannerROS
 DWAPlannerROS:
 
   # Robot Configuration Parameters
-  max_vel_x: 0.40
+  max_vel_x: 0.30
   min_vel_x: 0.13
 
   max_vel_y: 0.0
   min_vel_y: 0.0
 
   # The velocity when robot is moving in a straight line
-  max_vel_trans:  0.40
+  max_vel_trans:  0.30
   min_vel_trans:  0.13
 
   max_vel_theta: 1.82

@@ -4,6 +4,7 @@ import rospy
 import math
 import os
 import pathlib
+import yaml
 
 from std_msgs.msg import Int16
 from sensor_msgs.msg import MagneticField
@@ -84,18 +85,17 @@ class Magnetometer:
         calibrationfile = str(pathlib.Path(rospy.get_param('~roomdirectory', '/tmp')).joinpath('magcalibration.txt'))
         if os.path.exists(calibrationfile):
             rospy.loginfo("Reading calibration data from %s", calibrationfile)
-            handle = open(calibrationfile, 'r')
-            self.minx = float(handle.readline())
-            self.miny = float(handle.readline())
-            self.maxx = float(handle.readline())
-            self.maxy = float(handle.readline())
+            with open(calibrationfile, 'r') as stream:
+                data = yaml.safe_load(stream)
+                self.minx = data.minx
+                self.miny = data.miny
+                self.maxx = data.maxx
+                self.maxy = data.maxy
 
-            rospy.loginfo(' minx = ' + str(self.minx))
-            rospy.loginfo(' miny = ' + str(self.miny))
-            rospy.loginfo(' maxx = ' + str(self.maxx))
-            rospy.loginfo(' maxy = ' + str(self.maxy))
-
-            handle.close()
+                rospy.loginfo(' minx = ' + str(self.minx))
+                rospy.loginfo(' miny = ' + str(self.miny))
+                rospy.loginfo(' maxx = ' + str(self.maxx))
+                rospy.loginfo(' maxy = ' + str(self.maxy))
 
         raw_data_handle = None
         if lograwdata:
@@ -214,13 +214,14 @@ class Magnetometer:
             raw_data_handle.close()
 
         rospy.loginfo('Saving calibration data to %s', calibrationfile)
-        handle = open(calibrationfile, 'w')
-        handle.write('{:.6f}'.format(self.minx) + '\n')
-        handle.write('{:.6f}'.format(self.miny) + '\n')
-        handle.write('{:.6f}'.format(self.maxx) + '\n')
-        handle.write('{:.6f}'.format(self.maxy) + '\n')
-        handle.flush()
-        handle.close()
+        with open(calibrationfile, "w") as outfile:
+            data = dict(
+                minx = self.minx,
+                miny = self.miny,
+                maxx = self.maxx,
+                maxy = self.maxy
+            )
+            yaml.dump(data, outfile, default_flow_style=False)
 
         rospy.loginfo('Magnetometer terminated.')
 
@@ -231,4 +232,3 @@ if __name__ == '__main__':
         magnetometer.start()
     except rospy.ROSInterruptException:
         pass
-

@@ -4,6 +4,7 @@ import rospy
 import math
 import pathlib
 import os
+import yaml
 
 from std_msgs.msg import Int16
 from sensor_msgs.msg import Imu
@@ -186,13 +187,14 @@ class IMU:
         calibrationfile = str(pathlib.Path(rospy.get_param('~roomdirectory', '/tmp')).joinpath('imucalibration.txt'))
         if os.path.exists(calibrationfile):
             rospy.loginfo("Reading calibration data from %s", calibrationfile)
-            handle = open(calibrationfile, 'r')
-            self.linearaccgainx = float(handle.readline())
-            self.linearaccgainy = float(handle.readline())
-            self.linearaccgainz = float(handle.readline())
-            self.angularvelgainx = float(handle.readline())
-            self.angularvelgainy = float(handle.readline())
-            self.angularvelgainz = float(handle.readline())
+            with open(calibrationfile, 'r') as stream:
+                data = yaml.safe_load(stream)
+                self.linearaccgainx = data.linearaccgainx
+                self.linearaccgainy = data.linearaccgainy
+                self.linearaccgainz = data.linearaccgainz
+                self.angularvelgainx = data.angularvelgainx
+                self.angularvelgainy = data.angularvelgainy
+                self.angularvelgainz = data.angularvelgainz
 
             rospy.loginfo(' linearaccgainx = ' + str(self.linearaccgainx))
             rospy.loginfo(' linearaccgainy = ' + str(self.linearaccgainy))
@@ -201,7 +203,6 @@ class IMU:
             rospy.loginfo(' angularvelgainy = ' + str(self.angularvelgainy))
             rospy.loginfo(' angularvelgainz = ' + str(self.angularvelgainz))
 
-            handle.close()
             calibrationmode = False
 
         # Processing the sensor polling in an endless loop until this node shuts down
@@ -248,15 +249,16 @@ class IMU:
                         rospy.loginfo(' angularvelgainz = ' + str(self.angularvelgainz))
 
                         rospy.loginfo('Saving calibration data to %s', calibrationfile)
-                        handle = open(calibrationfile, 'w')
-                        handle.write('{:.6f}'.format(self.linearaccgainx) + '\n')
-                        handle.write('{:.6f}'.format(self.linearaccgainy) + '\n')
-                        handle.write('{:.6f}'.format(self.linearaccgainz) + '\n')
-                        handle.write('{:.6f}'.format(self.angularvelgainx) + '\n')
-                        handle.write('{:.6f}'.format(self.angularvelgainy) + '\n')
-                        handle.write('{:.6f}'.format(self.angularvelgainz) + '\n')
-                        handle.flush()
-                        handle.close()
+                        with open(calibrationfile, "w") as outfile:
+                            data = dict(
+                                linearaccgainx = self.linearaccgainx,
+                                linearaccgainy = self.linearaccgainy,
+                                linearaccgainz = self.linearaccgainz,
+                                angularvelgainx = self.angularvelgainx,
+                                angularvelgainy = self.angularvelgainy,
+                                angularvelgainz = self.angularvelgainz,
+                            )
+                            yaml.dump(data, outfile, default_flow_style=False)
                 else:
                     self.processROSMessage()
 

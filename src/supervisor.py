@@ -13,6 +13,7 @@ import time
 import shutil
 import asyncio
 import json
+import yaml
 
 import tf
 import roslaunch
@@ -459,7 +460,7 @@ class Supervisor:
                 except Exception as e3:
                     return default
 
-    def savestateformap(self):
+    def savestateformap(self, latestposfilename):
         try:
             mapfile = str(pathlib.Path(self.roomsdirectory).joinpath(self.roomname, 'map'))
 
@@ -473,14 +474,14 @@ class Supervisor:
             time.sleep(5)
             process.stop()
 
-            latestposfilename = str(pathlib.Path(self.roomsdirectory).joinpath(self.roomname, 'latest.position'))
             rospy.loginfo('Saving latest position to %s', latestposfilename)
-            handle = open(latestposfilename, 'w')
-            handle.write('{:.6f}'.format(self.state.latestodomonmap["x"]) + '\n')
-            handle.write('{:.6f}'.format(self.state.latestodomonmap["y"]) + '\n')
-            handle.write('{:.6f}'.format(self.state.latestodomonmap["theta"]) + '\n')
-            handle.flush()
-            handle.close()
+            with open(latestposfilename, "w") as outfile:
+                data = dict(
+                    initial_pose_x = float(self.state.latestodomonmap["x"]),
+                    initial_pose_y = float(self.state.latestodomonmap["y"]),
+                    initial_pose_a = self.state.latestodomonmap["theta"],
+                )
+                yaml.dump(data, outfile, default_flow_style=False)
 
         except Exception as e:
             logging.error(traceback.format_exc())
@@ -595,28 +596,13 @@ class Supervisor:
                 try:
                     rospy.loginfo('Starting new node with launch file %s', self.nodelaunchfile)
 
-                    latestposfilename = str(pathlib.Path(self.roomsdirectory).joinpath(self.roomname, 'latest.position'))
-
                     arguments = []
+
+                    latestposfilename = str(pathlib.Path(self.roomsdirectory).joinpath(self.roomname, 'latestposition.yaml'))
                     if os.path.exists(latestposfilename):
-                        rospy.loginfo('Loading latest position from %s', latestposfilename)
-                        handle = open(latestposfilename, 'r')
-                        x = float(handle.readline())
-                        y = float(handle.readline())
-                        yaw = float(handle.readline())
-                        handle.close()
-
-                        rospy.loginfo('Latest position is x=%s, y=%s, yaw=%s', x, y, yaw)
-
-                        mapfile = str(pathlib.Path(self.roomsdirectory).joinpath(self.roomname, 'map.yaml'))
-                        rospy.loginfo('Using map file %s', mapfile)
-
-                        arguments.append('initialx:=' + str(x))
-                        arguments.append('initialy:=' + str(y))
-                        arguments.append('initialyaw:=' + str(yaw))
+                        rospy.loginfo('Using existing map with position stored in %s', latestposfilename)
                         arguments.append('loadmap:=true')
                         arguments.append('createmap:=false')
-                        arguments.append('mapfile:=' + mapfile)
                     else:
                         rospy.loginfo('Using a new map which will be stored as %s', self.roomname)
                         arguments.append('loadmap:=false')
@@ -655,7 +641,8 @@ class Supervisor:
                 # This requests a shutdown of subscribing nodes (Odometry, Highlevel etc.)
                 shutdownTopic.publish(Int16(1))
 
-                self.savestateformap()
+                latestposfilename = str(pathlib.Path(self.roomsdirectory).joinpath(self.roomname, 'latestposition.yaml'))
+                self.savestateformap(latestposfilename)
 
                 try:
                     rospy.loginfo('Shutting down running node')

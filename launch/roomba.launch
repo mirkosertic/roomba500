@@ -4,10 +4,6 @@
 
     <arg name="createmap" default="false"/>
     <arg name="loadmap" default="false"/>
-    <arg name="mapfile" default=""/>
-    <arg name="initialx" default="0"/>
-    <arg name="initialy" default="0"/>
-    <arg name="initialyaw" default="0"/>
     <arg name="roomdirectory" default="/tmp"/>
 
     <include file="$(find roomba500)/launch/hardware.launch">
@@ -19,14 +15,12 @@
    </group>
 
     <group if="$(arg loadmap)">
-        <node pkg="map_server" type="map_server" name="map_server" output="screen" args="$(arg mapfile)">
+        <node pkg="map_server" type="map_server" name="map_server" output="screen" args="$(arg roomdirectory)/map.yaml">
             <param name="rosout_disable_topics_generation" value="True"/>
         </node>
 
         <include file="$(find roomba500)/launch/amcl.launch">
-            <arg name="initialx" value="$(arg initialx)"/>
-            <arg name="initialy" value="$(arg initialy)"/>
-            <arg name="initialyaw" value="$(arg initialyaw)"/>
+            <arg name="roomdirectory" value="$(arg roomdirectory)"/>
         </include>
     </group>
 
