@@ -156,33 +156,33 @@ class Magnetometer:
                     ym_cal = xm_off * soft_iron_bias_xy + ym_off * soft_iron_bias_yy + zm_off * soft_iron_bias_zy
                     zm_cal = xm_off * soft_iron_bias_xz + ym_off * soft_iron_bias_yz + zm_off * soft_iron_bias_zz
 
-                    #scalex = 2 / (self.maxx - self.minx)
-                    #scaley = 2 / (self.maxy - self.miny)
-                    #dx = x - self.minx
-                    #dy = y - self.miny
+                    scalex = 2 / (self.maxx - self.minx)
+                    scaley = 2 / (self.maxy - self.miny)
+                    dx = x - self.minx
+                    dy = y - self.miny
 
-                    #xscaled = -1 + (dx * scalex)
-                    #yscaled = -1 + (dy * scaley)
+                    xscaled = -1 + (dx * scalex)
+                    yscaled = -1 + (dy * scaley)
 
-                    rospy.logdebug("x = %s, y=%s scaled to x1 = %s, y1 = %s", str(x), str(y), str(xm_cal), str(ym_cal))
+                    rospy.logdebug("x = %s, y=%s scaled to x1 = %s, y1 = %s", str(x), str(y), str(xscaled), str(yscaled))
 
                     magmessage = MagneticField()
                     magmessage.header.frame_id = self.magneticfieldframe
                     magmessage.header.stamp = currenttime
-                    magmessage.magnetic_field.x = ym_cal
-                    magmessage.magnetic_field.y = xm_cal
+                    magmessage.magnetic_field.x = yscaled
+                    magmessage.magnetic_field.y = xscaled
                     self.magneticfieldpub.publish(magmessage)
 
                     magmessageraw = MagneticField()
                     magmessageraw.header.frame_id = self.magneticfieldframe
                     magmessageraw.header.stamp = currenttime
-                    magmessageraw.magnetic_field.x = y
-                    magmessageraw.magnetic_field.y = x
+                    magmessageraw.magnetic_field.x = yscaled
+                    magmessageraw.magnetic_field.y = xscaled
                     self.magneticfieldpubraw.publish(magmessageraw)
 
                     roll = 0
                     pitch = 0
-                    yaw = math.atan2(xm_cal, ym_cal)
+                    yaw = math.atan2(xscaled, yscaled)
                     q = quaternion_from_euler(roll, pitch, yaw)
 
                     rospy.logdebug("Mag x = %s, y = %s, yaw = %s", x, y, yaw)
