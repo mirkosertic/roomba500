@@ -8,14 +8,14 @@
         <param name="xmax" value="4.6"/>
         <param name="ymin" value="-5.0"/>
         <param name="ymax" value="4.6"/>
-        <param name="delta" value="0.05"/> <!-- Map-Grid-Size -->
+        <param name="delta" value="0.04"/>
     </node>
 
     <!-- 480 * 192 x = -0.463182 y = -0.555886 yaw = -3.104431 origin: [-19.400000, -5.000000, 0.000000] width = 24m height = 9.6m -->
 
-    <!--    <node pkg="slam_toolbox" type="sync_slam_toolbox_node" name="slam_toolbox" output="screen">
-            <param name="rosout_disable_topics_generation" value="True" />
-            <rosparam command="load" file="$(find roomba500)/config/slamtoolbox_online_sync.yaml" />
-        </node> -->
+    <!--<node pkg="slam_toolbox" type="sync_slam_toolbox_node" name="slam_toolbox" output="screen">
+        <param name="rosout_disable_topics_generation" value="True" />
+        <rosparam command="load" file="$(find roomba500)/config/slamtoolbox_online_sync.yaml" />
+    </node>-->
 
 </launch>

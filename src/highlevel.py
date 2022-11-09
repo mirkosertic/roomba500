@@ -152,7 +152,7 @@ class Highlevel:
 
                 self.currentpathindex = self.currentpathindex + 1
 
-                if self.currentpathindex < len(path) - 1:
+                if self.currentpathindex < len(path):
                     rospy.loginfo("Continue with waypoint %s", str(self.currentpathindex + 1))
 
                     if not self.movebaseclient.wait_for_server(rospy.Duration(1.0)):
