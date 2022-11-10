@@ -16,6 +16,7 @@ let dummymapdata = {
     "wheelEncoderRight": 0,
     "lastcommandedvelx": 0.19368421052631585,
     "lastcommandedveltheta": 0.0,
+    "compass": 2.0,
     "odomvelx": 0.19351249595612657,
     "odomveltheta": 0.0007150618907072933,
     "distanceToTargetInMeters": 0.3788996636867523,

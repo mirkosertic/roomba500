@@ -43,6 +43,7 @@ class SupervisorState:
         self.transformlistener = transformlistener
 
         self.latestodomonmap = None
+        self.latestcompass = None
 
         self.lastcommandedvelx = .0
         self.lastcommandedveltheta = .0
@@ -198,6 +199,33 @@ class SupervisorState:
 
         self.syncLock.release()
 
+    def newMagnetometerOdometry(self, message):
+        try:
+            self.syncLock.acquire()
+
+            latestcommontime = self.transformlistener.getLatestCommonTime(self.mapframe, message.header.frame_id)
+
+            mpose = PoseStamped()
+            mpose.pose.position = message.pose.pose.position
+            mpose.pose.orientation = message.pose.pose.orientation
+            mpose.header.frame_id = message.header.frame_id
+            mpose.header.stamp = latestcommontime
+
+            odometryInTargetposeFrame = self.transformlistener.transformPose(self.mapframe, mpose)
+
+            odomQuat = odometryInTargetposeFrame.pose.orientation
+            (_, _, theta) = euler_from_quaternion([odomQuat.x, odomQuat.y, odomQuat.z, odomQuat.w])
+
+            self.latestcompass = {
+                'theta': theta,
+            }
+
+        except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException) as e:
+            # Do nothing here
+            pass
+
+        self.syncLock.release()
+
     def newCmdVel(self, message):
         self.syncLock.acquire()
 
@@ -256,6 +284,7 @@ class SupervisorState:
             'odometryOnMap': self.latestodomonmap,
             'cleaningpath': self.latestcleaningpath,
             'cleaningmap': self.latestcleaningmap,
-            'rooms': knownrooms
+            'rooms': knownrooms,
+            'compass': self.latestcompass['theta'] if self.latestcompass is not None else .0,
         }
         return data

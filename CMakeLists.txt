@@ -64,6 +64,7 @@ add_service_files(
    FILES
    Clean.srv
    Cancel.srv
+   UpdateNoCleanZones.srv
 )
 
 ## Generate actions in the 'action' folder

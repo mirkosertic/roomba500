@@ -48,8 +48,7 @@ from luma.oled.device import ssd1306
 from PIL import ImageFont
 
 from roomba500.msg import RoombaSensorFrame, NavigationInfo, Area
-from roomba500.srv import Clean, CleanResponse
-
+from roomba500.srv import Clean, CleanResponse, UpdateNoCleanZones, UpdateNoCleanZonesResponse
 
 class Supervisor:
 
@@ -279,6 +278,29 @@ class Supervisor:
 
         service = rospy.ServiceProxy(servicename, Clean)
         service(cleanarea)
+        rospy.loginfo('Service called!')
+
+        return JSONResponse({})
+
+    async def addNoCleanZone(self, req):
+
+        cmd = await req.json()
+
+        servicename = 'updatenocleanzones'
+        rospy.loginfo('Waiting for service %s', servicename)
+        rospy.wait_for_service(servicename)
+        rospy.loginfo('Invoking service')
+
+        areas = []
+        nocleanarea = Area()
+        nocleanarea.mapTopLeftX = cmd['topX']
+        nocleanarea.mapTopLeftY = cmd['topY']
+        nocleanarea.mapBottomRightX = cmd['bottomX']
+        nocleanarea.mapBottomRightY = cmd['bottomY']
+        areas.append(nocleanarea)
+
+        service = rospy.ServiceProxy(servicename, UpdateNoCleanZones)
+        service(areas)
         rospy.loginfo('Service called!')
 
         return JSONResponse({})
@@ -541,6 +563,7 @@ class Supervisor:
         self.app.add_route('/actions/room/{room}/start', self.startroom, methods=['GET'])
         self.app.add_route('/actions/simulateObstacle', self.simulateObstacle, methods=['GET'])
         self.app.add_route('/actions/moveTo', self.moveToPosition, methods=['POST'])
+        self.app.add_route('/actions/addnocleanzone', self.addNoCleanZone, methods=['POST'])
 
         wsThread = threading.Thread(target=self.startWebServer)
         wsThread.start()
@@ -549,6 +572,7 @@ class Supervisor:
 
         rospy.Subscriber("roomba/sensorframe", RoombaSensorFrame, self.state.newSensorFrame)
         rospy.Subscriber("odom", Odometry, self.state.newOdometry)
+        rospy.Subscriber("magnetometer/odom", Odometry, self.state.newMagnetometerOdometry)
         rospy.Subscriber("cmd_vel", Twist, self.state.newCmdVel)
         rospy.Subscriber("navigation_info", NavigationInfo, self.state.newNavigationInfo)
         rospy.Subscriber("map", OccupancyGrid, self.state.newMap)

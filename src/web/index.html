@@ -284,7 +284,7 @@
                     <canvas id="costmap"></canvas>
                     <canvas id="markers"></canvas>
                     <canvas id="path"></canvas>
-                    <canvas id="interaction" title="Left mouseclick to move to this place. Right mouseclick to mark an area for cleaning."></canvas>
+                    <canvas id="interaction" title="Left mouseclick to move to this place. Right mouse drag to mark an area for cleaning. Hold shift and right mouse drag to mark an area as prohibited."></canvas>
                 </div>
                 <div id="remotecontrol" class="remotecontrol">
                     <div class="navbuttons">
@@ -422,6 +422,12 @@
                     interaction.dataset.mousex = Math.floor(x);
                     interaction.dataset.mousey = Math.floor(y);
                     interaction.dataset.mousebutton = event.button;
+
+                    if (event.shiftKey) {
+                        interaction.dataset.mouseshift = true;
+                    } else {
+                        interaction.removeAttribute("data-mouseshift");
+                    }
                 }
             });
             interaction.addEventListener("mouseup", function(event) {
@@ -456,14 +462,25 @@
                             bottomY: Math.min(topY, bottomY)
                         };
 
-                        fetch('/actions/clean', {
-                            method: 'POST',
-                            cache: 'no-cache',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify(command)
-                        });
+                        if (interaction.dataset.mouseshift) {
+                            fetch('/actions/addnocleanzone', {
+                                method: 'POST',
+                                cache: 'no-cache',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify(command)
+                            });
+                        } else {
+                            fetch('/actions/clean', {
+                                method: 'POST',
+                                cache: 'no-cache',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify(command)
+                            });
+                        }
 
                     } else {
 
@@ -517,15 +534,24 @@
 
                     var context = interaction.getContext('2d');
                     if (interaction.dataset.mousebutton === "2") {
+                        if (event.shiftKey) {
+                            context.strokeStyle = '#ff0000';
+                        } else {
+                            context.strokeStyle = '#2980b9';
+                        }
                         context.lineWidth = 4;
-                        context.strokeStyle = '#2980b9';
                         context.strokeRect(x, y, xm - x, ym - y);
                     } else {
-                        context.strokeStyle = '#ffffff';
                         context.lineWidth = 4;
                         context.moveTo(x, y);
                         context.lineTo(xm, ym);
                         context.stroke();
+                    }
+
+                    if (event.shiftKey) {
+                        interaction.dataset.mouseshift = true;
+                    } else {
+                        interaction.removeAttribute("data-mouseshift");
                     }
                 }
             });
@@ -726,8 +752,8 @@
                         path.width = map.width * 5;
                         path.height = map.height * 5;
 
-                        dx = Math.floor(Math.sin(data.odometryOnMap.theta - Math.PI / 2) * 5);
-                        dy = Math.floor(Math.cos(data.odometryOnMap.theta - Math.PI / 2) * 5);
+                        dx = Math.floor(Math.sin(data.odometryOnMap.theta - Math.PI / 2) * 8);
+                        dy = Math.floor(Math.cos(data.odometryOnMap.theta - Math.PI / 2) * 8);
 
                         var context = path.getContext('2d');
                         context.beginPath();
@@ -767,12 +793,26 @@
                         context.lineWidth = 3;
                         context.beginPath();
                         context.translate(0.5, 0.5);
-                        context.arc((map.width - robotmapx - 1) * 5, robotmapy * 5, 2 * 5, 0, 2 * Math.PI, false);
+                        context.arc((map.width - robotmapx - 1) * 5, robotmapy * 5, 18, 0, 2 * Math.PI, false);
                         context.fill();
 
                         context.moveTo((map.width - robotmapx - 1) * 5, robotmapy * 5);
                         context.lineTo((map.width - robotmapx - 1 + dx) * 5, (robotmapy + dy) * 5);
                         context.stroke();
+
+                        if (data.compass) {
+                            context.beginPath();
+
+                            context.moveTo((map.width - robotmapx - 1) * 5, robotmapy * 5);
+                            dx = Math.floor(Math.sin(data.compass - Math.PI / 2) * 8);
+                            dy = Math.floor(Math.cos(data.compass - Math.PI / 2) * 8);
+
+                            context.strokeStyle = '#ff0000';
+                            context.fillStyle = '#ff0000';
+
+                            context.lineTo((map.width - robotmapx - 1 + dx) * 5, (robotmapy + dy) * 5);
+                            context.stroke();
+                        }
 
                         markersToCanvas(uistate.latestmap, markers, data.cleaningmap);
                     }

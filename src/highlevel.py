@@ -10,7 +10,7 @@ from map import NavigationMap, GridCellStatus
 
 from std_msgs.msg import Int16, ColorRGBA
 from nav_msgs.msg import Odometry, OccupancyGrid, Path
-from geometry_msgs.msg import Twist, Point, Pose, PoseStamped, Quaternion, Vector3, PoseWithCovarianceStamped
+from geometry_msgs.msg import Twist, Point, Pose, PoseStamped, Quaternion, Vector3, PoseWithCovarianceStamped, Polygon, Point32
 from visualization_msgs.msg import Marker, MarkerArray
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from actionlib_msgs.msg import GoalStatus
@@ -18,8 +18,9 @@ from tf.transformations import quaternion_from_euler
 from tf.transformations import euler_from_quaternion
 
 from roomba500.msg import NavigationInfo
-from roomba500.srv import Clean, CleanResponse, Cancel, CancelResponse
+from roomba500.srv import Clean, CleanResponse, Cancel, CancelResponse, UpdateNoCleanZones, UpdateNoCleanZonesResponse
 
+from costmap_prohibition_layer.srv import UpdateZones, UpdateZonesResponse
 
 class Highlevel:
 
@@ -246,6 +247,33 @@ class Highlevel:
 
         return CancelResponse(0)
 
+    def updateNoCleanZones(self, req):
+        rospy.loginfo("Received UpdateNoCleanZones command")
+
+        self.syncLock.acquire()
+
+        zones = []
+        for area in req.areas:
+            p = Polygon()
+            p.points.append(Point32(area.mapTopLeftX, area.mapTopLeftY, .0))
+            p.points.append(Point32(area.mapBottomRightX, area.mapTopLeftY, .0))
+            p.points.append(Point32(area.mapBottomRightX, area.mapBottomRightY, .0))
+            p.points.append(Point32(area.mapTopLeftX, area.mapBottomRightY, .0))
+            zones.append(p)
+
+        servicestocall = ["/move_base/global_costmap/prohibited_layer/update_zones", "/move_base/local_costmap/prohibited_layer/update_zones"]
+        for servicename in servicestocall:
+            rospy.loginfo("Calling service %s", servicename)
+            rospy.wait_for_service(servicename)
+            service = rospy.ServiceProxy(servicename, UpdateZones)
+            res = service(zones)
+
+        rospy.loginfo("Zones updated")
+
+        self.syncLock.release()
+
+        return UpdateNoCleanZonesResponse(0)
+
     def latestOdometryTransformedToFrame(self, targetframe):
 
         latestcommontime = self.transformlistener.getLatestCommonTime(targetframe, self.latestOdometryFrame)
@@ -357,6 +385,7 @@ class Highlevel:
         # Register services
         rospy.Service("clean", Clean, self.clean)
         rospy.Service("cancel", Cancel, self.cancel)
+        rospy.Service("updatenocleanzones", UpdateNoCleanZones, self.updateNoCleanZones)
 
         # Processing the sensor polling in an endless loop until this node shuts down
         rospy.loginfo("Highlevel Controller is ready.")
