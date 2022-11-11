@@ -25,7 +25,7 @@ from std_srvs.srv import Empty
 from std_msgs.msg import Int16
 from geometry_msgs.msg import Twist, Pose2D, Point32, PoseStamped
 from nav_msgs.msg import Odometry, OccupancyGrid, Path
-from sensor_msgs.msg import PointCloud
+from sensor_msgs.msg import PointCloud, MagneticField
 from rosgraph_msgs.msg import Log
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from visualization_msgs.msg import MarkerArray
@@ -572,7 +572,7 @@ class Supervisor:
 
         rospy.Subscriber("roomba/sensorframe", RoombaSensorFrame, self.state.newSensorFrame)
         rospy.Subscriber("odom", Odometry, self.state.newOdometry)
-        rospy.Subscriber("magnetometer/odom", Odometry, self.state.newMagnetometerOdometry)
+        rospy.Subscriber("imu/mag", MagneticField, self.state.newMagnetometerField)
         rospy.Subscriber("cmd_vel", Twist, self.state.newCmdVel)
         rospy.Subscriber("navigation_info", NavigationInfo, self.state.newNavigationInfo)
         rospy.Subscriber("map", OccupancyGrid, self.state.newMap)

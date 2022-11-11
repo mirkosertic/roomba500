@@ -1,15 +1,12 @@
 #!/usr/bin/env python3
 
 import rospy
-import math
 import os
 import pathlib
 import yaml
 
 from std_msgs.msg import Int16
 from sensor_msgs.msg import MagneticField
-from nav_msgs.msg import Odometry
-from tf.transformations import quaternion_from_euler
 
 from HMC5883L import HMC5883L
 
@@ -79,9 +76,6 @@ class Magnetometer:
         self.magneticfieldpub = rospy.Publisher('imu/mag', MagneticField, queue_size=10)
         self.magneticfieldpubraw = rospy.Publisher('imu/mag_raw', MagneticField, queue_size=10)
 
-        self.magneticfieldodompub = rospy.Publisher('magnetometer/odom', Odometry, queue_size=10)
-        self.magneticfieldsoftironodompub = rospy.Publisher('magnetometer/odom_softiron', Odometry, queue_size=10)
-
         calibrationfile = str(pathlib.Path(rospy.get_param('~roomdirectory', '/tmp')).joinpath('magcalibration.txt'))
         if os.path.exists(calibrationfile):
             rospy.loginfo("Reading calibration data from %s", calibrationfile)
@@ -145,11 +139,6 @@ class Magnetometer:
 
                     currenttime = rospy.Time.now()
 
-                    odommessage = Odometry()
-                    odommessage.header.stamp = currenttime
-                    odommessage.header.frame_id = self.odomframe
-                    odommessage.child_frame_id = self.magneticfieldframe
-
                     # Implementation is here: https://github.com/nliaudat/magnetometer_calibration
                     xm_off = x - hard_iron_bias_x
                     ym_off = y - hard_iron_bias_y
@@ -182,28 +171,6 @@ class Magnetometer:
                     magmessageraw.magnetic_field.x = x
                     magmessageraw.magnetic_field.y = y
                     self.magneticfieldpubraw.publish(magmessageraw)
-
-                    roll = 0
-                    pitch = 0
-                    yaw = math.atan2(xscaled, yscaled)
-                    q = quaternion_from_euler(roll, pitch, yaw)
-
-                    odommessage.pose.pose.orientation.x = q[0]
-                    odommessage.pose.pose.orientation.y = q[1]
-                    odommessage.pose.pose.orientation.z = q[2]
-                    odommessage.pose.pose.orientation.w = q[3]
-
-                    self.magneticfieldodompub.publish(odommessage)
-
-                    yaw = math.atan2(xm_cal, ym_cal)
-                    q = quaternion_from_euler(roll, pitch, yaw)
-
-                    odommessage.pose.pose.orientation.x = q[0]
-                    odommessage.pose.pose.orientation.y = q[1]
-                    odommessage.pose.pose.orientation.z = q[2]
-                    odommessage.pose.pose.orientation.w = q[3]
-
-                    self.magneticfieldsoftironodompub.publish(odommessage)
 
                 rate.sleep()
         except Exception as e:

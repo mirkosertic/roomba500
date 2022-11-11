@@ -2,6 +2,7 @@
 
 import threading
 import os
+import math
 
 import tf
 
@@ -199,25 +200,17 @@ class SupervisorState:
 
         self.syncLock.release()
 
-    def newMagnetometerOdometry(self, message):
+    def newMagnetometerField(self, message):
         try:
             self.syncLock.acquire()
 
-            latestcommontime = self.transformlistener.getLatestCommonTime(self.mapframe, message.header.frame_id)
-
-            mpose = PoseStamped()
-            mpose.pose.position = message.pose.pose.position
-            mpose.pose.orientation = message.pose.pose.orientation
-            mpose.header.frame_id = message.header.frame_id
-            mpose.header.stamp = latestcommontime
-
-            odometryInTargetposeFrame = self.transformlistener.transformPose(self.mapframe, mpose)
-
-            odomQuat = odometryInTargetposeFrame.pose.orientation
-            (_, _, theta) = euler_from_quaternion([odomQuat.x, odomQuat.y, odomQuat.z, odomQuat.w])
+            x = message.magnetic_field.x
+            y = message.magnetic_field.x
 
             self.latestcompass = {
-                'theta': theta,
+                'theta': math.atan2(y, x),
+                'x': x,
+                'y': y
             }
 
         except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException) as e:
