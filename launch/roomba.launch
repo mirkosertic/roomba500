@@ -26,6 +26,8 @@
 
     <include file="$(find roomba500)/launch/navigation.launch"/>
 
-    <include file="$(find roomba500)/launch/highlevel.launch"/>
+    <include file="$(find roomba500)/launch/highlevel.launch">
+        <arg name="roomdirectory" value="$(arg roomdirectory)"/>
+    </include>
 
 </launch>

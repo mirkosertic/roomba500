@@ -184,7 +184,7 @@ class IMU:
         self.imupub = rospy.Publisher('imu/data', Imu, queue_size=10)
 
         # Here goes our calibration data
-        calibrationfile = str(pathlib.Path(rospy.get_param('~roomdirectory', '/tmp')).joinpath('imucalibration.txt'))
+        calibrationfile = str(pathlib.Path(rospy.get_param('~roomdirectory', '/tmp')).joinpath('imucalibration.yaml'))
         if os.path.exists(calibrationfile):
             rospy.loginfo("Reading calibration data from %s", calibrationfile)
             with open(calibrationfile, 'r') as stream:

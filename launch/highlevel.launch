@@ -1,9 +1,13 @@
 <?xml version="1.0"?>
 <launch>
+    <arg name="roomdirectory" default="/tmp"/>
+
     <node name="highlevel" pkg="roomba500" type="highlevel.py" output="screen">
         <param name="rosout_disable_topics_generation" value="True"/>
 
         <param name="scanwidthinmeters" value="0.18"/>
         <param name="gridcellwidthinmeters" value="0.18"/>
+
+        <param name="roomdirectory" value="$(arg roomdirectory)"/>
     </node>
 </launch>
