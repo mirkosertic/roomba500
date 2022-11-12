@@ -64,7 +64,7 @@ class Magnetometer:
 
         self.magneticfieldodompub = rospy.Publisher('magnetometer/odom', Odometry, queue_size=10)
 
-        calibrationfile = str(pathlib.Path(rospy.get_param('~roomdirectory', '/tmp')).joinpath('magcalibration.txt'))
+        calibrationfile = str(pathlib.Path(rospy.get_param('~roomdirectory', '/tmp')).joinpath('magcalibration.yaml'))
         if os.path.exists(calibrationfile):
             rospy.loginfo("Reading calibration data from %s", calibrationfile)
             with open(calibrationfile, 'r') as stream:
@@ -81,7 +81,7 @@ class Magnetometer:
 
         raw_data_handle = None
         if lograwdata:
-            raw_data_dump = str(pathlib.Path(rospy.get_param('~roomdirectory', '/tmp')).joinpath('mag_out.txt'))
+            raw_data_dump = str(pathlib.Path(rospy.get_param('~roomdirectory', '/tmp')).joinpath('mag_out.csv'))
             rospy.loginfo("Logging raw data to %s", raw_data_dump)
             raw_data_handle = open(raw_data_dump, 'w')
 
