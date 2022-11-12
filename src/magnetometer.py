@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 
 import rospy
+import math
 import os
 import pathlib
 import yaml
 
 from std_msgs.msg import Int16
 from sensor_msgs.msg import MagneticField
+from nav_msgs.msg import Odometry
+from tf.transformations import quaternion_from_euler
 
 from HMC5883L import HMC5883L
 
@@ -18,7 +21,6 @@ class Magnetometer:
         self.magneticfieldpub = None
         self.magneticfieldpubraw = None
         self.magneticfieldodompub = None
-        self.magneticfieldsoftironodompub = None
         self.magneticfieldframe = None
         self.hmc5883l = None
         self.odomframe = 'odom'
@@ -36,28 +38,12 @@ class Magnetometer:
         pollingRateInHertz = int(rospy.get_param('~pollingRateInHertz', '20'))
 
         self.magneticfieldframe = rospy.get_param('~magnetometer_frame', 'base_link')
-        self.minx = float(rospy.get_param('~initial_minx', '-601.68'))
-        self.miny = float(rospy.get_param('~initial_miny', '-199.64'))
-        self.maxx = float(rospy.get_param('~initial_maxx', '-79.12'))
-        self.maxy = float(rospy.get_param('~initial_maxy', '283.36'))
+        self.minx = float(rospy.get_param('~initial_minx', '-565.8'))
+        self.miny = float(rospy.get_param('~initial_miny', '-141.68'))
+        self.maxx = float(rospy.get_param('~initial_maxx', '-180.32'))
+        self.maxy = float(rospy.get_param('~initial_maxy', '290.72'))
 
         lograwdata = bool(rospy.get_param('~lograwdata', 'False'))
-
-        hard_iron_bias_x = float(rospy.get_param('~hard_iron_bias_x', '244.6953822373436'))
-        hard_iron_bias_y = float(rospy.get_param('~hard_iron_bias_y', '-478.3109347752146'))
-        hard_iron_bias_z = float(rospy.get_param('~hard_iron_bias_z', '187.88851271580867'))
-
-        soft_iron_bias_xx = float(rospy.get_param('~soft_iron_bias_xx', '0.0819028609649276'))
-        soft_iron_bias_xy =  float(rospy.get_param('~soft_iron_bias_xy', '-0.08186652146555928'))
-        soft_iron_bias_xz =  float(rospy.get_param('~soft_iron_bias_xz', '0.0052316581647013'))
-
-        soft_iron_bias_yx =  float(rospy.get_param('~soft_iron_bias_yx', '-0.08186652146555924'))
-        soft_iron_bias_yy =  float(rospy.get_param('~soft_iron_bias_yy', '0.08193966402754398'))
-        soft_iron_bias_yz =  float(rospy.get_param('~soft_iron_bias_yz', '0.0004502243369786666'))
-
-        soft_iron_bias_zx =  float(rospy.get_param('~soft_iron_bias_zx', '0.005231658164701299'))
-        soft_iron_bias_zy =  float(rospy.get_param('~soft_iron_bias_zy', '0.0004502243369786652'))
-        soft_iron_bias_zz =  float(rospy.get_param('~soft_iron_bias_zz', '0.2950141209373251'))
 
         rospy.loginfo("Polling magnetometer data with %s hertz", pollingRateInHertz)
         rate = rospy.Rate(pollingRateInHertz)
@@ -75,6 +61,8 @@ class Magnetometer:
         # Publishing IMU data
         self.magneticfieldpub = rospy.Publisher('imu/mag', MagneticField, queue_size=10)
         self.magneticfieldpubraw = rospy.Publisher('imu/mag_raw', MagneticField, queue_size=10)
+
+        self.magneticfieldodompub = rospy.Publisher('magnetometer/odom', Odometry, queue_size=10)
 
         calibrationfile = str(pathlib.Path(rospy.get_param('~roomdirectory', '/tmp')).joinpath('magcalibration.txt'))
         if os.path.exists(calibrationfile):
@@ -130,39 +118,34 @@ class Magnetometer:
 
                 if x is not None and y is not None and self.maxx > self.minx and self.maxy > self.miny:
 
-                    z = 100
-
                     if lograwdata:
                         raw_data_handle.write('{:.6f}'.format(x) + ',')
-                        raw_data_handle.write('{:.6f}'.format(y) + ',')
-                        raw_data_handle.write('{:.6f}'.format(z) + '\n')
+                        raw_data_handle.write('{:.6f}'.format(y) + '\n')
 
                     currenttime = rospy.Time.now()
 
-                    # Implementation is here: https://github.com/nliaudat/magnetometer_calibration
-                    xm_off = x - hard_iron_bias_x
-                    ym_off = y - hard_iron_bias_y
-                    zm_off = z - hard_iron_bias_z
+                    # This is just a simple hard iron compensation
+                    # We move the center of the data area to x,y = (0,0) and scale
+                    # it to be quadratic. The data seem to form a nice circle with
+                    # some noise in it, so no need to do advanced ellipsoid fitting
+                    # to get it in the right shape, so no further soft iron compensation.
+                    width = self.maxx - self.minx
+                    height = self.maxy - self.miny
+                    xyratio = width / height
 
-                    xm_cal = xm_off * soft_iron_bias_xx + ym_off * soft_iron_bias_yx + zm_off * soft_iron_bias_zx
-                    ym_cal = xm_off * soft_iron_bias_xy + ym_off * soft_iron_bias_yy + zm_off * soft_iron_bias_zy
-                    zm_cal = xm_off * soft_iron_bias_xz + ym_off * soft_iron_bias_yz + zm_off * soft_iron_bias_zz
+                    biasx = -(self.minx + self.maxx) / 2.0
+                    biasy = -(self.miny + self.maxy) / 2.0
 
-                    scalex = 2 / (self.maxx - self.minx)
-                    scaley = 2 / (self.maxy - self.miny)
-                    dx = x - self.minx
-                    dy = y - self.miny
-
-                    xscaled = -1 + (dx * scalex)
-                    yscaled = -1 + (dy * scaley)
+                    xscaled = biasx + x
+                    yscaled = (biasy + y) * xyratio
 
                     rospy.logdebug("x = %s, y=%s scaled to x1 = %s, y1 = %s", str(x), str(y), str(xscaled), str(yscaled))
 
                     magmessage = MagneticField()
                     magmessage.header.frame_id = self.magneticfieldframe
                     magmessage.header.stamp = currenttime
-                    magmessage.magnetic_field.x = yscaled
-                    magmessage.magnetic_field.y = xscaled
+                    magmessage.magnetic_field.x = xscaled
+                    magmessage.magnetic_field.y = yscaled
                     self.magneticfieldpub.publish(magmessage)
 
                     magmessageraw = MagneticField()
@@ -171,6 +154,23 @@ class Magnetometer:
                     magmessageraw.magnetic_field.x = x
                     magmessageraw.magnetic_field.y = y
                     self.magneticfieldpubraw.publish(magmessageraw)
+
+                    odommessage = Odometry()
+                    odommessage.header.stamp = currenttime
+                    odommessage.header.frame_id = "map"
+                    odommessage.child_frame_id = "map"
+
+                    roll = 0
+                    pitch = 0
+                    yaw = math.atan2(yscaled, xscaled)
+                    q = quaternion_from_euler(roll, pitch, yaw)
+
+                    odommessage.pose.pose.orientation.x = q[0]
+                    odommessage.pose.pose.orientation.y = q[1]
+                    odommessage.pose.pose.orientation.z = q[2]
+                    odommessage.pose.pose.orientation.w = q[3]
+
+                    self.magneticfieldodompub.publish(odommessage)
 
                 rate.sleep()
         except Exception as e:
