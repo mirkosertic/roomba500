@@ -205,7 +205,7 @@ class SupervisorState:
             self.syncLock.acquire()
 
             x = message.magnetic_field.x
-            y = message.magnetic_field.x
+            y = message.magnetic_field.y
 
             self.latestcompass = {
                 'theta': math.atan2(y, x),
