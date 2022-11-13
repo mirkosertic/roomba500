@@ -43,7 +43,7 @@ class Magnetometer:
         self.maxx = float(rospy.get_param('~initial_maxx', '-180.32'))
         self.maxy = float(rospy.get_param('~initial_maxy', '290.72'))
 
-        lograwdata = bool(rospy.get_param('~lograwdata', 'False'))
+        lograwdata = bool(rospy.get_param('~lograwdata', 'True'))
 
         rospy.loginfo("Polling magnetometer data with %s hertz", pollingRateInHertz)
         rate = rospy.Rate(pollingRateInHertz)
@@ -92,31 +92,7 @@ class Magnetometer:
 
                 (x, y, z) = self.hmc5883l.axes()
 
-                if x is not None:
-                    if self.maxx is None:
-                        self.maxx = x
-                    else:
-                        self.maxx = max(x, self.maxx)
-
-                    if self.minx is None:
-                        self.minx = x
-                    else:
-                        self.minx = min(x, self.minx)
-
-                if y is not None:
-                    if self.maxy is None:
-                        self.maxy = y
-                    else:
-                        self.maxy = max(y, self.maxy)
-
-                    if self.miny is None:
-                        self.miny = y
-                    else:
-                        self.miny = min(y, self.miny)
-
-                rospy.logdebug("minx = %s miny = %s, maxx = %s, maxy = %s",str(self.minx), str(self.miny), str(self.maxx), str(self.maxy))
-
-                if x is not None and y is not None and self.maxx > self.minx and self.maxy > self.miny:
+                if x is not None and y is not None:
 
                     if lograwdata:
                         raw_data_handle.write('{:.6f}'.format(x) + ',')
