@@ -2,7 +2,6 @@
 
 import threading
 import os
-import math
 
 import tf
 
@@ -44,7 +43,7 @@ class SupervisorState:
         self.transformlistener = transformlistener
 
         self.latestodomonmap = None
-        self.latestcompass = None
+        self.latestmagfield = None
 
         self.lastcommandedvelx = .0
         self.lastcommandedveltheta = .0
@@ -207,8 +206,7 @@ class SupervisorState:
             x = message.magnetic_field.x
             y = message.magnetic_field.y
 
-            self.latestcompass = {
-                'theta': math.atan2(y, x),
+            self.latestmagfield = {
                 'x': x,
                 'y': y
             }
@@ -278,6 +276,7 @@ class SupervisorState:
             'cleaningpath': self.latestcleaningpath,
             'cleaningmap': self.latestcleaningmap,
             'rooms': knownrooms,
-            'compass': self.latestcompass['theta'] if self.latestcompass is not None else .0,
+            'magfieldx': self.latestmagfield['x'] if self.latestmagfield is not None else .0,
+            'magfieldy': self.latestmagfield['y'] if self.latestmagfield is not None else .0,
         }
         return data

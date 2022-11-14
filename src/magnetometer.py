@@ -136,12 +136,12 @@ class Magnetometer:
 
                     odommessage = Odometry()
                     odommessage.header.stamp = currenttime
-                    odommessage.header.frame_id = "base_link"
+                    odommessage.header.frame_id = "odom"
                     odommessage.child_frame_id = "base_link"
 
                     roll = 0
                     pitch = 0
-                    yaw = math.atan2(yscaled, xscaled)
+                    yaw = -math.atan2(xscaled, yscaled)
                     q = quaternion_from_euler(roll, pitch, yaw)
 
                     odommessage.pose.pose.orientation.x = q[0]

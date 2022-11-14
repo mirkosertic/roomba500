@@ -800,12 +800,14 @@
                         context.lineTo((map.width - robotmapx - 1 + dx) * 5, (robotmapy + dy) * 5);
                         context.stroke();
 
-                        if (data.compass) {
+                        if (data.magfieldx && data.magfieldy) {
                             context.beginPath();
 
+                            theta = -Math.atan2(data.magfieldx, data.magfieldy)
+
                             context.moveTo((map.width - robotmapx - 1) * 5, robotmapy * 5);
-                            dx = Math.floor(Math.cos(data.compass - Math.PI / 2) * 8);
-                            dy = Math.floor(Math.sin(data.compass - Math.PI / 2) * 8);
+                            dx = Math.floor(Math.cos(theta) * 8);
+                            dy = Math.floor(Math.sin(theta) * 8);
 
                             context.strokeStyle = '#ff0000';
                             context.fillStyle = '#ff0000';
