@@ -36,7 +36,7 @@
             false, false, false,
             false, false, false]</rosparam> -->
 
-        <param name="imu0" value="imu/data"/>
+        <param name="imu0" value="imu/data_raw"/>
         <rosparam param="imu0_config">[false, false, false,
             false, false, true,
             false, false, false,
