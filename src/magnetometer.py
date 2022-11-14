@@ -38,10 +38,10 @@ class Magnetometer:
         pollingRateInHertz = int(rospy.get_param('~pollingRateInHertz', '20'))
 
         self.magneticfieldframe = rospy.get_param('~magnetometer_frame', 'base_link')
-        self.minx = float(rospy.get_param('~initial_minx', '-609.04'))
-        self.miny = float(rospy.get_param('~initial_miny', '-72.68'))
-        self.maxx = float(rospy.get_param('~initial_maxx', '-233.68'))
-        self.maxy = float(rospy.get_param('~initial_maxy', '253.28'))
+        self.minx = float(rospy.get_param('~initial_minx', '-138,92'))
+        self.miny = float(rospy.get_param('~initial_miny', '-73.6'))
+        self.maxx = float(rospy.get_param('~initial_maxx', '327.52'))
+        self.maxy = float(rospy.get_param('~initial_maxy', '340,4'))
 
         lograwdata = bool(rospy.get_param('~lograwdata', 'True'))
 
@@ -94,10 +94,6 @@ class Magnetometer:
 
                 if x is not None and y is not None:
 
-                    if lograwdata:
-                        raw_data_handle.write('{:.6f}'.format(x) + ',')
-                        raw_data_handle.write('{:.6f}'.format(y) + '\n')
-
                     currenttime = rospy.Time.now()
 
                     # This is just a simple hard iron compensation
@@ -116,6 +112,13 @@ class Magnetometer:
                     yscaled = (biasy + y) * xyratio
 
                     rospy.logdebug("x = %s, y=%s scaled to x1 = %s, y1 = %s", str(x), str(y), str(xscaled), str(yscaled))
+
+                    if lograwdata:
+                        raw_data_handle.write('{:.6f}'.format(x) + ',')
+                        raw_data_handle.write('{:.6f}'.format(y) + ',')
+                        raw_data_handle.write('{:.6f}'.format(xscaled) + ',')
+                        raw_data_handle.write('{:.6f}'.format(yscaled) + '\n')
+
 
                     magmessage = MagneticField()
                     magmessage.header.frame_id = self.magneticfieldframe
