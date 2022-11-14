@@ -38,10 +38,10 @@ class Magnetometer:
         pollingRateInHertz = int(rospy.get_param('~pollingRateInHertz', '20'))
 
         self.magneticfieldframe = rospy.get_param('~magnetometer_frame', 'base_link')
-        self.minx = float(rospy.get_param('~initial_minx', '-565.8'))
-        self.miny = float(rospy.get_param('~initial_miny', '-141.68'))
-        self.maxx = float(rospy.get_param('~initial_maxx', '-180.32'))
-        self.maxy = float(rospy.get_param('~initial_maxy', '290.72'))
+        self.minx = float(rospy.get_param('~initial_minx', '-609.04'))
+        self.miny = float(rospy.get_param('~initial_miny', '-72.68'))
+        self.maxx = float(rospy.get_param('~initial_maxx', '-233.68'))
+        self.maxy = float(rospy.get_param('~initial_maxy', '253.28'))
 
         lograwdata = bool(rospy.get_param('~lograwdata', 'True'))
 
@@ -133,8 +133,8 @@ class Magnetometer:
 
                     odommessage = Odometry()
                     odommessage.header.stamp = currenttime
-                    odommessage.header.frame_id = "map"
-                    odommessage.child_frame_id = "map"
+                    odommessage.header.frame_id = "base_link"
+                    odommessage.child_frame_id = "base_link"
 
                     roll = 0
                     pitch = 0
