@@ -804,8 +804,8 @@
                             context.beginPath();
 
                             context.moveTo((map.width - robotmapx - 1) * 5, robotmapy * 5);
-                            dx = Math.floor(Math.sin(data.compass - Math.PI / 2) * 8);
-                            dy = Math.floor(Math.cos(data.compass - Math.PI / 2) * 8);
+                            dx = Math.floor(Math.cos(data.compass - Math.PI / 2) * 8);
+                            dy = Math.floor(Math.sin(data.compass - Math.PI / 2) * 8);
 
                             context.strokeStyle = '#ff0000';
                             context.fillStyle = '#ff0000';
