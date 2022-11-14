@@ -38,7 +38,7 @@ class Magnetometer:
         pollingRateInHertz = int(rospy.get_param('~pollingRateInHertz', '20'))
 
         self.magneticfieldframe = rospy.get_param('~magnetometer_frame', 'base_link')
-        self.minx = float(rospy.get_param('~initial_minx', '-138,92'))
+        self.minx = float(rospy.get_param('~initial_minx', '-138.92'))
         self.miny = float(rospy.get_param('~initial_miny', '-73.6'))
         self.maxx = float(rospy.get_param('~initial_maxx', '327.52'))
         self.maxy = float(rospy.get_param('~initial_maxy', '340.4'))
