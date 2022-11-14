@@ -192,9 +192,9 @@ class IMU:
                 self.linearaccgainx = float(data["linearaccgainx"])
                 self.linearaccgainy = float(data["linearaccgainy"])
                 self.linearaccgainz = float(data["linearaccgainz"])
-                self.angularvelgainx = float(data["data.angularvelgainx"])
-                self.angularvelgainy = float(data["data.angularvelgainy"])
-                self.angularvelgainz = float(data["data.angularvelgainz"])
+                self.angularvelgainx = float(data["angularvelgainx"])
+                self.angularvelgainy = float(data["angularvelgainy"])
+                self.angularvelgainz = float(data["angularvelgainz"])
 
             rospy.loginfo(' linearaccgainx = ' + str(self.linearaccgainx))
             rospy.loginfo(' linearaccgainy = ' + str(self.linearaccgainy))
