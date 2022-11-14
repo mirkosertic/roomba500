@@ -189,12 +189,12 @@ class IMU:
             rospy.loginfo("Reading calibration data from %s", calibrationfile)
             with open(calibrationfile, 'r') as stream:
                 data = yaml.safe_load(stream)
-                self.linearaccgainx = data.linearaccgainx
-                self.linearaccgainy = data.linearaccgainy
-                self.linearaccgainz = data.linearaccgainz
-                self.angularvelgainx = data.angularvelgainx
-                self.angularvelgainy = data.angularvelgainy
-                self.angularvelgainz = data.angularvelgainz
+                self.linearaccgainx = float(data["linearaccgainx"])
+                self.linearaccgainy = float(data["linearaccgainy"])
+                self.linearaccgainz = float(data["linearaccgainz"])
+                self.angularvelgainx = float(data["data.angularvelgainx"])
+                self.angularvelgainy = float(data["data.angularvelgainy"])
+                self.angularvelgainz = float(data["data.angularvelgainz"])
 
             rospy.loginfo(' linearaccgainx = ' + str(self.linearaccgainx))
             rospy.loginfo(' linearaccgainy = ' + str(self.linearaccgainy))

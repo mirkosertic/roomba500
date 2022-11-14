@@ -69,10 +69,10 @@ class Magnetometer:
             rospy.loginfo("Reading calibration data from %s", calibrationfile)
             with open(calibrationfile, 'r') as stream:
                 data = yaml.safe_load(stream)
-                self.minx = data.minx
-                self.miny = data.miny
-                self.maxx = data.maxx
-                self.maxy = data.maxy
+                self.minx = float(data["minx"])
+                self.miny = float(data["miny"])
+                self.maxx = float(data["maxx"])
+                self.maxy = float(data["maxy"])
 
                 rospy.loginfo(' minx = ' + str(self.minx))
                 rospy.loginfo(' miny = ' + str(self.miny))
