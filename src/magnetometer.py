@@ -41,7 +41,7 @@ class Magnetometer:
         self.minx = float(rospy.get_param('~initial_minx', '-138,92'))
         self.miny = float(rospy.get_param('~initial_miny', '-73.6'))
         self.maxx = float(rospy.get_param('~initial_maxx', '327.52'))
-        self.maxy = float(rospy.get_param('~initial_maxy', '340,4'))
+        self.maxy = float(rospy.get_param('~initial_maxy', '340.4'))
 
         lograwdata = bool(rospy.get_param('~lograwdata', 'True'))
 
