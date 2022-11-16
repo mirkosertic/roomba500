@@ -75,6 +75,7 @@ class Supervisor:
         self.rotationspeed = .6  # 0.4 is bare minimum
 
         self.roomsdirectory = None
+        self.dynamicconfigdirectory = None
 
         self.bumperspub = None
         self.transformlistener = None
@@ -514,7 +515,7 @@ class Supervisor:
     def start(self):
         rospy.init_node('supervisor', anonymous=True)
 
-        pollingRateInHertz = int(rospy.get_param('~pollingRateInHertz', '2'))
+        pollingRateInHertz = int(rospy.get_param('~pollingRateInHertz', '5'))
         self.wsport = int(rospy.get_param('~wsport', '8080'))
         self.wsinterface = self.bindinginterface('0.0.0.0')
 
@@ -529,6 +530,9 @@ class Supervisor:
 
         self.roomsdirectory = str(pathlib.Path(__file__).parent.resolve().parent.joinpath('rooms'))
         rospy.loginfo('Using %s as the rooms directory', self.roomsdirectory)
+
+        self.dynamicconfigdirectory = str(pathlib.Path(__file__).parent.resolve().parent.joinpath('dynamicconfig'))
+        rospy.loginfo('Using %s as the dynamic config directory', self.dynamicconfigdirectory)
 
         self.mapframe = rospy.get_param('~mapframe', 'map')
         self.transformlistener = tf.TransformListener()
@@ -634,6 +638,7 @@ class Supervisor:
 
                     roomdir = str(pathlib.Path(self.roomsdirectory).joinpath(self.roomname))
                     arguments.append('roomdirectory:=' + roomdir)
+                    arguments.append('configdirectory:=' + self.dynamicconfigdirectory)
 
                     rospy.loginfo('Launching with arguments %s', str(arguments))
                     uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)

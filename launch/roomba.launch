@@ -5,9 +5,10 @@
     <arg name="createmap" default="false"/>
     <arg name="loadmap" default="false"/>
     <arg name="roomdirectory" default="/tmp"/>
+    <arg name="configdirectory" default="/tmp"/>
 
     <include file="$(find roomba500)/launch/hardware.launch">
-        <arg name="roomdirectory" value="$(arg roomdirectory)"/>
+        <arg name="configdirectory" value="$(arg configdirectory)"/>
     </include>
 
     <group if="$(arg createmap)">

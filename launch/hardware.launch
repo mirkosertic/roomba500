@@ -1,11 +1,11 @@
 <?xml version="1.0"?>
 <launch>
-    <arg name="roomdirectory" default="unknown"/>
+    <arg name="configdirectory" default="/tmp"/>
 
     <include file="$(find roomba500)/launch/roombainterface.launch"/>
 
     <include file="$(find roomba500)/launch/imu.launch">
-        <arg name="roomdirectory" value="$(arg roomdirectory)"/>
+        <arg name="configdirectory" value="$(arg configdirectory)"/>
     </include>
 
     <node name="differentialodometry" pkg="roomba500" type="differentialodometryv2.py" output="screen">

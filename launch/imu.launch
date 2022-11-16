@@ -1,18 +1,18 @@
 <?xml version="1.0"?>
 <launch>
-    <arg name="roomdirectory" default="/tmp"/>
+    <arg name="configdirectory" default="/tmp"/>
 
     <node name="imu" pkg="roomba500" type="imu.py" output="screen" respawn="false">
         <param name="rosout_disable_topics_generation" value="True"/>
         <param name="pollingRateInHertz" value="30"/>
-        <param name="roomdirectory" value="$(arg roomdirectory)"/>
+        <param name="configdirectory" value="$(arg configdirectory)"/>
         <remap from="imu/data" to="imu/data_raw"/>
     </node>
 
     <node name="magnetometer" pkg="roomba500" type="magnetometer.py" output="screen" respawn="false">
         <param name="rosout_disable_topics_generation" value="True"/>
         <param name="pollingRateInHertz" value="15"/>
-        <param name="roomdirectory" value="$(arg roomdirectory)"/>
+        <param name="configdirectory" value="$(arg configdirectory)"/>
     </node>
 
     <node name="madgwick" pkg="imu_filter_madgwick" type="imu_filter_node" output="screen" respawn="false">
