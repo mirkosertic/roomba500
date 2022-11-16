@@ -29,6 +29,7 @@ class Magnetometer:
         self.miny = None
         self.maxx = None
         self.maxy = None
+        self.offsetindegrees = None
 
     def newShutdownCommand(self, data):
         rospy.signal_shutdown('Shutdown requested')
@@ -42,6 +43,7 @@ class Magnetometer:
         self.miny = float(rospy.get_param('~initial_miny', '-73.6'))
         self.maxx = float(rospy.get_param('~initial_maxx', '327.52'))
         self.maxy = float(rospy.get_param('~initial_maxy', '340.4'))
+        self.offsetindegrees = float(rospy.get_param('~offsetindegrees', '-49.11'))
 
         lograwdata = bool(rospy.get_param('~lograwdata', 'True'))
 
@@ -73,11 +75,13 @@ class Magnetometer:
                 self.miny = float(data["miny"])
                 self.maxx = float(data["maxx"])
                 self.maxy = float(data["maxy"])
+                self.offsetindegrees = float(data["offsetindegrees"])
 
-                rospy.loginfo(' minx = ' + str(self.minx))
-                rospy.loginfo(' miny = ' + str(self.miny))
-                rospy.loginfo(' maxx = ' + str(self.maxx))
-                rospy.loginfo(' maxy = ' + str(self.maxy))
+                rospy.loginfo(' minx            = ' + str(self.minx))
+                rospy.loginfo(' miny            = ' + str(self.miny))
+                rospy.loginfo(' maxx            = ' + str(self.maxx))
+                rospy.loginfo(' maxy            = ' + str(self.maxy))
+                rospy.loginfo(' offsetindegrees = ' + str(self.offsetindegrees))
 
         raw_data_handle = None
         if lograwdata:
@@ -141,7 +145,9 @@ class Magnetometer:
 
                     roll = 0
                     pitch = 0
-                    yaw = -math.atan2(xscaled, yscaled)
+                    # Look at the atan2 function. We have to swap x,y, as x is relative to the sensor forward,
+                    # but in math it is right. They are swapped.
+                    yaw = math.radians(90) + math.radians(self.offsetindegrees) + math.atan2(xscaled, yscaled) # 90 Degrees offset
                     q = quaternion_from_euler(roll, pitch, yaw)
 
                     odommessage.pose.pose.orientation.x = q[0]
@@ -165,7 +171,8 @@ class Magnetometer:
                 minx = self.minx,
                 miny = self.miny,
                 maxx = self.maxx,
-                maxy = self.maxy
+                maxy = self.maxy,
+                offsetindegrees = self.offsetindegrees
             )
             yaml.dump(data, outfile, default_flow_style=False)
 
