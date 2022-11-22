@@ -25,10 +25,9 @@ class Magnetometer:
         self.hmc5883l = None
         self.odomframe = 'odom'
 
-        self.minx = None
-        self.miny = None
-        self.maxx = None
-        self.maxy = None
+        self.hardironx = None
+        self.hardirony = None
+        self.xyratio = None
         self.offsetindegrees = None
 
     def newShutdownCommand(self, data):
@@ -39,11 +38,10 @@ class Magnetometer:
         pollingRateInHertz = int(rospy.get_param('~pollingRateInHertz', '20'))
 
         self.magneticfieldframe = rospy.get_param('~magnetometer_frame', 'base_link')
-        self.minx = float(rospy.get_param('~initial_minx', '-138.92'))
-        self.miny = float(rospy.get_param('~initial_miny', '-73.6'))
-        self.maxx = float(rospy.get_param('~initial_maxx', '327.52'))
-        self.maxy = float(rospy.get_param('~initial_maxy', '340.4'))
-        self.offsetindegrees = float(rospy.get_param('~offsetindegrees', '-49.11'))
+        self.hardironx = float(rospy.get_param('~hardironx', '98.49'))
+        self.hardirony = float(rospy.get_param('~hardirony', '142.79'))
+        self.xyratio = float(rospy.get_param('~xyratio', '1.13225'))
+        self.offsetindegrees = float(rospy.get_param('~offsetindegrees', '-10.8591'))
 
         lograwdata = bool(rospy.get_param('~lograwdata', 'True'))
 
@@ -71,16 +69,14 @@ class Magnetometer:
             rospy.loginfo("Reading calibration data from %s", calibrationfile)
             with open(calibrationfile, 'r') as stream:
                 data = yaml.safe_load(stream)
-                self.minx = float(data["minx"])
-                self.miny = float(data["miny"])
-                self.maxx = float(data["maxx"])
-                self.maxy = float(data["maxy"])
+                self.hardironx = float(data["hardironx"])
+                self.hardirony = float(data["hardirony"])
+                self.xyratio = float(data["xyratio"])
                 self.offsetindegrees = float(data["offsetindegrees"])
 
-                rospy.loginfo(' minx            = ' + str(self.minx))
-                rospy.loginfo(' miny            = ' + str(self.miny))
-                rospy.loginfo(' maxx            = ' + str(self.maxx))
-                rospy.loginfo(' maxy            = ' + str(self.maxy))
+                rospy.loginfo(' hardironx       = ' + str(self.hardironx))
+                rospy.loginfo(' hardirony       = ' + str(self.hardirony))
+                rospy.loginfo(' xyratio         = ' + str(self.xyratio))
                 rospy.loginfo(' offsetindegrees = ' + str(self.offsetindegrees))
 
         raw_data_handle = None
@@ -100,20 +96,14 @@ class Magnetometer:
 
                     currenttime = rospy.Time.now()
 
-                    # This is just a simple hard iron compensation
-                    # We move the center of the data area to x,y = (0,0) and scale
-                    # it to be quadratic. The data seem to form a nice circle with
-                    # some noise in it, so no need to do advanced ellipsoid fitting
-                    # to get it in the right shape, so no further soft iron compensation.
-                    width = self.maxx - self.minx
-                    height = self.maxy - self.miny
-                    xyratio = width / height
+                    # Translate the data back to origin (0,0)
+                    xtrans = x - self.hardironx
+                    ytrans = y - self.hardirony
+                    rotation = math.radians(self.offsetindegrees)
 
-                    biasx = -(self.minx + self.maxx) / 2.0
-                    biasy = -(self.miny + self.maxy) / 2.0
-
-                    xscaled = biasx + x
-                    yscaled = (biasy + y) * xyratio
+                    # Rotate and scale the data to shape it into a "square" form
+                    xscaled = xtrans * math.cos(rotation) - ytrans * math.sin(rotation)
+                    yscaled = (xtrans * math.sin(rotation) + ytrans * math.cos(rotation)) * self.xyratio
 
                     rospy.logdebug("x = %s, y=%s scaled to x1 = %s, y1 = %s", str(x), str(y), str(xscaled), str(yscaled))
 
@@ -122,7 +112,6 @@ class Magnetometer:
                         raw_data_handle.write('{:.6f}'.format(y) + ',')
                         raw_data_handle.write('{:.6f}'.format(xscaled) + ',')
                         raw_data_handle.write('{:.6f}'.format(yscaled) + '\n')
-
 
                     magmessage = MagneticField()
                     magmessage.header.frame_id = self.magneticfieldframe
@@ -168,10 +157,9 @@ class Magnetometer:
         rospy.loginfo('Saving calibration data to %s', calibrationfile)
         with open(calibrationfile, "w") as outfile:
             data = dict(
-                minx = self.minx,
-                miny = self.miny,
-                maxx = self.maxx,
-                maxy = self.maxy,
+                hardironx = self.hardironx,
+                hardirony = self.hardirony,
+                xyratio = self.xyratio,
                 offsetindegrees = self.offsetindegrees
             )
             yaml.dump(data, outfile, default_flow_style=False)
