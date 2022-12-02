@@ -38,12 +38,12 @@ class Magnetometer:
         pollingRateInHertz = int(rospy.get_param('~pollingRateInHertz', '20'))
 
         self.magneticfieldframe = rospy.get_param('~magnetometer_frame', 'base_link')
-        self.hardironx = float(rospy.get_param('~hardironx', '98.49'))
-        self.hardirony = float(rospy.get_param('~hardirony', '142.79'))
-        self.xyratio = float(rospy.get_param('~xyratio', '1.13225'))
+        self.hardironx = float(rospy.get_param('~hardironx', '1578.8144'))
+        self.hardirony = float(rospy.get_param('~hardirony', '486.5135'))
+        self.xyratio = float(rospy.get_param('~xyratio', '1.0879'))
         self.offsetindegrees = float(rospy.get_param('~offsetindegrees', '-10.8591'))
 
-        lograwdata = bool(rospy.get_param('~lograwdata', 'True'))
+        lograwdata = bool(rospy.get_param('~lograwdata', 'False'))
 
         rospy.loginfo("Polling magnetometer data with %s hertz", pollingRateInHertz)
         rate = rospy.Rate(pollingRateInHertz)
