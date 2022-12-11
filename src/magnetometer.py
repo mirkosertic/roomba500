@@ -20,7 +20,6 @@ class Magnetometer:
         self.deviceaddress = 0x68
         self.magneticfieldpub = None
         self.magneticfieldpubraw = None
-        self.magneticfieldodompub = None
         self.magneticfieldframe = None
         self.hmc5883l = None
         self.odomframe = 'odom'
@@ -62,8 +61,6 @@ class Magnetometer:
         self.magneticfieldpub = rospy.Publisher('imu/mag', MagneticField, queue_size=10)
         self.magneticfieldpubraw = rospy.Publisher('imu/mag_raw', MagneticField, queue_size=10)
 
-        self.magneticfieldodompub = rospy.Publisher('magnetometer/odom', Odometry, queue_size=10)
-
         calibrationfile = str(pathlib.Path(rospy.get_param('~configdirectory', '/tmp')).joinpath('magcalibration.yaml'))
         if os.path.exists(calibrationfile):
             rospy.loginfo("Reading calibration data from %s", calibrationfile)
@@ -91,6 +88,10 @@ class Magnetometer:
             while not rospy.is_shutdown():
 
                 (x, y, z) = self.hmc5883l.axes()
+
+                # Correct orientation of sensor
+                x = -x
+                y = -y
 
                 if x is not None and y is not None:
 
@@ -126,25 +127,6 @@ class Magnetometer:
                     magmessageraw.magnetic_field.x = x
                     magmessageraw.magnetic_field.y = y
                     self.magneticfieldpubraw.publish(magmessageraw)
-
-                    odommessage = Odometry()
-                    odommessage.header.stamp = currenttime
-                    odommessage.header.frame_id = "odom"
-                    odommessage.child_frame_id = "base_link"
-
-                    roll = 0
-                    pitch = 0
-                    # Look at the atan2 function. We have to swap x,y, as x is relative to the sensor forward,
-                    # but in math it is right. They are swapped.
-                    yaw = math.radians(90) + math.radians(self.offsetindegrees) + math.atan2(xscaled, yscaled) # 90 Degrees offset
-                    q = quaternion_from_euler(roll, pitch, yaw)
-
-                    odommessage.pose.pose.orientation.x = q[0]
-                    odommessage.pose.pose.orientation.y = q[1]
-                    odommessage.pose.pose.orientation.z = q[2]
-                    odommessage.pose.pose.orientation.w = q[3]
-
-                    self.magneticfieldodompub.publish(odommessage)
 
                 rate.sleep()
         except Exception as e:
