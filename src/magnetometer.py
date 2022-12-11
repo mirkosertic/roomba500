@@ -37,10 +37,10 @@ class Magnetometer:
         pollingRateInHertz = int(rospy.get_param('~pollingRateInHertz', '20'))
 
         self.magneticfieldframe = rospy.get_param('~magnetometer_frame', 'base_link')
-        self.hardironx = float(rospy.get_param('~hardironx', '1578.8144'))
-        self.hardirony = float(rospy.get_param('~hardirony', '486.5135'))
-        self.xyratio = float(rospy.get_param('~xyratio', '1.0879'))
-        self.offsetindegrees = float(rospy.get_param('~offsetindegrees', '-10.8591'))
+        self.hardironx = float(rospy.get_param('~hardironx', '-1236.7402'))
+        self.hardirony = float(rospy.get_param('~hardirony', '-461.8761'))
+        self.xyratio = float(rospy.get_param('~xyratio', '1.01'))
+        self.offsetindegrees = float(rospy.get_param('~offsetindegrees', '-1.08'))
 
         lograwdata = bool(rospy.get_param('~lograwdata', 'False'))
 
@@ -81,6 +81,7 @@ class Magnetometer:
             raw_data_dump = str(pathlib.Path(rospy.get_param('~configdirectory', '/tmp')).joinpath('mag_out.csv'))
             rospy.loginfo("Logging raw data to %s", raw_data_dump)
             raw_data_handle = open(raw_data_dump, 'w')
+            raw_data_handle.write('x,y,x_scaled,y_scaled\n')
 
         # Processing the sensor polling in an endless loop until this node shuts down
         rospy.loginfo("Polling magnetometer..")
