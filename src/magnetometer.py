@@ -8,8 +8,6 @@ import yaml
 
 from std_msgs.msg import Int16
 from sensor_msgs.msg import MagneticField
-from nav_msgs.msg import Odometry
-from tf.transformations import quaternion_from_euler
 
 from HMC5883L import HMC5883L
 
@@ -19,7 +17,6 @@ class Magnetometer:
         self.bus = None
         self.deviceaddress = 0x68
         self.magneticfieldpub = None
-        self.magneticfieldpubraw = None
         self.magneticfieldframe = None
         self.hmc5883l = None
         self.odomframe = 'odom'
@@ -59,7 +56,6 @@ class Magnetometer:
 
         # Publishing IMU data
         self.magneticfieldpub = rospy.Publisher('imu/mag', MagneticField, queue_size=10)
-        self.magneticfieldpubraw = rospy.Publisher('imu/mag_raw', MagneticField, queue_size=10)
 
         calibrationfile = str(pathlib.Path(rospy.get_param('~configdirectory', '/tmp')).joinpath('magcalibration.yaml'))
         if os.path.exists(calibrationfile):
@@ -121,13 +117,6 @@ class Magnetometer:
                     magmessage.magnetic_field.x = xscaled
                     magmessage.magnetic_field.y = yscaled
                     self.magneticfieldpub.publish(magmessage)
-
-                    magmessageraw = MagneticField()
-                    magmessageraw.header.frame_id = self.magneticfieldframe
-                    magmessageraw.header.stamp = currenttime
-                    magmessageraw.magnetic_field.x = x
-                    magmessageraw.magnetic_field.y = y
-                    self.magneticfieldpubraw.publish(magmessageraw)
 
                 rate.sleep()
         except Exception as e:
