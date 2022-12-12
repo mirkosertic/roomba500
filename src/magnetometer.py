@@ -126,7 +126,7 @@ class Magnetometer:
                     compassmessage.header.frame_id = self.magneticfieldframe
                     compassmessage.header.stamp = currenttime
 
-                    compass_quaternion = quaternion_from_euler(.0, .0, math.atan2(yscaled, xscaled))
+                    compass_quaternion = quaternion_from_euler(.0, .0, -math.atan2(yscaled, xscaled))
 
                     o = compassmessage.orientation
                     o.x, o.y, o.z, o.w = compass_quaternion[0], compass_quaternion[1], compass_quaternion[2], compass_quaternion[3]
