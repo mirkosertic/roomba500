@@ -8,6 +8,8 @@ import yaml
 
 from std_msgs.msg import Int16
 from sensor_msgs.msg import MagneticField
+from sensor_msgs.msg import Imu
+from tf.transformations import quaternion_from_euler
 
 from HMC5883L import HMC5883L
 
@@ -18,6 +20,7 @@ class Magnetometer:
         self.deviceaddress = 0x68
         self.magneticfieldpub = None
         self.magneticfieldframe = None
+        self.imupub = None
         self.hmc5883l = None
         self.odomframe = 'odom'
 
@@ -56,6 +59,7 @@ class Magnetometer:
 
         # Publishing IMU data
         self.magneticfieldpub = rospy.Publisher('imu/mag', MagneticField, queue_size=10)
+        self.imupub = rospy.Publisher('imu/compass_orientation', Imu, queue_size=10)
 
         calibrationfile = str(pathlib.Path(rospy.get_param('~configdirectory', '/tmp')).joinpath('magcalibration.yaml'))
         if os.path.exists(calibrationfile):
@@ -118,7 +122,18 @@ class Magnetometer:
                     magmessage.magnetic_field.y = yscaled
                     self.magneticfieldpub.publish(magmessage)
 
+                    compassmessage = Imu()
+                    compassmessage.header.frame_id = self.magneticfieldframe
+                    compassmessage.header.stamp = currenttime
+
+                    compass_quaternion = quaternion_from_euler(.0, .0, math.atan2(y, x))
+
+                    o = compassmessage.orientation
+                    o.x, o.y, o.z, o.w = compass_quaternion[0], compass_quaternion[1], compass_quaternion[2], compass_quaternion[3]
+                    self.imupub.publish(compassmessage)
+
                 rate.sleep()
+
         except Exception as e:
             rospy.logerr('Error shutting down node : %s', e)
 
