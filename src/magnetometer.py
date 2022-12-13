@@ -5,6 +5,7 @@ import math
 import os
 import pathlib
 import yaml
+import traceback
 
 from std_msgs.msg import Int16
 from sensor_msgs.msg import MagneticField
@@ -135,6 +136,7 @@ class Magnetometer:
                 rate.sleep()
 
         except Exception as e:
+            traceback.print_exc()
             rospy.logerr('Error shutting down node : %s', e)
 
         if lograwdata:
