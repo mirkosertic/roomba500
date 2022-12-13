@@ -132,6 +132,8 @@ class Magnetometer:
                     o = compassmessage.orientation
                     o.x, o.y, o.z, o.w = compass_quaternion[0], compass_quaternion[1], compass_quaternion[2], compass_quaternion[3]
                     self.imupub.publish(compassmessage)
+                else:
+                    rospy.logerr("Sensor seems to be saturated. Please increase sensor range!")
 
                 rate.sleep()
 
