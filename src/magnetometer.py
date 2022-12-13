@@ -91,11 +91,11 @@ class Magnetometer:
 
                 (x, y, z) = self.hmc5883l.axes()
 
-                # Correct orientation of sensor
-                x = -x
-                y = -y
-
                 if x is not None and y is not None:
+
+                    # Correct orientation of sensor
+                    x = -x
+                    y = -y
 
                     currenttime = rospy.Time.now()
 
