@@ -15,11 +15,11 @@
         <param name="configdirectory" value="$(arg configdirectory)"/>
     </node>
 
-    <node name="madgwick" pkg="imu_filter_madgwick" type="imu_filter_node" output="screen" respawn="false">
+    <!-- <node name="madgwick" pkg="imu_filter_madgwick" type="imu_filter_node" output="screen" respawn="false">
         <param name="use_mag" value="True"/>
         <param name="remove_gravity" value="False"/>
         <param name="publish_tf" value="False"/>
-    </node>
+    </node>-->
 
     <!-- <node name="imu" pkg="roomba500" type="imu_raw.py" output="screen" respawn="false">
         <param name="rosout_disable_topics_generation" value="True"/>
