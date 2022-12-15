@@ -41,7 +41,7 @@ class Magnetometer:
         self.hardironx = float(rospy.get_param('~hardironx', '-1756.7402'))
         self.hardirony = float(rospy.get_param('~hardirony', '-649.8761'))
         self.xyratio = float(rospy.get_param('~xyratio', '1.02'))
-        self.offsetindegrees = float(rospy.get_param('~offsetindegrees', '-1.08'))
+        self.offsetindegrees = float(rospy.get_param('~offsetindegrees', '100'))
 
         lograwdata = bool(rospy.get_param('~lograwdata', 'False'))
 

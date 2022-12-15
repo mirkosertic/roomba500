@@ -803,7 +803,7 @@
                         if (data.magfieldx && data.magfieldy) {
                             context.beginPath();
 
-                            theta = data.odometryOnMap.theta + Math.atan2(data.magfieldy, data.magfieldx)
+                            theta = data.odometryOnMap.theta - (Math.PI / 2.0) + Math.atan2(data.magfieldy, data.magfieldx)
 
                             context.moveTo((map.width - robotmapx - 1) * 5, robotmapy * 5);
                             dx = Math.floor(Math.cos(theta) * 8);
