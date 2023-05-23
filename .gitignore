@@ -1,3 +1,4 @@
 /.idea/
 *.iml
 /doc/.ipynb_checkpoints/
+/jupyter/.ipynb_checkpoints/

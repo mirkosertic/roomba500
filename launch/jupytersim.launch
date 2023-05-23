@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<launch>
+    <include file="$(find roomba500)/launch/simulation.launch"/>
+
+    <include file="$(find roomba500)/launch/turtlebot.launch"/>
+
+    <include file="$(find roomba500)/launch/slam.launch"/>
+
+    <node name="plotjuggler" pkg="plotjuggler" type="plotjuggler"/>
+</launch>
