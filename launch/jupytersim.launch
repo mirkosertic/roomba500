@@ -7,4 +7,9 @@
     <include file="$(find roomba500)/launch/slam.launch"/>
 
     <node name="plotjuggler" pkg="plotjuggler" type="plotjuggler"/>
+
+    <node pkg="costmap_2d" type="costmap_2d_node" name="costmap_node" output="screen">
+        <rosparam file="$(find roomba500)/config/costmap_node_params.yaml" command="load" ns="costmap"/>
+    </node>
+
 </launch>
