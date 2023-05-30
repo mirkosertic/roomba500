@@ -2,12 +2,11 @@ import rospy
 import threading
 import tf
 
-from idlestate import IdleState
 from geometry_msgs.msg import PoseStamped
 from geometry_msgs.msg import Twist
 
 class RobotController:
-    
+
     def __init__(self, transformlistener, mapframe, cmdvelpub):
         self.lock = threading.Lock()
         self.transformlistener = transformlistener
@@ -15,7 +14,7 @@ class RobotController:
         self.behavior = []
         self.latestodominmapframe = None
         self.cmdvelpub = cmdvelpub
-        
+
     def cap(self, value, m):
         if value > m:
             value = m
@@ -32,11 +31,11 @@ class RobotController:
         twistMsg.angular.y = .0
         twistMsg.angular.z = self.cap(veltheta, 3.0)
         self.cmdvelpub.publish(twistMsg)
-        
+
     def newodometry(self, message):
         try:
-            self.lock.acquire()            
-            
+            self.lock.acquire()
+
             latestcommontime = self.transformlistener.getLatestCommonTime(self.mapframe, message.header.frame_id)
 
             mpose = PoseStamped()
@@ -51,23 +50,23 @@ class RobotController:
 
         except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException) as e:
             rospy.logerr('Error processing odometry data : %s', e)
-            
-        self.lock.release()            
+
+        self.lock.release()
         pass
-    
+
     def processBehavior(self):
         try:
             if len(self.behavior) > 0:
                 self.behavior[-1].process(self)
-        except Exception as e:                
+        except Exception as e:
             rospy.logerr('Error processing behavior : %s', e)
         pass
-    
+
     def appendbehavior(self, b):
         self.lock.acquire()
         self.behavior.append(b)
-        
+
         self.lock.release()
-        
+
     def finishbehavior(self):
         del self.behavior[-1]
