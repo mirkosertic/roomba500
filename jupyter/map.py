@@ -1,5 +1,11 @@
 from priorityqueue import PriorityQueue
 
+from tf.transformations import euler_from_quaternion
+from trigfunctions import signedangle
+from trigfunctions import normalizerad
+
+import math
+
 class Map:
 
     def __init__(self):
@@ -21,8 +27,17 @@ class Map:
         mapx = int((pose.pose.position.x - self.latestmap.info.origin.position.x) / self.latestmap.info.resolution)
         mapy = int((pose.pose.position.y - self.latestmap.info.origin.position.y) / self.latestmap.info.resolution)
         return (mapx, mapy)
-    
-    def findpath(self, src, target):
+
+    def posetoyaw(self, pose):
+        quat = pose.pose.orientation
+        (_, _, yaw) = euler_from_quaternion([quat.x, quat.y, quat.z, quat.w])
+        return normalizerad(yaw)
+
+    def findpath(self, srcpose, targetpose):
+
+        src = self.posetogrid(srcpose)
+        target = self.posetogrid(targetpose)
+        srcyaw = self.posetoyaw(srcpose)
 
         # Code taken from https://www.redblobgames.com/pathfinding/a-star/implementation.html
         frontier = PriorityQueue()
@@ -31,14 +46,25 @@ class Map:
         came_from = {}
         cost_so_far = {}
         came_from[src] = None
-        cost_so_far[src] = 0
+        cost_so_far[src] = (0, srcyaw)
 
-        def heuristicscore(src, target):
+        def distance(src, target):
             (x1, y1) = src
             (x2, y2) = target
             dx = x2 - x1
             dy = y2 - y1
-            return abs(dx) + abs(dy)
+
+            return math.sqrt(dx * dx + dy * dy)
+
+        def coststoreach(currentyaw, src, target):
+
+            angle = anglebetween(src, target)
+            shortestrotation = signedangle(currentyaw, angle)
+
+            d = distance(src, target)
+
+            # We assume 0.3m / second velocity and 90 degrees / second rotation speed
+            return d# * 0.3 + abs(shortestrotation) / 15
 
         def adjecentcellsfor(src):
             cells = []
@@ -62,6 +88,17 @@ class Map:
 
             return cells
 
+        def ischeaper(newcost, nextcell):
+            if nextcell not in cost_so_far:
+                return True
+            (nextcost, nextyaw) = cost_so_far[nextcell]
+            return newcost < nextcost
+
+        def anglebetween(src, target):
+            (x1, y1) = src
+            (x2, y2) = target
+            return math.atan2(y2 - y1, x2 - y1)
+
         while not frontier.empty():
             _, currentcell = frontier.get()
 
@@ -77,10 +114,11 @@ class Map:
                 return completePath
 
             for nextCell in adjecentcellsfor(currentcell):
-                new_cost = cost_so_far[currentcell] + heuristicscore(currentcell, nextCell)
-                if nextCell not in cost_so_far or new_cost < cost_so_far[nextCell]:
-                    cost_so_far[nextCell] = new_cost
-                    priority = new_cost + heuristicscore(nextCell, target)
+                (currentcost, currentyaw) = cost_so_far[currentcell]
+                new_cost = currentcost + coststoreach(currentyaw, currentcell, nextCell)
+                if ischeaper(new_cost, nextCell):
+                    cost_so_far[nextCell] = (new_cost, anglebetween(currentcell, nextCell))
+                    priority = new_cost + distance(nextCell, target)
                     frontier.put((id(nextCell), nextCell), priority)
                     came_from[nextCell] = currentcell
 

@@ -4,6 +4,8 @@ from basestate import BaseState
 from pidcontroller import PIDController
 from tf.transformations import euler_from_quaternion
 
+from trigfunctions import signedangle
+
 class DriveToPosition(BaseState):
 
     def __init__(self, targetpose):
@@ -33,7 +35,7 @@ class DriveToPosition(BaseState):
 
                 targetyaw = math.atan2(dy, dx)
 
-                return self.signedAngle(currentyaw, targetyaw)
+                return signedangle(currentyaw, targetyaw)
 
             self.yawcontroller = PIDController(0.05, .0, .0, angleerror)
 

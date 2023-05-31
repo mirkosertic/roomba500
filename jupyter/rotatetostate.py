@@ -4,6 +4,7 @@ from basestate import BaseState
 from pidcontroller import PIDController
 from tf.transformations import euler_from_quaternion
 
+from trigfunctions import signedangle
 
 class RotateToState(BaseState):
 
@@ -13,7 +14,7 @@ class RotateToState(BaseState):
             odomQuat = current.pose.orientation
             (_, _, yaw) = euler_from_quaternion([odomQuat.x, odomQuat.y, odomQuat.z, odomQuat.w])
 
-            return self.signedAngle(yaw, targettheta)
+            return signedangle(yaw, targettheta)
 
         self.controller = PIDController(0.05, .0, .0, errorfun)
         pass
