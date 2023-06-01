@@ -1,7 +1,6 @@
 from priorityqueue import PriorityQueue
 
 from tf.transformations import euler_from_quaternion
-from trigfunctions import signedangle
 from trigfunctions import normalizerad
 
 import math
@@ -33,11 +32,15 @@ class Map:
         (_, _, yaw) = euler_from_quaternion([quat.x, quat.y, quat.z, quat.w])
         return normalizerad(yaw)
 
-    def isdirectpath(self, srcpose, targetpose):
+    def isdirectpathpose(self, srcpose, targetpose):
+
+        return self.isdirectpath(self.posetogrid(srcpose), self.posetogrid(targetpose))
+
+    def isdirectpath(self, src, target):
 
         # Code adapted from https://jccraig.medium.com/we-must-draw-the-line-1820d49d19dd
-        (x1, y1) = self.posetogrid(srcpose)
-        (x2, y2) = self.posetogrid(targetpose)
+        (x1, y1) = src
+        (x2, y2) = target
 
         x = x1
         y = y1
@@ -51,7 +54,7 @@ class Map:
         while pixels:
 
             idx = self.indexfor(x, y)
-            if self.latestmap.data[idx] != 0:
+            if idx is None or self.latestmap.data[idx] != 0:
                 return False
 
             ix += dx
@@ -80,6 +83,8 @@ class Map:
         came_from[src] = None
         cost_so_far[src] = 0
 
+        scandistance = 5
+
         def heuristicscore(src, target):
             (x1, y1) = src
             (x2, y2) = target
@@ -91,24 +96,41 @@ class Map:
         def adjecentcellsfor(src):
             cells = []
 
-            def check(x, y, offx, offy):
-                idx = self.indexfor(x + offx, y + offy)
-                if idx is not None:
-                    if self.latestmap.data[idx] == 0:
-                        return (x + offx, y + offy)
-
-                return None
+            if self.isdirectpath(src, target):
+                cells.append(target)
+                return cells
 
             (x, y) = src
 
-            offsetstocheck = ((-1, 1), (0, 1), (1, 1), (-1, 0), (1, 0), (-1, -1), (0, -1), (-1, -1))
+            offsetstocheck = ((-scandistance, scandistance), (0, scandistance), (scandistance, scandistance), (-scandistance, 0), (scandistance, 0), (-scandistance, -scandistance), (0, -scandistance), (-scandistance, -scandistance))
             for off in offsetstocheck:
                 (offx, offy) = off
-                cell = check(x, y, offx, offy)
-                if cell is not None:
+                cell = (x + offx, y + offy)
+                if self.isdirectpath(src, cell):
                     cells.append(cell)
 
             return cells
+
+        def compress(path):
+            result = []
+            for i, cell in enumerate(path):
+                if i == 0 or i == len(path) - 1:
+                    # We have to keep the first and the last point of the path
+                    result.append(cell)
+                else:
+                    # We check the trajectory from the previous point to the current
+                    (px, py) = path[i - 1]
+                    (cx, cy) = cell
+                    (nx, ny) = path[i + 1]
+
+                    tprev = math.atan2(cy - py, cx - px)
+                    tnext = math.atan2(ny - cy, nx - cx)
+
+                    if abs(tnext - tprev) > 0.05: # if there is a significant change in angle, add it to the list
+                        result.append(cell)
+
+            return result
+
 
         while not frontier.empty():
             _, currentcell = frontier.get()
@@ -122,7 +144,7 @@ class Map:
                 completePath.append(src)
                 completePath.reverse()
 
-                return completePath
+                return compress(completePath)
 
             for nextCell in adjecentcellsfor(currentcell):
                 new_cost = cost_so_far[currentcell] + heuristicscore(currentcell, nextCell)

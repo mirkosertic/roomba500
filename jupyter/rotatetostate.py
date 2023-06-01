@@ -16,13 +16,13 @@ class RotateToState(BaseState):
 
             return signedangle(yaw, targettheta)
 
-        self.controller = PIDController(0.05, .0, .0, errorfun)
+        self.controller = PIDController(0.025, .0, .0, errorfun)
         pass
 
     def process(self, robotcontroller):
 
-        regval = self.controller.update(int(robotcontroller.latestodominmapframe.header.stamp.to_sec() * 1000), robotcontroller.latestodominmapframe, lambda value : robotcontroller.sendcontrol(.0, value))
-        if regval and abs(regval) < 0.05:
+        regval, error = self.controller.update(int(robotcontroller.latestodominmapframe.header.stamp.to_sec() * 1000), robotcontroller.latestodominmapframe, lambda value : robotcontroller.sendcontrol(.0, value))
+        if regval and abs(regval) < 0.01:
             rospy.loginfo('RotateToState() - Finished')
 
             robotcontroller.sendcontrol(.0, .0)

@@ -30,6 +30,6 @@ class PIDController:
             self.lasterror = error
             self.sumerror += error
             
-            return regval
+            return regval, error
             
         return None
