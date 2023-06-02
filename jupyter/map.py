@@ -221,7 +221,7 @@ class Map:
 
                 for prev in prevslices:
                     for curr in currentslices:
-                        if (commonborder(prev, curr)):
+                        if commonborder(prev, curr):
                             prev.rightslices.append(curr)
                             curr.leftslices.append(prev)
 
