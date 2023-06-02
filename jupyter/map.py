@@ -5,6 +5,15 @@ from trigfunctions import normalizerad
 
 import math
 
+class VerticalSlice:
+
+    def __init__(self, x, ystart, yend):
+        self.x = x
+        self.ystart = ystart
+        self.yend = yend
+        self.leftslices = []
+        self.rightslices = []
+
 class Map:
 
     def __init__(self):
@@ -155,3 +164,69 @@ class Map:
                     came_from[nextCell] = currentcell
 
         return None
+
+    def celldecompose(self, scanwidth):
+
+        x = 0
+
+        slices = []
+
+        def testslice(x, y, testwidth):
+            yt = y
+            while (yt < y + testwidth):
+                idx = x + (y * self.latestmap.info.width)
+                if self.latestmap.data[idx] != 0:
+                    return False
+                yt = yt + 1
+
+            return True
+
+        def commonborder(left, right):
+            if left.ystart <= right.ystart <= left.yend:
+                return True
+            if left.ystart <= right.yend <= left.yend:
+                return True
+            if right.ystart < left.ystart and right.yend > left.yend:
+                return True
+
+            return False
+
+        prevslices = []
+
+        while x < self.latestmap.info.width:
+            y = 0
+            testwidth = min(scanwidth, self.latestmap.info.width - 1 - x)
+            if testwidth > 0:
+
+                lateststart = None
+
+                currentslices = []
+
+                while y < self.latestmap.info.height:
+
+                    if testslice(x, y, testwidth):
+                        if lateststart is None:
+                            lateststart = y
+                    else:
+                        if lateststart is not None:
+
+                            newslice = VerticalSlice(x, lateststart, y - 1)
+
+                            slices.append(newslice)
+                            currentslices.append(newslice)
+
+                            lateststart = None
+
+                    y = y + 1
+
+                for prev in prevslices:
+                    for curr in currentslices:
+                        if (commonborder(prev, curr)):
+                            prev.rightslices.append(curr)
+                            curr.leftslices.append(prev)
+
+                prevslices = currentslices
+
+            x = x + scanwidth
+
+        return slices
