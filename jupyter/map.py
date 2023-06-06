@@ -1,18 +1,30 @@
 from priorityqueue import PriorityQueue
 
 from tf.transformations import euler_from_quaternion
-from trigfunctions import normalizerad
+from trigfunctions import normalizerad, distance
 
 import math
+import rospy
 
 class VerticalSlice:
 
-    def __init__(self, x, ystart, yend):
+    def __init__(self, x, width, ystart, yend):
         self.x = x
+        self.width = width
         self.ystart = ystart
         self.yend = yend
         self.leftslices = []
         self.rightslices = []
+
+    def covers(self, position):
+        x, y = position
+        return x >= self.x and x < self.x + self.width and y >= self.ystart and y < self.yend
+
+    def top(self):
+        return (int(self.x + self.width / 2), self.ystart)
+
+    def bottom(self):
+        return (int(self.x + self.width / 2), self.yend)
 
 class Map:
 
@@ -55,6 +67,7 @@ class Map:
         y = y1
         dx = abs(x2 - x1)
         dy = abs(y2 - y1)
+
         sx = 1 if x1 < x2 else -1 if x1 > x2 else 0
         sy = 1 if y1 < y2 else -1 if y1 > y2 else 0
         ix = dy // 2
@@ -83,6 +96,10 @@ class Map:
         src = self.posetogrid(srcpose)
         target = self.posetogrid(targetpose)
 
+        return self.findpathgrid(src, target)
+
+    def findpathgrid(self, src, target):
+
         # Code taken from https://www.redblobgames.com/pathfinding/a-star/implementation.html
         frontier = PriorityQueue()
         frontier.put((id(src), src), 0)
@@ -93,14 +110,6 @@ class Map:
         cost_so_far[src] = 0
 
         scandistance = 5
-
-        def heuristicscore(src, target):
-            (x1, y1) = src
-            (x2, y2) = target
-            dx = x2 - x1
-            dy = y2 - y1
-
-            return math.sqrt(dx * dx + dy * dy)
 
         def adjecentcellsfor(src):
             cells = []
@@ -156,10 +165,10 @@ class Map:
                 return compress(completePath)
 
             for nextCell in adjecentcellsfor(currentcell):
-                new_cost = cost_so_far[currentcell] + heuristicscore(currentcell, nextCell)
+                new_cost = cost_so_far[currentcell] + distance(currentcell, nextCell)
                 if nextCell not in cost_so_far or new_cost < cost_so_far[nextCell]:
                     cost_so_far[nextCell] = new_cost
-                    priority = new_cost + heuristicscore(nextCell, target)
+                    priority = new_cost + distance(nextCell, target)
                     frontier.put((id(nextCell), nextCell), priority)
                     came_from[nextCell] = currentcell
 
@@ -172,12 +181,11 @@ class Map:
         slices = []
 
         def testslice(x, y, testwidth):
-            yt = y
-            while (yt < y + testwidth):
-                idx = x + (y * self.latestmap.info.width)
+            idx = x + (y * self.latestmap.info.width)
+            for i in range(testwidth):
                 if self.latestmap.data[idx] != 0:
                     return False
-                yt = yt + 1
+                idx = idx + 1
 
             return True
 
@@ -210,7 +218,7 @@ class Map:
                     else:
                         if lateststart is not None:
 
-                            newslice = VerticalSlice(x, lateststart, y - 1)
+                            newslice = VerticalSlice(x, testwidth, lateststart, y - 1)
 
                             slices.append(newslice)
                             currentslices.append(newslice)
@@ -230,3 +238,109 @@ class Map:
             x = x + scanwidth
 
         return slices
+
+    def fullcoveragepath(self, scanwidth, currentpose):
+
+        slices = self.celldecompose(scanwidth)
+        robotposition = self.posetogrid(currentpose)
+
+        startslice = None
+        for slice in slices:
+            if slice.covers(robotposition):
+                startslice = slice
+
+        if startslice is None:
+            rospy.loginfo('fullcoveragepath(): No starting slice found')
+            return None, None, None
+
+        slicetop = startslice.top()
+        slicebottom = startslice.bottom()
+
+        coveragepath = []
+
+        currentpos = None
+
+        if distance(robotposition, slicetop) < distance(robotposition, slicebottom):
+            # Move robot to top and then to the bottom of the slice
+            coveragepath.append(slicetop)
+            coveragepath.append(slicebottom)
+            currentpos = slicebottom
+        else:
+            # Move robot to the botton and then to the top of the slice
+            coveragepath.append(slicebottom)
+            coveragepath.append(slicetop)
+            currentpos = slicetop
+
+        # Now, we do have all slices
+        # Step: find the slice containing the robot, this is the starting slice
+        # within the starting slice, check the shortest path to the top or to the bottom, move to the shortest point
+        # 1. Move within the slice to the opposite end
+        # 2. Mark the current slice as visited
+        # 3. Check all not visited neighboring slices of the current sliice. Move to the shortest slice and repeat at 1. Mark all other slices as open
+        # 4. If there are no direct neighbors, select the nearest slice from the open list and repeat at 1
+        # 5. Repeat until open list is empty
+
+        def dfs(level, currentslice, currentpos, visited, coveragepath):
+
+            if not currentslice in visited:
+
+                visited.append(currentslice)
+
+                def nearestslice(currentpos):
+
+                    nearest = None
+                    lastdistance = None
+
+                    slicestocheck = currentslice.leftslices + currentslice.rightslices
+                    for slice in slicestocheck:
+                        if slice not in visited:
+                            dist = min(distance(currentpos, slice.top()), distance(currentpos, slice.bottom()))
+                            if nearest is None:
+                                nearest = slice
+                                lastdistance = dist
+                            else:
+                                if dist < lastdistance:
+                                    nearest = slice
+                                    lastdistance = dist
+
+                    return nearest
+
+                nextslice = nearestslice(currentpos)
+                while nextslice:
+
+                    top = nextslice.top()
+                    bottom = nextslice.bottom()
+
+                    if distance(currentpos, top) < distance(currentpos, bottom):
+                        # Move to top, then to the bottom
+
+                        path = self.findpathgrid(currentpos, top)
+                        if path:
+                            coveragepath.extend(path)
+                            coveragepath.append(bottom)
+                            currentpos = bottom
+                        else:
+                            return currentpos, top
+                    else:
+                        # Move to the bottom, then to the top
+                        path = self.findpathgrid(currentpos, bottom)
+                        if path:
+                            coveragepath.extend(path)
+                            coveragepath.append(top)
+                            currentpos = top
+                        else:
+                            return currentpos, bottom
+
+                    currentpos, error = dfs(level + 1, nextslice, currentpos, visited, coveragepath)
+                    #if error:
+                    #    return currentpos, error
+
+                    nextslice = nearestslice(currentpos)
+
+                return currentpos, None
+
+            return currentpos, None
+
+        currentpos, error = dfs(0, startslice, currentpos, [], coveragepath)
+
+        return coveragepath, currentpos, error
