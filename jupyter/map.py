@@ -1,5 +1,7 @@
 from priorityqueue import PriorityQueue
 
+from geometry_msgs.msg import PoseStamped
+
 from tf.transformations import euler_from_quaternion
 from trigfunctions import normalizerad, distance
 
@@ -48,6 +50,13 @@ class Map:
         mapy = int((pose.pose.position.y - self.latestmap.info.origin.position.y) / self.latestmap.info.resolution)
         return (mapx, mapy)
 
+    def gridtopose(self, g):
+        x, y = g
+        pose = PoseStamped()
+        pose.pose.position.x = self.latestmap.info.origin.position.x + x * self.latestmap.info.resolution + self.latestmap.info.resolution / 2
+        pose.pose.position.y = self.latestmap.info.origin.position.y + y * self.latestmap.info.resolution + self.latestmap.info.resolution / 2
+        return pose
+    
     def posetoyaw(self, pose):
         quat = pose.pose.orientation
         (_, _, yaw) = euler_from_quaternion([quat.x, quat.y, quat.z, quat.w])

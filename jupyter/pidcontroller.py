@@ -8,7 +8,7 @@ class PIDController:
         self.ki = ki
         self.integral = 0
         self.sumerror = 0
-        self.errorfun = errorfun;
+        self.errorfun = errorfun
         
     def update(self, time, currentvalue, regulator):
         dt = time - self.lasttime

@@ -32,6 +32,19 @@ class RobotController:
         twistMsg.angular.z = self.cap(veltheta, 3.0)
         self.cmdvelpub.publish(twistMsg)
 
+    def stop(self):
+        try:
+            self.lock.acquire()
+            
+            self.behavior = []
+            
+        except Exception as e:
+            rospy.logerr('Error stopping action : %s', e)
+
+        self.lock.release()
+        pass
+      
+        
     def newodometry(self, message):
         try:
             self.lock.acquire()
