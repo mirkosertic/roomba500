@@ -10,7 +10,7 @@ class PIDController:
         self.sumerror = 0
         self.errorfun = errorfun
         
-    def update(self, time, currentvalue, regulator):
+    def update(self, time, currentvalue):
         dt = time - self.lasttime
         
         if dt > 0:
@@ -23,13 +23,10 @@ class PIDController:
             
             regval = error * self.kp + derrivative + self.integral
 
-            if regulator is not None:
-                regulator(regval)
-        
             self.lasttime = time
             self.lasterror = error
             self.sumerror += error
             
             return regval, error
             
-        return None
+        return None, None

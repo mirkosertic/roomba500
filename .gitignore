@@ -2,3 +2,4 @@
 *.iml
 /doc/.ipynb_checkpoints/
 /jupyter/.ipynb_checkpoints/
+/src/.ipynb_checkpoints/

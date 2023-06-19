@@ -18,7 +18,6 @@ import yaml
 import tf
 import roslaunch
 import rospy
-import actionlib
 import rosservice
 
 from std_srvs.srv import Empty
@@ -27,9 +26,7 @@ from geometry_msgs.msg import Twist, Pose2D, Point32, PoseStamped
 from nav_msgs.msg import Odometry, OccupancyGrid, Path
 from sensor_msgs.msg import PointCloud, MagneticField
 from rosgraph_msgs.msg import Log
-from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from visualization_msgs.msg import MarkerArray
-from actionlib_msgs.msg import GoalStatus
 
 from tf.transformations import quaternion_from_euler
 
@@ -48,7 +45,7 @@ from luma.oled.device import ssd1306
 from PIL import ImageFont
 
 from roomba500.msg import RoombaSensorFrame, NavigationInfo, Area
-from roomba500.srv import Clean, CleanResponse, UpdateNoCleanZones, UpdateNoCleanZonesResponse
+from roomba500.srv import Clean, Cancel, CleanResponse, UpdateNoCleanZones, UpdateNoCleanZonesResponse, MoveTo
 
 class Supervisor:
 
@@ -79,8 +76,6 @@ class Supervisor:
 
         self.bumperspub = None
         self.transformlistener = None
-
-        self.movebaseclient = None
 
         self.sidebrushpub = None
         self.mainbrushpub = None
@@ -160,7 +155,7 @@ class Supervisor:
 
         self.mainbrushpub.publish(Int16(0))
         self.sidebrushpub.publish(Int16(0))
-        self.vacuum.publish(Int16(0))
+        self.vacuumpub.publish(Int16(0))
 
         self.command(.0, .0)
         return JSONResponse({})
@@ -312,7 +307,7 @@ class Supervisor:
         rospy.loginfo('Waiting for service %s', servicename)
         rospy.wait_for_service(servicename)
         rospy.loginfo('Invoking service')
-        service = rospy.ServiceProxy(servicename, Clean)
+        service = rospy.ServiceProxy(servicename, Cancel)
         service()
         rospy.loginfo('Service called!')
 
@@ -379,73 +374,25 @@ class Supervisor:
 
         rospy.loginfo("Received move to command %s", str(cmd))
 
-        if not self.movebaseclient.wait_for_server(rospy.Duration(1.0)):
-            rospy.logerr("Action server not available!")
-            rospy.signal_shutdown("Action server not available!")
-        else:
-            # Rotate to target
-            rospy.loginfo("Rotating towards target position...")
-            currentx = self.state.latestodomonmap["x"]
-            currenty = self.state.latestodomonmap["y"]
-            targetangle = math.atan2(cmd['targety'] - currenty, cmd['targetx'] - currentx)
-            q = quaternion_from_euler(0, 0, targetangle)
-            rotationgoal = MoveBaseGoal()
-            rotationgoal.target_pose.header.frame_id = "map"
-            rotationgoal.target_pose.header.stamp = rospy.Time.now()
-            rotationgoal.target_pose.pose.position.x = currentx
-            rotationgoal.target_pose.pose.position.y = currenty
-            rotationgoal.target_pose.pose.orientation.x = q[0]
-            rotationgoal.target_pose.pose.orientation.y = q[1]
-            rotationgoal.target_pose.pose.orientation.z = q[2]
-            rotationgoal.target_pose.pose.orientation.w = q[3]
+        servicename = 'moveto'
+        rospy.loginfo('Waiting for service %s', servicename)
+        rospy.wait_for_service(servicename)
+        rospy.loginfo('Invoking service')
+        service = rospy.ServiceProxy(servicename, MoveTo)
 
-            def done_cb(status, result):
-                rospy.loginfo("Rotation done")
+        q = quaternion_from_euler(0, 0, cmd['theta'])
+        targetpose = PoseStamped()
+        targetpose.header.frame_id = "map"
+        targetpose.header.stamp = rospy.Time.now()
+        targetpose.pose.position.x = cmd['targetx']
+        targetpose.pose.position.y = cmd['targety']
+        targetpose.pose.orientation.x = q[0]
+        targetpose.pose.orientation.y = q[1]
+        targetpose.pose.orientation.z = q[2]
+        targetpose.pose.orientation.w = q[3]
 
-                if status == GoalStatus.SUCCEEDED:
-                    rospy.loginfo("Sending final goal to navigation stack...")
-                    # Move to target
-
-                    goal = MoveBaseGoal()
-                    goal.target_pose.header.frame_id = "map"
-                    goal.target_pose.header.stamp = rospy.Time.now()
-                    goal.target_pose.pose.position.x = cmd['targetx']
-                    goal.target_pose.pose.position.y = cmd['targety']
-                    goal.target_pose.pose.orientation.x = q[0]
-                    goal.target_pose.pose.orientation.y = q[1]
-                    goal.target_pose.pose.orientation.z = q[2]
-                    goal.target_pose.pose.orientation.w = q[3]
-
-                    def done_cb_2(status, result):
-                        rospy.loginfo("Reached target pose, rotating to final state")
-
-                        if status == GoalStatus.SUCCEEDED:
-                            q = quaternion_from_euler(0, 0, cmd['theta'])
-                            rot = MoveBaseGoal()
-                            rot.target_pose.header.frame_id = "map"
-                            rot.target_pose.header.stamp = rospy.Time.now()
-                            rot.target_pose.pose.position.x = cmd['targetx']
-                            rot.target_pose.pose.position.y = cmd['targety']
-                            rot.target_pose.pose.orientation.x = q[0]
-                            rot.target_pose.pose.orientation.y = q[1]
-                            rot.target_pose.pose.orientation.z = q[2]
-                            rot.target_pose.pose.orientation.w = q[3]
-
-                            self.movebaseclient.send_goal(goal)
-
-                    self.movebaseclient.send_goal(goal, done_cb_2, active_cb, feedback_cb)
-                pass
-
-            def active_cb():
-                rospy.loginfo("Goal is now being processing by action server...")
-                pass
-
-            def feedback_cb(feedback):
-                rospy.logdebug("Got feedback from action server : (%s) %s", str(type(feedback)), str(feedback))
-                pass
-
-            self.movebaseclient.send_goal(rotationgoal, done_cb, active_cb, feedback_cb)
-            self.state.latestcleaningpath = {}
+        service(targetpose)
+        rospy.loginfo('Service called!')
 
         return JSONResponse({})
 
@@ -580,19 +527,15 @@ class Supervisor:
         rospy.Subscriber("cmd_vel", Twist, self.state.newCmdVel)
         rospy.Subscriber("navigation_info", NavigationInfo, self.state.newNavigationInfo)
         rospy.Subscriber("map", OccupancyGrid, self.state.newMap)
-        rospy.Subscriber("move_base/global_costmap/costmap", OccupancyGrid, self.state.newCostMap)
-        rospy.Subscriber("cleaningpath", Path, self.state.newCleaningPath)
+        rospy.Subscriber("/costmap_node/costmap/costmap", OccupancyGrid, self.state.newCostMap)
+        rospy.Subscriber("navpath", Path, self.state.newCleaningPath)
         rospy.Subscriber("cleaningmap", MarkerArray, self.state.newCleaningMap)
 
         rospy.Subscriber("rosout_agg", Log, self.state.newLogMessage)
 
         self.mainbrushpub = rospy.Publisher('roomba/cmd_mainbrush', Int16, queue_size=10)
         self.sidebrushpub = rospy.Publisher('roomba/cmd_sidebrush', Int16, queue_size=10)
-        self.vacuum = rospy.Publisher('roomba/cmd_vacuum', Int16, queue_size=10)
-
-        # We need the client for move base
-        rospy.loginfo("Connecting to move_base action server")
-        self.movebaseclient = actionlib.SimpleActionClient('move_base', MoveBaseAction)
+        self.vacuumpub = rospy.Publisher('roomba/cmd_vacuum', Int16, queue_size=10)
 
         rospy.loginfo('Initializing physical display')
         font0path = str(pathlib.Path(__file__).resolve().parent.joinpath('ttf', 'C&C Red Alert [INET].ttf'))

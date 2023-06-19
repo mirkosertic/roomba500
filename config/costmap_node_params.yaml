@@ -8,12 +8,17 @@ transform_tolerance: 0.5
 
 plugins:
   - {name: static_layer, type: "costmap_2d::StaticLayer"}
+  - {name: prohibited_layer, type: "costmap_prohibition_layer_namespace::CostmapProhibitionLayer"}
   - {name: obstacle_layer, type: "costmap_2d::VoxelLayer"}
   - {name: inflation_layer, type: "costmap_2d::InflationLayer"}
 
 static_layer:
   map_topic: /map
   subscribe_to_updates: true
+
+prohibited_layer:
+  prohibition_areas:
+    - []
 
 obstacle_layer:
   observation_sources: bumpers lightsensors

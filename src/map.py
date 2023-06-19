@@ -1,389 +1,123 @@
-#!/usr/bin/env python3
-
-import enum
-import math
-
-import rospy
-import numpy as np
-
 from priorityqueue import PriorityQueue
 
+from nav_msgs.msg import Path
+from geometry_msgs.msg import PoseStamped
 
-class GridCellStatus(enum.Enum):
-    UNKNOWN = 1
-    OCCUPIED = 2
-    FREE = 3
-
-
-class GridMovementDirection(enum.Enum):
-    RIGHT = 1
-    TOP = 2
-    LEFT = 3
-    BOTTOM = 4
-
-
-class BoustrophedonSpan:
-
-    def __init__(self, start):
-        self.cells = []
-        self.cells.append(start)
-        self.neighbors = []
+from tf.transformations import euler_from_quaternion
+from trigfunctions import normalizerad, distance
 
-    def append(self, cell):
-        self.cells.append(cell)
+import math
+import rospy
 
-    def appendNeighbors(self, neighbors):
-        self.neighbors.extend(neighbors)
+class VerticalSlice:
 
+    def __init__(self, x, width, ystart, yend):
+        self.x = x
+        self.width = width
+        self.ystart = ystart
+        self.yend = yend
+        self.leftslices = []
+        self.rightslices = []
 
-class MapGridCell:
+    def __str__(self):
+        return "(VerticalSlice x=" + str(self.x) + ", ystart=" + str(self.ystart) + ", yend=" + str(self.yend) + ", width=" + str(self.width) + ")"
 
-    def __init__(self, centerx, centery, size, status):
-        self.centerx = centerx
-        self.centery = centery
-        self.size = size
+    def __repr__(self):
+        return self.__str__()
 
-        # Pre-Compute the bounding box to speed up containment test
-        halfsize = self.size / 2.0
-        self.topleftx = self.centerx - halfsize
-        self.toplefty = self.centery + halfsize
-        self.bottomrightx = self.centerx + halfsize
-        self.bottomrighty = self.centery - halfsize
+    def covers(self, position):
+        x, y = position
+        return x >= self.x and x < self.x + self.width and y >= self.ystart and y < self.yend
 
-        self.topleft = None
-        self.top = None
-        self.topright = None
-        self.left = None
-        self.right = None
-        self.bottomleft = None
-        self.bottom = None
-        self.bottomright = None
-        self.status = status
+    def top(self):
+        return int(self.x + self.width / 2), self.ystart
 
-    def distanceTo(self, othercell):
-        dx = othercell.centerx - self.centerx
-        dy = othercell.centery - self.centery
-        return math.sqrt(dx * dx + dy * dy)
+    def bottom(self):
+        return int(self.x + self.width / 2), self.yend
 
-    def isCovering(self, position):
-        return position.x >= self.topleftx and position.x <= self.bottomrightx and position.y >= self.bottomrighty and position.y <= self.toplefty
+class Map:
 
-    def updateStatusFrom(self, griddata, scanwidthinmeters, occupancythreshold):
-        topleftx = self.centerx - scanwidthinmeters / 2
-        toplefty = self.centery + scanwidthinmeters / 2
+    def __init__(self):
+        self.latestmap = None
 
-        bottomrightx = self.centerx + scanwidthinmeters / 2
-        bottomrighty = self.centery - scanwidthinmeters / 2
+    def newmap(self, message):
+        self.latestmap = message
 
-        topleftxoc = int((topleftx - griddata.info.origin.position.x) / griddata.info.resolution)
-        topleftyoc = int((toplefty - griddata.info.origin.position.y) / griddata.info.resolution)
+    def indexfor(self, x, y):
+        if self.latestmap is None:
+            return None
 
-        bottomrightxoc = int((bottomrightx - griddata.info.origin.position.x) / griddata.info.resolution)
-        bottomrightyoc = int((bottomrighty - griddata.info.origin.position.y) / griddata.info.resolution)
+        if x < 0 or y < 0 or x > self.latestmap.info.width or y > self.latestmap.info.height:
+            return None
 
-        for y in range(bottomrightyoc, topleftyoc, 1):
-            for x in range(topleftxoc, bottomrightxoc, 1):
-                # Clip to valid coordinates
-                if x >= 0 and x < griddata.info.width and y >= 0 and y < griddata.info.height:
-                    value = griddata.data[y * griddata.info.width + x]
-                    if value < 0:
-                        # If one cell is unknown(-1), the status of the whole cell is unknown
-                        self.status = GridCellStatus.UNKNOWN
-                        return
-
-        # We only check the center of the cell, as due to costmap inflation this also covers if it is reachable or not.
-        self.status = GridCellStatus.UNKNOWN
-        xcenter = int((self.centerx - griddata.info.origin.position.x) / griddata.info.resolution)
-        ycenter = int((self.centery - griddata.info.origin.position.y) / griddata.info.resolution)
-        if xcenter >= 0 and xcenter < griddata.info.width and ycenter >= 0 and ycenter < griddata.info.height:
-            if griddata.data[ycenter * griddata.info.width + xcenter] > occupancythreshold:
-                self.status = GridCellStatus.OCCUPIED
-            else:
-                self.status = GridCellStatus.FREE
+        return x + (y * self.latestmap.info.width)
 
+    def posetogrid(self, pose):
+        return self.xytogrid(pose.pose.position.x, pose.pose.position.y)
 
-class NavigationMap:
+    def xytogrid(self, x, y):
+        mapx = int((x - self.latestmap.info.origin.position.x) / self.latestmap.info.resolution)
+        mapy = int((y - self.latestmap.info.origin.position.y) / self.latestmap.info.resolution)
+        return mapx, mapy
 
-    def __init__(self, gridcellwidthinmeters, scanwidthinmeters, occupancythreshold):
-        self.gridcellwidthinmeters = gridcellwidthinmeters
-        self.scanwidthinmeters = scanwidthinmeters
-        self.occupancythreshold = occupancythreshold
-        self.cells = []
-        self.currentmap =  None
+    def gridtopose(self, g):
+        x, y = g
+        pose = PoseStamped()
+        pose.pose.position.x = self.latestmap.info.origin.position.x + x * self.latestmap.info.resolution + self.latestmap.info.resolution / 2
+        pose.pose.position.y = self.latestmap.info.origin.position.y + y * self.latestmap.info.resolution + self.latestmap.info.resolution / 2
+        return pose
 
-    def isNewMap(self, griddata):
-        if self.currentmap is None:
-            return True
+    def posetoyaw(self, pose):
+        quat = pose.pose.orientation
+        (_, _, yaw) = euler_from_quaternion([quat.x, quat.y, quat.z, quat.w])
+        return normalizerad(yaw)
 
-        if self.currentmap.info.width != griddata.info.width:
-            return True
+    def isdirectpathpose(self, srcpose, targetpose):
 
-        if self.currentmap.info.height != griddata.info.height:
-            return True
+        return self.isdirectpath(self.posetogrid(srcpose), self.posetogrid(targetpose))
 
-        if self.currentmap.info.resolution != griddata.info.resolution:
-            return True
-
-        if self.currentmap.info.origin.position.x != griddata.info.origin.position.x:
-            return True
+    def isdirectpath(self, src, target):
 
-        if self.currentmap.info.origin.position.y != griddata.info.origin.position.y:
-            return True
+        # Code adapted from https://jccraig.medium.com/we-must-draw-the-line-1820d49d19dd
+        (x1, y1) = src
+        (x2, y2) = target
 
-        return False
+        x = x1
+        y = y1
+        dx = abs(x2 - x1)
+        dy = abs(y2 - y1)
 
-    def updateCellStatusFrom(self, griddata):
-        self.currentmap = griddata
-        for cell in self.cells:
-            cell.updateStatusFrom(griddata, self.scanwidthinmeters, self.occupancythreshold)
+        sx = 1 if x1 < x2 else -1 if x1 > x2 else 0
+        sy = 1 if y1 < y2 else -1 if y1 > y2 else 0
+        ix = dy // 2
+        iy = dx // 2
+        pixels = dx + 1 if dx > dy else dy + 1
+        while pixels:
 
-    def initOrUpdateFromOccupancyGrid(self, griddata):
+            idx = self.indexfor(x, y)
+            if idx is None or self.latestmap.data[idx] != 0:
+                return False
 
-        rospy.loginfo("Got new costmap")
+            ix += dx
+            if ix >= dy:
+                ix -= dy
+                x += sx
+            iy += dy
+            if iy >= dx:
+                iy -= dx
+                y += sy
+            pixels -= 1
 
-        if not self.isNewMap(griddata):
-            self.updateCellStatusFrom(griddata)
-            return
+        return True
 
-        if self.currentmap is not None:
-            rospy.loginfo("Changes in map position, size or resolution are currently not supported!")
-            return
-
-        origin = griddata.info.origin
-        width = griddata.info.width
-        height = griddata.info.height
-
-        mapwidthinmeters = width * griddata.info.resolution
-        mapheightinmeters = height * griddata.info.resolution
-
-        squaresperrow = len(np.arange(0, mapwidthinmeters, self.gridcellwidthinmeters))
-
-        yoffset = 0
-        for y in np.arange(0, mapheightinmeters, self.gridcellwidthinmeters):
-            xoffset = 0
-            for x in np.arange(0, mapwidthinmeters, self.gridcellwidthinmeters):
-                centerx = origin.position.x + x + (self.gridcellwidthinmeters / 2)
-                centery = origin.position.y + y + (self.gridcellwidthinmeters / 2)
+    def findpath(self, srcpose, targetpose):
 
-                cell = MapGridCell(centerx, centery, self.gridcellwidthinmeters, GridCellStatus.UNKNOWN)
-
-                # We connect the cells
-                if xoffset > 0:
-                    # Connect left cell
-                    left = self.cells[len(self.cells) - 1]
-                    cell.left = left
-                    left.right = cell
-
-                if yoffset > 0:
-                    # Bottom cell
-                    bottom = self.cells[len(self.cells) - squaresperrow]
-                    bottom.top = cell
-                    cell.bottom = bottom
+        src = self.posetogrid(srcpose)
+        target = self.posetogrid(targetpose)
 
-                if yoffset > 0 and xoffset > 0:
-                    # Bottom left
-                    bottomleft = self.cells[len(self.cells) - squaresperrow - 1]
-                    bottomleft.topright = cell
-                    cell.bottomleft = bottomleft
-
-                if yoffset > 0 and xoffset < squaresperrow - 1:
-                    # Bottom right
-                    bottomright = self.cells[len(self.cells) - squaresperrow + 1]
-                    bottomright.topleft = cell
-                    cell.bottomright = bottomright
-
-                self.cells.append(cell)
-
-                xoffset = xoffset + 1
+        return self.findpathgrid(src, target)
 
-            yoffset = yoffset + 1
-
-        self.updateCellStatusFrom(griddata)
-
-    def nearestCellCovering(self, position):
-        nearestCell = None
-        nearestDistance = None
-        for cell in self.cells:
-            if cell.isCovering(position):
-                dx = position.x - cell.centerx
-                dy = position.y - cell.centery
-                distance = math.sqrt(dx * dx + dy * dy)
-                if nearestCell is None or distance < nearestDistance:
-                    nearestCell = cell
-                    nearestDistance = distance
-
-        return nearestCell
-
-    def pathlength(self, path):
-        current = None
-        length = 0
-        for cell in path:
-            if current is None:
-                current = cell
-            else:
-                length = length + current.distanceTo(cell)
-                current = cell
-
-        return length
-
-    def startCoverageBoustrophedon(self, src, cleanarea):
-        # Boustrophedon cell decomposition
-
-        def isCellInCleanArea(cell):
-            return cell.centerx >= cleanarea.mapTopLeftX and cell.centerx <= cleanarea.mapBottomRightX and cell.centery <= cleanarea.mapTopLeftY and cell.centery >= cleanarea.mapBottomRightY
-
-        def isFreeCell(cell):
-            return cell is not None and cell.status == GridCellStatus.FREE and isCellInCleanArea(cell)
-
-        def scanVertical(cell):
-            # Search the top cell
-            foundspans = []
-            start = current
-            while start.top is not None:
-                start = start.top
-
-            currentspan = None
-            while start.bottom is not None:
-                if isFreeCell(start):
-                    if currentspan is None:
-                        currentspan = BoustrophedonSpan(start)
-                        foundspans.append(currentspan)
-                    else:
-                        currentspan.append(start)
-                else:
-                    currentspan = None
-
-                start = start.bottom
-
-            return foundspans
-
-        spanstocover = []
-
-        # Scan to the right
-        current = src
-        initialspans = None
-        prevspans = None
-
-        rospy.loginfo("Robot is in grid cell x=%s, y=%s", str(src.centerx), str(src.centery))
-        rospy.loginfo("Clean area is %s", str(cleanarea))
-
-        rospy.loginfo("Scanning to the right...")
-        while current.right is not None:
-            foundspans = scanVertical(current)
-            spanstocover.extend(foundspans)
-            if initialspans is None:
-                initialspans = foundspans
-
-            # TODO: Register neighbors in a bidirectional way
-
-            prevspans = foundspans
-            current = current.right
-
-        # Scan to the left
-        rospy.loginfo("Scanning to the left...")
-        prevspans = initialspans
-        current = src.left
-        while current is not None and current.left is not None:
-            foundspans = scanVertical(current)
-
-            # TODO: Register neighbors in a bidirectional way
-
-            spanstocover.extend(foundspans)
-            current = current.left
-            prevspans = foundspans
-
-        path = []
-
-        currentspan = None
-        downmovement = True
-
-        # Find the first span covering
-        rospy.loginfo("Cleaning area contains %s spans", len(spanstocover))
-        for span in spanstocover:
-            if src in span.cells:
-                currentspan = span
-
-        if currentspan is None:
-            rospy.loginfo("Robot is not in cleaning area!")
-            pass
-
-        while len(spanstocover) > 0:
-
-            rospy.loginfo("Spans to cover %s", len(spanstocover))
-
-            if downmovement:
-                path.extend(currentspan.cells)
-            else:
-                path.extend(currentspan.cells[::-1])
-
-            spanstocover.remove(currentspan)
-
-            # Find the next possible span
-            current = path[len(path) - 1]
-
-            currentspan = None
-            nearestdistance = .0
-            nearestpath = None
-            for span in spanstocover:
-                possiblepath = self.findPath(current, span.cells[0])
-                if possiblepath is None:
-                    rospy.loginfo("Span is not reachable!")
-                    spanstocover.remove(span)
-                else:
-                    d = self.pathlength(possiblepath)
-                    if currentspan is None or d < nearestdistance:
-                        currentspan = span
-                        nearestdistance = d
-                        nearestpath = possiblepath
-
-                if possiblepath is not None:
-                    possiblepath = self.findPath(current, span.cells[len(span.cells) - 1])
-                    if possiblepath is not None:
-                        d = self.pathlength(possiblepath)
-                        if currentspan is None or d < nearestdistance:
-                            currentspan = span
-                            nearestdistance = d
-                            nearestpath = possiblepath
-
-            if currentspan is None:
-                if len(spanstocover) == 0:
-                    rospy.loginfo("Path seems to be complete")
-                    return self.compress(path)
-
-                rospy.loginfo("Cannot find nearest span")
-                return self.compress(path)
-
-            distanceTop = current.distanceTo(currentspan.cells[0])
-            distanceBottom = current.distanceTo(currentspan.cells[len(currentspan.cells) - 1])
-            downmovement = distanceTop < distanceBottom
-
-            #for index, cell in enumerate(nearestpath):
-            #    if index > 0 and index < len(nearestpath) - 1:
-            #        path.append(cell)
-
-        pass
-
-    def compress(self, path):
-        result = []
-        for i, cell in enumerate(path):
-            if i == 0 or i == len(path) - 1:
-                # We have to keep the first and the last point of the path
-                result.append(cell)
-            else:
-                # We check the trajectory from the previous point to the current
-                prevCell = path[i - 1]
-                currCell = cell
-                nextCell = path[i + 1]
-
-                tprev = math.atan2(currCell.centery - prevCell.centery, currCell.centerx - prevCell.centerx)
-                tnext = math.atan2(nextCell.centery - currCell.centery, nextCell.centerx - currCell.centerx)
-
-                if abs(tnext - tprev) > math.pi / 8:  # Change greater than 22.5 degrees
-                    result.append(cell)
-
-        return result
-
-    def findPath(self, src, target):
+    def findpathgrid(self, src, target):
 
         # Code taken from https://www.redblobgames.com/pathfinding/a-star/implementation.html
         frontier = PriorityQueue()
@@ -394,58 +128,269 @@ class NavigationMap:
         came_from[src] = None
         cost_so_far[src] = 0
 
-        def heuristicscore(src, target):
-            dx = target.centerx - src.centerx
-            dy = target.centery - src.centery
-            #return math.sqrt(dx * dx + dy * dy)
-            return abs(dx) + abs(dy)
+        scandistance = 5
 
         def adjecentcellsfor(src):
             cells = []
 
-            def freeCell(cell):
-                return cell is not None and cell.status == GridCellStatus.FREE
+            if self.isdirectpath(src, target):
+                cells.append(target)
+                return cells
 
-            if freeCell(src.top):
-                cells.append(src.top)
-            if freeCell(src.bottom):
-                cells.append(src.bottom)
-            if freeCell(src.left):
-                cells.append(src.left)
-            if freeCell(src.right):
-                cells.append(src.right)
+            (x, y) = src
 
-            if freeCell(src.top) and freeCell(src.right) and freeCell(src.topright):
-                cells.append(src.topright)
-            if freeCell(src.bottom) and freeCell(src.right) and freeCell(src.bottomright):
-                cells.append(src.bottomright)
-            if freeCell(src.top) and freeCell(src.left) and freeCell(src.topleft):
-                cells.append(src.topleft)
-            if freeCell(src.bottom) and freeCell(src.left) and freeCell(src.bottomleft):
-                cells.append(src.bottomleft)
+            offsetstocheck = ((-scandistance, scandistance), (0, scandistance), (scandistance, scandistance), (-scandistance, 0), (scandistance, 0), (-scandistance, -scandistance), (0, -scandistance), (-scandistance, -scandistance))
+            for off in offsetstocheck:
+                (offx, offy) = off
+                cell = (x + offx, y + offy)
+                if self.isdirectpath(src, cell):
+                    cells.append(cell)
 
             return cells
+
+        def compress(path):
+            result = []
+            for i, cell in enumerate(path):
+                if i == 0 or i == len(path) - 1:
+                    # We have to keep the first and the last point of the path
+                    result.append(cell)
+                else:
+                    # We check the trajectory from the previous point to the current
+                    (px, py) = path[i - 1]
+                    (cx, cy) = cell
+                    (nx, ny) = path[i + 1]
+
+                    tprev = math.atan2(cy - py, cx - px)
+                    tnext = math.atan2(ny - cy, nx - cx)
+
+                    if abs(tnext - tprev) > 0.05: # if there is a significant change in angle, add it to the list
+                        result.append(cell)
+
+            return result
+
 
         while not frontier.empty():
             _, currentcell = frontier.get()
 
             if currentcell == target:
-                completePath = []
+                completepath = []
                 while currentcell != src:
-                    completePath.append(currentcell)
+                    completepath.append(currentcell)
                     currentcell = came_from[currentcell]
 
-                completePath.append(src)
-                completePath.reverse()
+                completepath.append(src)
+                completepath.reverse()
 
-                return self.compress(completePath)
+                return compress(completepath)
 
             for nextCell in adjecentcellsfor(currentcell):
-                new_cost = cost_so_far[currentcell] + heuristicscore(currentcell, nextCell)
+                new_cost = cost_so_far[currentcell] + distance(currentcell, nextCell)
                 if nextCell not in cost_so_far or new_cost < cost_so_far[nextCell]:
                     cost_so_far[nextCell] = new_cost
-                    priority = new_cost + heuristicscore(nextCell, target)
+                    priority = new_cost + distance(nextCell, target)
                     frontier.put((id(nextCell), nextCell), priority)
                     came_from[nextCell] = currentcell
 
         return None
+
+    def celldecompose(self, scanwidth, areatoscan):
+
+        minx = 0
+        maxx = self.latestmap.info.width
+
+        miny = 0
+        maxy = self.latestmap.info.height
+
+        if areatoscan is not None:
+
+            minx, miny = self.xytogrid(areatoscan.mapTopLeftX, areatoscan.mapBottomRightY)
+            maxx, maxy = self.xytogrid(areatoscan.mapBottomRightX, areatoscan.mapTopLeftY)
+
+            rospy.loginfo("Calculating full coverage path from (%s, %s) to (%s, %s)", minx, miny, maxx, maxy)
+
+        x = minx
+
+        slices = []
+
+        def testslice(x, y, testwidth):
+            idx = x + (y * self.latestmap.info.width)
+            for i in range(testwidth):
+                if self.latestmap.data[idx] != 0:
+                    return False
+                idx = idx + 1
+
+            return True
+
+        def commonborder(left, right):
+            if left.ystart <= right.ystart <= left.yend:
+                return True
+            if left.ystart <= right.yend <= left.yend:
+                return True
+            if right.ystart < left.ystart and right.yend > left.yend:
+                return True
+
+            return False
+
+        prevslices = []
+
+        while x < maxx:
+            y = miny
+            testwidth = min(scanwidth, maxx - 1 - x)
+
+            if testwidth > 0:
+
+                lateststart = None
+
+                currentslices = []
+
+                while y < maxy:
+
+                    if testslice(x, y, testwidth):
+                        if lateststart is None:
+                            lateststart = y
+                    else:
+                        if lateststart is not None:
+                            newslice = VerticalSlice(x, testwidth, lateststart, y - 1)
+
+                            slices.append(newslice)
+                            currentslices.append(newslice)
+
+                            lateststart = None
+
+                    y = y + 1
+
+                # We have to finish a running slice if there exists one
+                if lateststart is not None:
+                    newslice = VerticalSlice(x, testwidth, lateststart, y - 1)
+                    slices.append(newslice)
+                    currentslices.append(newslice)
+
+                for prev in prevslices:
+                    for curr in currentslices:
+                        if commonborder(prev, curr):
+                            prev.rightslices.append(curr)
+                            curr.leftslices.append(prev)
+
+                prevslices = currentslices
+
+            x = x + scanwidth
+
+        return slices
+
+    def fullcoveragepath(self, scanwidth, currentpose, cleanarea):
+
+        slices = self.celldecompose(scanwidth, cleanarea)
+        robotposition = self.posetogrid(currentpose)
+
+        startslice = None
+        for sl in slices:
+            if sl.covers(robotposition):
+                startslice = sl
+
+        if startslice is None:
+            rospy.loginfo('fullcoveragepath(): No starting slice at %s found in %s', robotposition, slices)
+            return None, None, None
+
+        slicetop = startslice.top()
+        slicebottom = startslice.bottom()
+
+        coveragepath = []
+
+        currentpos = None
+
+        if distance(robotposition, slicetop) < distance(robotposition, slicebottom):
+            # Move robot to top and then to the bottom of the slice
+            coveragepath.append(slicetop)
+            coveragepath.append(slicebottom)
+            currentpos = slicebottom
+        else:
+            # Move robot to the botton and then to the top of the slice
+            coveragepath.append(slicebottom)
+            coveragepath.append(slicetop)
+            currentpos = slicetop
+
+        # Now, we do have all slices
+        # Step: find the slice containing the robot, this is the starting slice
+        # within the starting slice, check the shortest path to the top or to the bottom, move to the shortest point
+        # 1. Move within the slice to the opposite end
+        # 2. Mark the current slice as visited
+        # 3. Check all not visited neighboring slices of the current sliice. Move to the shortest slice and repeat at 1. Mark all other slices as open
+        # 4. If there are no direct neighbors, select the nearest slice from the open list and repeat at 1
+        # 5. Repeat until open list is empty
+
+        def dfs(level, currentslice, currentpos, visited, coveragepath):
+
+            if not currentslice in visited:
+
+                visited.append(currentslice)
+
+                def nearestslice(currentpos):
+
+                    nearest = None
+                    lastdistance = None
+
+                    slicestocheck = currentslice.leftslices + currentslice.rightslices
+                    for sl in slicestocheck:
+                        if sl not in visited:
+                            dist = min(distance(currentpos, sl.top()), distance(currentpos, sl.bottom()))
+                            if nearest is None:
+                                nearest = sl
+                                lastdistance = dist
+                            else:
+                                if dist < lastdistance:
+                                    nearest = sl
+                                    lastdistance = dist
+
+                    return nearest
+
+                nextslice = nearestslice(currentpos)
+                while nextslice:
+
+                    top = nextslice.top()
+                    bottom = nextslice.bottom()
+
+                    if distance(currentpos, top) < distance(currentpos, bottom):
+                        # Move to top, then to the bottom
+
+                        path = self.findpathgrid(currentpos, top)
+                        if path:
+                            coveragepath.extend(path)
+                            coveragepath.append(bottom)
+                            currentpos = bottom
+                        else:
+                            return currentpos, top
+                    else:
+                        # Move to the bottom, then to the top
+                        path = self.findpathgrid(currentpos, bottom)
+                        if path:
+                            coveragepath.extend(path)
+                            coveragepath.append(top)
+                            currentpos = top
+                        else:
+                            return currentpos, bottom
+
+                    currentpos, error = dfs(level + 1, nextslice, currentpos, visited, coveragepath)
+                    #if error:
+                    #    return currentpos, error
+
+                    nextslice = nearestslice(currentpos)
+
+                return currentpos, None
+
+            return currentpos, None
+
+        currentpos, error = dfs(0, startslice, currentpos, [], coveragepath)
+
+        return coveragepath, currentpos, error
+
+    def gridpointstoposes(self, points, mapframe):
+        path = Path()
+        path.header.frame_id = mapframe
+        path.header.stamp = rospy.Time.now()
+
+        for po in points:
+            path.poses.append(self.gridtopose(po))
+
+
+        return path
+

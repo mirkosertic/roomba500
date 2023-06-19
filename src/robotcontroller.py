@@ -1,19 +1,19 @@
 import rospy
 import threading
 import tf
+import traceback
 
 from geometry_msgs.msg import PoseStamped
-from geometry_msgs.msg import Twist
 
 class RobotController:
 
-    def __init__(self, transformlistener, mapframe, cmdvelpub):
+    def __init__(self, transformlistener, mapframe, driver):
         self.lock = threading.Lock()
         self.transformlistener = transformlistener
         self.mapframe = mapframe
         self.behavior = []
         self.latestodominmapframe = None
-        self.cmdvelpub = cmdvelpub
+        self.driver = driver
 
     def cap(self, value, m):
         if value > m:
@@ -23,20 +23,14 @@ class RobotController:
         return value
 
     def sendcontrol(self, velx, veltheta):
-        twistMsg = Twist()
-        twistMsg.linear.x = self.cap(velx, 0.4)
-        twistMsg.linear.y = .0
-        twistMsg.linear.z = .0
-        twistMsg.angular.x = .0
-        twistMsg.angular.y = .0
-        twistMsg.angular.z = self.cap(veltheta, 3.0)
-        self.cmdvelpub.publish(twistMsg)
+        self.driver.drive(self.cap(velx, 0.4), self.cap(veltheta, 3.0))
 
     def stop(self):
         try:
             self.lock.acquire()
             
             self.behavior = []
+            self.sendcontrol(.0, .0)
             
         except Exception as e:
             rospy.logerr('Error stopping action : %s', e)
@@ -62,7 +56,7 @@ class RobotController:
             self.processBehavior()
 
         except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException) as e:
-            rospy.logerr('Error processing odometry data : %s', e)
+            rospy.loginfo('Error processing odometry data : %s', traceback.format_exc())
 
         self.lock.release()
         pass
@@ -72,7 +66,7 @@ class RobotController:
             if len(self.behavior) > 0:
                 self.behavior[-1].process(self)
         except Exception as e:
-            rospy.logerr('Error processing behavior : %s', e)
+            rospy.loginfo('Error processing behavior : %s', traceback.format_exc())
         pass
 
     def appendbehavior(self, b):

@@ -1,15 +1,51 @@
 import rospy
 import math
-from basestate import BaseState
+
 from pidcontroller import PIDController
 from tf.transformations import euler_from_quaternion
 
 from trigfunctions import signedangle
-from rotatetostate import RotateToState
+
+class BaseState:
+
+    def __init__(self):
+        pass
+
+    def process(self, controller):
+        pass
+
+class RotateToState(BaseState):
+
+    def __init__(self, targettheta):
+
+        BaseState.__init__(self)
+
+        def errorfun(current):
+            odomquat = current.pose.orientation
+            (_, _, yaw) = euler_from_quaternion([odomquat.x, odomquat.y, odomquat.z, odomquat.w])
+
+            return signedangle(yaw, targettheta)
+
+        self.controller = PIDController(0.025, .0, .0, errorfun)
+
+    def process(self, robotcontroller):
+
+        regval, error = self.controller.update(int(robotcontroller.latestodominmapframe.header.stamp.to_sec() * 1000), robotcontroller.latestodominmapframe)
+        if regval:
+            if abs(regval) < 0.01:
+                rospy.loginfo('RotateToState() - Finished')
+
+                robotcontroller.sendcontrol(.0, .0)
+                robotcontroller.finishbehavior()
+            else:
+                robotcontroller.sendcontrol(.0, regval)
 
 class DriveToPosition(BaseState):
 
     def __init__(self, targetpose):
+
+        BaseState.__init__(self)
+
         self.targetpose = targetpose
 
         def distanceerrorfun(current):
@@ -21,7 +57,6 @@ class DriveToPosition(BaseState):
 
         self.distanceController = PIDController(1.2, .0, .0, distanceerrorfun)
         self.yawcontroller = None
-        pass
 
     def process(self, robotcontroller):
 
@@ -29,8 +64,8 @@ class DriveToPosition(BaseState):
             dx = self.targetpose.pose.position.x - current.pose.position.x
             dy = self.targetpose.pose.position.y - current.pose.position.y
 
-            odomQuat = robotcontroller.latestodominmapframe.pose.orientation
-            (_, _, currentyaw) = euler_from_quaternion([odomQuat.x, odomQuat.y, odomQuat.z, odomQuat.w])
+            odomquat = robotcontroller.latestodominmapframe.pose.orientation
+            (_, _, currentyaw) = euler_from_quaternion([odomquat.x, odomquat.y, odomquat.z, odomquat.w])
 
             targetyaw = math.atan2(dy, dx)
 
@@ -41,13 +76,13 @@ class DriveToPosition(BaseState):
 
         time = int(robotcontroller.latestodominmapframe.header.stamp.to_sec() * 1000)
 
-        regvalyaw, yawerror = self.yawcontroller.update(time, robotcontroller.latestodominmapframe, None)
-        regdistance, distanceerror = self.distanceController.update(time, robotcontroller.latestodominmapframe, None)
+        regvalyaw, yawerror = self.yawcontroller.update(time, robotcontroller.latestodominmapframe)
+        regdistance, distanceerror = self.distanceController.update(time, robotcontroller.latestodominmapframe)
 
         if regvalyaw and regdistance:
 
             # In case there is a too large error in yaw, we just regulate the yaw, and not the velocity
-            if abs(regvalyaw) > 0.3:
+            if abs(yawerror) > 5:
                 robotcontroller.sendcontrol(.0, regvalyaw)
             else:
                 robotcontroller.sendcontrol(regdistance, regvalyaw)

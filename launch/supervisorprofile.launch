@@ -3,7 +3,7 @@
     <node name='supervisor' pkg='roomba500' type='supervisor.py' output='screen' respawn='false' launch-prefix="python3 -m cProfile -o /home/ubuntu/supervisor.prof ">
         <!-- https://pypi.org/project/flameprof/ -->
         <param name="rosout_disable_topics_generation" value="True"/>
-        <param name="launchfile" value="roomba.launch"/>
-        <param name="displaytype" value="ssd1306"/>
+        <param name="launchfile" value="highlevelsimulation.launch"/>
+        <param name="displaytype" value="demo"/>
     </node>
 </launch>
