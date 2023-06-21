@@ -6,13 +6,12 @@ import tf
 import os
 import pathlib
 import yaml
-import math
 import traceback
 
 from map import Map
 from robotcontroller import RobotController
 from driver import Driver
-from robotbehaviors import RotateToState, DriveToPosition
+from robotbehaviors import DriveToPosition
 
 from std_msgs.msg import Int16, ColorRGBA
 from nav_msgs.msg import Odometry, OccupancyGrid, Path
@@ -113,36 +112,24 @@ class Highlevel:
 
     def pathtorobotstatemachine(self, path):
 
+        rospy.loginfo("Converting nav points %s to robot state machine", path)
+
+        statestoadd = []
+
         x = len(path) - 1
         while x >= 1:
-            (xtarget, ytarget) = path[x]
-            (xorigin, yorigin) = path[x - 1]
-
             pose = self.navmap.gridtopose(path[x])
 
-            self.robotcontroller.appendbehavior(DriveToPosition(pose))
-
-            dx = xtarget - xorigin
-            dy = ytarget - yorigin
-
-            yaw = math.atan2(dy, dx)
-            self.robotcontroller.appendbehavior(RotateToState(yaw))
+            statestoadd.append(DriveToPosition(pose))
 
             x = x - 1
 
-        # Calculate to first waypoint
-        (xtarget, ytarget) = path[1]
-        (xorigin, yorigin) = path[0]
+        self.robotcontroller.append_behaviors(statestoadd)
 
-        pose = self.navmap.gridtopose(path[1])
+        if self.robotcontroller.latestodominmapframe is not None:
+            rospy.loginfo("Starting robot pose is at x=%s, y=%s", self.robotcontroller.latestodominmapframe.pose.position.x, self.robotcontroller.latestodominmapframe.pose.position.y)
 
-        self.robotcontroller.appendbehavior(DriveToPosition(pose))
-
-        dx = xtarget - xorigin
-        dy = ytarget - yorigin
-
-        yaw = math.atan2(dy, dx)
-        self.robotcontroller.appendbehavior(RotateToState(yaw))
+        rospy.loginfo("Converting state machine computed : %s", statestoadd)
 
     def moveto(self, req):
         rospy.loginfo("Received moveto command")

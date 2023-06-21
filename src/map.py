@@ -354,7 +354,8 @@ class Map:
 
                         path = self.findpathgrid(currentpos, top)
                         if path:
-                            coveragepath.extend(path)
+                            # Remove first element from path, as we are already at the starting position
+                            coveragepath.extend([elem for elem in path[1:]])
                             coveragepath.append(bottom)
                             currentpos = bottom
                         else:
@@ -363,7 +364,8 @@ class Map:
                         # Move to the bottom, then to the top
                         path = self.findpathgrid(currentpos, bottom)
                         if path:
-                            coveragepath.extend(path)
+                            # Remove first element from path, as we are already at the starting position
+                            coveragepath.extend([elem for elem in path[1:]])
                             coveragepath.append(top)
                             currentpos = top
                         else:
@@ -384,6 +386,9 @@ class Map:
         return coveragepath, currentpos, error
 
     def gridpointstoposes(self, points, mapframe):
+
+        rospy.loginfo("Converting nav points %s to path", points)
+
         path = Path()
         path.header.frame_id = mapframe
         path.header.stamp = rospy.Time.now()

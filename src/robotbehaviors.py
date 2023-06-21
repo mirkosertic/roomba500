@@ -9,36 +9,11 @@ from trigfunctions import signedangle
 class BaseState:
 
     def __init__(self):
+        self.firstcalled = True
         pass
 
     def process(self, controller):
         pass
-
-class RotateToState(BaseState):
-
-    def __init__(self, targettheta):
-
-        BaseState.__init__(self)
-
-        def errorfun(current):
-            odomquat = current.pose.orientation
-            (_, _, yaw) = euler_from_quaternion([odomquat.x, odomquat.y, odomquat.z, odomquat.w])
-
-            return signedangle(yaw, targettheta)
-
-        self.controller = PIDController(0.025, .0, .0, errorfun)
-
-    def process(self, robotcontroller):
-
-        regval, error = self.controller.update(int(robotcontroller.latestodominmapframe.header.stamp.to_sec() * 1000), robotcontroller.latestodominmapframe)
-        if regval:
-            if abs(regval) < 0.01:
-                rospy.loginfo('RotateToState() - Finished')
-
-                robotcontroller.sendcontrol(.0, .0)
-                robotcontroller.finishbehavior()
-            else:
-                robotcontroller.sendcontrol(.0, regval)
 
 class DriveToPosition(BaseState):
 
@@ -57,6 +32,12 @@ class DriveToPosition(BaseState):
 
         self.distanceController = PIDController(1.2, .0, .0, distanceerrorfun)
         self.yawcontroller = None
+
+    def __str__(self):
+        return "(DriveToPosition x=" + str(self.targetpose.pose.position.x) + " y=" + str(self.targetpose.pose.position.y) + ")"
+
+    def __repr__(self):
+        return self.__str__()
 
     def process(self, robotcontroller):
 
@@ -79,16 +60,21 @@ class DriveToPosition(BaseState):
         regvalyaw, yawerror = self.yawcontroller.update(time, robotcontroller.latestodominmapframe)
         regdistance, distanceerror = self.distanceController.update(time, robotcontroller.latestodominmapframe)
 
+        if self.firstcalled:
+            self.firstcalled = False
+            rospy.loginfo("DriveToPosition() starting to reach %s:%s, distanceerror=%s, angleerror=%s", self.targetpose.pose.position.x, self.targetpose.pose.position.y, distanceerror, yawerror)
+
         if regvalyaw and regdistance:
 
             # In case there is a too large error in yaw, we just regulate the yaw, and not the velocity
-            if abs(yawerror) > 5:
-                robotcontroller.sendcontrol(.0, regvalyaw)
-            else:
-                robotcontroller.sendcontrol(regdistance, regvalyaw)
-
-            if abs(regdistance) < 0.02:
+            if abs(regdistance) < 0.025:
                 rospy.loginfo('DriveToPosition() - Finished distance = %s', regdistance)
 
                 robotcontroller.sendcontrol(.0, .0)
-                robotcontroller.finishbehavior()
+                robotcontroller.finish_behavior()
+
+            elif abs(yawerror) > 3 and regdistance > 0.10:
+                robotcontroller.sendcontrol(.0, regvalyaw)
+
+            else:
+                robotcontroller.sendcontrol(regdistance, regvalyaw)

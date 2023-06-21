@@ -53,7 +53,7 @@ class RobotController:
 
             self.latestodominmapframe = self.transformlistener.transformPose(self.mapframe, mpose)
 
-            self.processBehavior()
+            self.process_behavior()
 
         except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException) as e:
             rospy.loginfo('Error processing odometry data : %s', traceback.format_exc())
@@ -61,7 +61,7 @@ class RobotController:
         self.lock.release()
         pass
 
-    def processBehavior(self):
+    def process_behavior(self):
         try:
             if len(self.behavior) > 0:
                 self.behavior[-1].process(self)
@@ -69,11 +69,13 @@ class RobotController:
             rospy.loginfo('Error processing behavior : %s', traceback.format_exc())
         pass
 
-    def appendbehavior(self, b):
+    def append_behaviors(self, behaviors):
         self.lock.acquire()
-        self.behavior.append(b)
+
+        for b in behaviors:
+            self.behavior.append(b)
 
         self.lock.release()
 
-    def finishbehavior(self):
+    def finish_behavior(self):
         del self.behavior[-1]
