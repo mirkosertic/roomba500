@@ -53,7 +53,7 @@ class DriveToPosition(BaseState):
             return signedangle(currentyaw, targetyaw)
 
         if self.yawcontroller is None:
-            self.yawcontroller = PIDController(0.025, .0, .0, angleerror)
+            self.yawcontroller = PIDController(0.05, .0, .0, angleerror)
 
         time = int(robotcontroller.latestodominmapframe.header.stamp.to_sec() * 1000)
 
@@ -66,14 +66,17 @@ class DriveToPosition(BaseState):
 
         if regvalyaw and regdistance:
 
+            robotcontroller.report_metric('DriveToPosition/distance_to_target', distanceerror)
+            robotcontroller.report_metric('DriveToPosition/angle_error_in_degrees', yawerror)
+
             # In case there is a too large error in yaw, we just regulate the yaw, and not the velocity
-            if abs(regdistance) < 0.025:
+            if abs(distanceerror) < 0.015:
                 rospy.loginfo('DriveToPosition() - Finished distance = %s', regdistance)
 
                 robotcontroller.sendcontrol(.0, .0)
                 robotcontroller.finish_behavior()
 
-            elif abs(yawerror) > 3 and regdistance > 0.10:
+            elif abs(yawerror) > 3 and distanceerror > 0.10:
                 robotcontroller.sendcontrol(.0, regvalyaw)
 
             else:

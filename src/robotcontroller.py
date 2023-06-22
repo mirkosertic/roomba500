@@ -4,6 +4,7 @@ import tf
 import traceback
 
 from geometry_msgs.msg import PoseStamped
+from std_msgs.msg import Float32
 
 class RobotController:
 
@@ -14,6 +15,17 @@ class RobotController:
         self.behavior = []
         self.latestodominmapframe = None
         self.driver = driver
+        self.metricspub = {}
+
+    def report_metric(self, metricname, value):
+        fullname = "metrics/" + metricname
+        if fullname in self.metricspub:
+            pub = self.metricspub[fullname]
+        else:
+            pub = rospy.Publisher(fullname, Float32, queue_size=10)
+            self.metricspub[fullname] = pub
+
+        pub.publish(Float32(value))
 
     def cap(self, value, m):
         if value > m:
